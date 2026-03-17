@@ -1,0 +1,71 @@
+(* GVL_JC_Scheduler — Simulator-internal global variables *)
+(* Identical names to globals.st VAR_GLOBAL — no renaming needed *)
+VAR_GLOBAL
+  (* ===== Simulation Transporter State ===== *)
+  g_sim_trans                   : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;  (* physics + scheduler command state *)
+
+  (* ===== No-Treatment Task Destinations ===== *)
+  g_ntt                         : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;  (* no-treatment task destinations *)
+
+  (* ===== Precomputed Movement Times ===== *)
+  g_move                        : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;  (* precomputed movement times per transporter *)
+
+  (* ===== Unit Schedule ===== *)
+  g_schedule                    : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;  (* calculated schedule per unit *)
+
+  (* ===== Task Queues ===== *)
+  g_task                        : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;  (* task queue per transporter *)
+
+  (* ===== Departure Scheduler State ===== *)
+  g_dep_sandbox                 : UDT_JC_DepSandboxType;  (* isolated copy for planning *)
+  g_dep_idle_slot               : ARRAY[1..MAX_Transporters] OF UDT_JC_DepIdleSlotSetType;  (* idle slots per transporter *)
+  g_dep_waiting                 : ARRAY[1..DEP_MAX_WAITING] OF INT;  (* waiting batch unit indices *)
+  g_dep_waiting_count           : INT;  (* number of waiting batches *)
+  g_dep_overlap                 : UDT_JC_DepOverlapType;  (* overlap station flags *)
+  g_dep_pending                 : UDT_JC_DepPendingWriteType;  (* ACTIVATE write buffer *)
+  g_dep_activated               : BOOL;  (* handshake TSK ← DEP *)
+  g_dep_stable                  : BOOL;  (* handshake TSK → DEP: task list stable *)
+  g_conflict_resolved           : BOOL;  (* TRUE when TSK Analyze found no conflicts — gate for DEP *)
+  g_dep_wait_sched              : UDT_JC_TskScheduleType;  (* last DEP-calculated waiting batch schedule for UI *)
+  g_dep_wait_unit               : INT;  (* unit index of waiting schedule (0=none) *)
+
+  (* ===== Scheduler Debug Observability ===== *)
+  g_sched_dbg_tsk_phase         : INT;  (* TSK scheduler current phase *)
+  g_sched_dbg_dep_phase         : INT;  (* DEP scheduler current phase *)
+  g_sched_dbg_turn              : INT;  (* 1=TSK ran, 2=DEP ran this cycle *)
+  g_sched_dbg_skip_cnt          : INT;  (* DEP skip count *)
+  g_sched_dbg_dep_reject_cnt    : INT;  (* DEP reject count this cycle *)
+  g_sched_dbg_dep_fit_round     : INT;  (* DEP fit round counter *)
+  g_sched_dbg_dep_cur_wait_unit : INT;  (* DEP current waiting batch unit *)
+  g_sched_dbg_dep_wait_cnt      : INT;  (* DEP waiting batch count *)
+  g_sched_dbg_batch_cnt         : INT;  (* TSK active batch count *)
+
+  (* ===== Calibration State ===== *)
+  g_cal                         : ARRAY[1..MAX_Transporters] OF UDT_JC_CalibrationType;  (* calibration plan + results per transporter *)
+  g_cal_active                  : BOOL;  (* TRUE during calibration — inhibits schedulers *)
+
+  (* ===== Production Queue ===== *)
+  g_production_queue            : INT;  (* 1=batches in queue, 0=queue empty *)
+
+  (* ===== Unix Time ===== *)
+  g_time_s                      : LINT;  (* absolute time in unix seconds *)
+
+  (* ===== Event Queue ===== *)
+  g_event                       : UDT_JC_EventQueueType;  (* circular event buffer *)
+  g_event_pending               : UDT_JC_EventMsgType;  (* staging slot — written by other FBs *)
+  g_event_pending_valid         : BOOL;  (* TRUE = pending message ready to enqueue *)
+  g_event_ack_seq               : INT;   (* Gateway writes ack_seq via OPC UA to consume head message *)
+
+  (* ===== OPC UA Gateway Command Interface ===== *)
+  (* Gateway writes these via OPC UA, PLC reads and processes.
+     Change g_cmd_seq to trigger command execution.
+     Commands:
+       2 = init       (param = station_count)  — finalize config, start runtime
+       3 = clear      — zero all config, stop runtime
+       8 = cal_ctrl   (param: 1=start, 2=calculate, 3=abort)
+      12 = calc_move  — compute g_move from loaded g_cal kinematic params
+  *)
+  g_cmd_seq                     : INT;   (* command sequence — change triggers processing *)
+  g_cmd_code                    : INT;   (* command code *)
+  g_cmd_param                   : INT;   (* command parameter *)
+END_VAR

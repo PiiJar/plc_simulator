@@ -38,3 +38,7 @@ Legacy OpenPLC assets are intentionally excluded.
 ## Status
 
 Initial repository scaffold created on 2026-03-17.
+
+Current migration status:
+- CODESYS core sources migrated to `services/codesys/`
+- gateway, UI, and data migration pending

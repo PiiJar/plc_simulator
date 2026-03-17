@@ -30,6 +30,10 @@ coverage/
 .env
 .env.*
 
+!services/codesys/build/
+services/codesys/build/*
+!services/codesys/build/.gitkeep
+
 # Project runtime data overrides
 services/ui/.cache/
 services/ui/.next/
