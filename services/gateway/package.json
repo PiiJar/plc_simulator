@@ -1,0 +1,19 @@
+{
+  "name": "codesys-gateway",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "CODESYS OPC UA Gateway — REST API bridge between PLC and UI",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "node-opcua": "^2.133.0",
+    "pg": "^8.19.0"
+  }
+}
