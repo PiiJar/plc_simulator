@@ -130,27 +130,73 @@ export default function App() {
   const [unitSaving, setUnitSaving] = useState(false);
   const lastTickRef = useRef(null);
   const elapsedMsRef = useRef(0);
-  const latestSnapshotRef = useRef({
-    timeMs: performance.now(),
-    transporters: []
-  });
-
-  // Load saved customer/plant selection from backend on startup
+  
+  // --- CORE POLLING (2s interval) ---
   useEffect(() => {
-    // Poll PLC runtime status every 2 seconds
+    let cancelled = false;
+
     const pollPlcStatus = async () => {
       try {
         const data = await api.get('/api/plc/status');
+        if (cancelled) return;
         if (data) {
           setPlcStatus(data);
           if (typeof data.production_queue === 'number') setProductionQueue(data.production_queue);
         }
       } catch (err) {/* ignore */}
     };
-    pollPlcStatus();
-    const plcInterval = setInterval(pollPlcStatus, 2000);
-    return () => clearInterval(plcInterval);
+
+    const fetchBatchesAndUnits = async () => {
+      try {
+        const data = await api.get('/api/batches'); // Wait we use api.get or fetchBatchesFromApi? We'll use the existing function.
+        // Actually fetchBatchesFromApi updates the batches state directly now. 
+      } catch (err) {}
+    };
+
+    const fetchCoreData = async () => {
+      if (cancelled) return;
+      try {
+        await Promise.allSettled([
+          pollPlcStatus(),
+          fetchBatchesFromApi().then(data => {
+            if (data && Array.isArray(data.batches)) setBatches(data.batches);
+          }),
+          fetchUnitsFromApi(),
+          api.get('/api/transporter-tasks').then(data => {
+            if (data && Array.isArray(data.tasks)) setTransporterTasks(data.tasks);
+          }),
+          api.get('/api/manual-tasks').then(data => {
+            if (data && Array.isArray(data.tasks)) setManualTasks(data.tasks);
+          }),
+          api.get('/api/scheduler/state').then(data => {
+            if (data && data.state && typeof data.state.avgDepartureIntervalSec === 'number') {
+              setAvgCycleSec(data.state.avgDepartureIntervalSec);
+            }
+            if (data && data.productionStats) {
+              setProductionStats(data.productionStats);
+            }
+          })
+        ]);
+      } catch (err) {
+        // silently ignore container-level rejections
+      }
+    };
+
+    fetchCoreData();
+    const id = setInterval(fetchCoreData, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, []);
+
+  const latestSnapshotRef = useRef({
+    timeMs: performance.now(),
+    transporters: []
+  });
+
+  // Load saved customer/plant selection from backend on startup
+  
   useEffect(() => {
     const initializeData = async () => {
       try {
@@ -228,87 +274,11 @@ export default function App() {
   }, []);
 
   // Poll batches so erä-palkit päivittyvät backend-kirjoituksista
-  useEffect(() => {
-    let cancelled = false;
-    const fetchBatchesAndUnits = async () => {
-      try {
-        const data = await fetchBatchesFromApi();
-        if (cancelled) return;
-        if (data && Array.isArray(data.batches)) {
-          setBatches(data.batches);
-        }
-        await fetchUnitsFromApi();
-      } catch (err) {
-        // silently ignore polling errors
-      }
-    };
-    fetchBatchesAndUnits();
-    const id = setInterval(fetchBatchesAndUnits, 2000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
+  
 
-  // Poll transporter tasks from backend
-  const fetchTransporterTasks = async () => {
-    try {
-      const data = await api.get('/api/transporter-tasks');
-      if (data && Array.isArray(data.tasks)) {
-        setTransporterTasks(data.tasks);
-      }
-    } catch (err) {
-      // silently ignore polling errors
-    }
-  };
-  useEffect(() => {
-    let cancelled = false;
-    const fetchTasks = async () => {
-      try {
-        const [tasksRes, manualRes] = await Promise.allSettled([api.get('/api/transporter-tasks'), api.get('/api/manual-tasks')]);
-        if (cancelled) return;
-        if (tasksRes.status === 'fulfilled' && tasksRes.value && Array.isArray(tasksRes.value.tasks)) {
-          setTransporterTasks(tasksRes.value.tasks);
-        }
-        if (manualRes.status === 'fulfilled' && manualRes.value && Array.isArray(manualRes.value.tasks)) {
-          setManualTasks(manualRes.value.tasks);
-        }
-      } catch (err) {
-        // silently ignore polling errors
-      }
-    };
-    fetchTasks();
-    const id = setInterval(fetchTasks, 2000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
+  
 
-  // Poll scheduler state for avg departure interval
-  useEffect(() => {
-    let cancelled = false;
-    const fetchSchedulerState = async () => {
-      try {
-        const data = await api.get('/api/scheduler/state');
-        if (cancelled) return;
-        if (data && data.state && typeof data.state.avgDepartureIntervalSec === 'number') {
-          setAvgCycleSec(data.state.avgDepartureIntervalSec);
-        }
-        if (data && data.productionStats) {
-          setProductionStats(data.productionStats);
-        }
-      } catch (err) {
-        // silently ignore polling errors
-      }
-    };
-    fetchSchedulerState();
-    const id = setInterval(fetchSchedulerState, 2000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
+  
   useEffect(() => {
     if (!showBatches) return undefined;
     let cancelled = false;
