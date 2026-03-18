@@ -1,0 +1,100 @@
+{
+  "simulation_goals": {
+    "description": "Production goals for this simulation run",
+    "calculation_basis": "Derived from annual production targets in customer.json",
+    "reference": "See customer.json for plant production schedule and annual targets",
+    "simulation_period": {
+      "duration_hours": 12.0,
+      "description": "Simulation represents 12.0 hours of production"
+    },
+    "plant_constraints": {
+      "available_containers": 50,
+      "description": "Number of transport containers/carriers available for batches"
+    }
+  },
+  "simulation_targets": [
+    {
+      "product_id": "155KR88",
+      "product_name": "Steel Component A",
+      "treatment_program": 1,
+      "pieces_per_batch": 8,
+      "target_batches": 21,
+      "target_pieces": 168,
+      "production_share_percent": 50.0
+    },
+    {
+      "product_id": "155 OP",
+      "product_name": "Steel Component B",
+      "treatment_program": 1,
+      "pieces_per_batch": 8,
+      "target_batches": 21,
+      "target_pieces": 168,
+      "production_share_percent": 50.0
+    }
+  ],
+  "totals": {
+    "total_simulation_batches": 42,
+    "production_share_validation": {
+      "155KR88": "50.0%",
+      "155 OP": "50.0%",
+      "total": "100.0%"
+    }
+  },
+  "target_pace": {
+    "description": "Target production pace based on annual production targets",
+    "simulation_duration_hours": 12.0,
+    "simulation_target_batches": 42,
+    "annual_batches": 20000.0,
+    "annual_production_hours": 5760.0,
+    "annual_steady_hours": 5760.0,
+    "batches_per_hour": 3.472,
+    "target_cycle_time_seconds": 1036.8,
+    "average_batch_interval_minutes": 17.28,
+    "average_batch_interval_seconds": 1036.87,
+    "calculation": {
+      "annual_calculation": "Annual target: 20000 batches / 5760.0 hours = 3.47 batches/hour",
+      "cycle_time": "Target cycle time: 3600 seconds / 3.47 batches/hour = 1036.8s",
+      "simulation_target": "Simulation (12.0h): 3.47 batches/hour × 12.0h = 42 batches"
+    },
+    "interpretation": {
+      "description": "To meet annual targets, a new batch must complete every 1036.8s (17.28 min)",
+      "practical_note": "Actual intervals may vary based on treatment program duration and transporter capacity",
+      "target_cycle_time_note": "Target cycle time based on annual production goals: 1036.8s per batch"
+    },
+    "per_product_pace": {
+      "155KR88": {
+        "simulation_batches": 21,
+        "batches_per_hour": 1.75,
+        "average_interval_minutes": 34.29,
+        "average_interval_seconds": 2057.14,
+        "calculation": "21 batches / 12.0 hours = 1.75 batches/hour; 60 min / 1.75 = 34.29 min"
+      },
+      "155 OP": {
+        "simulation_batches": 21,
+        "batches_per_hour": 1.75,
+        "average_interval_minutes": 34.29,
+        "average_interval_seconds": 2057.14,
+        "calculation": "21 batches / 12.0 hours = 1.75 batches/hour; 60 min / 1.75 = 34.29 min"
+      }
+    },
+    "ramp_up_seconds": 2563.7960000000003,
+    "productive_hours": 11.288,
+    "ramp_up_calculation": {
+      "min_process_time": 2250,
+      "n_transfers": 14,
+      "avg_transfer_time": 22.414,
+      "formula": "ramp_up = min_process_time + n_transfers * avg_transfer_time"
+    },
+    "update_note": "Ramp-up info added. Targets kept as Annual / Total Hours."
+  },
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-11-13",
+    "description": "Simulation production goals - defines target quantities for simulation period",
+    "usage": {
+      "initialization": "This file is created during simulation initialization based on customer.json data",
+      "location": "Copied to output/{simulation_dir}/initialization/goals.json",
+      "purpose": "Defines how many batches of each product to simulate for target period"
+    }
+  }
+}

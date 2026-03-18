@@ -1,0 +1,177 @@
+{
+  "customer": {
+    "id": "900135",
+    "name": "Nammo Lapua Oy",
+    "description": "Main production facility for zinc phosphating operations",
+    "contact": {
+      "email": "production@factoryx.example",
+      "phone": "+358 40 1234567",
+      "address": "Teollisuustie 1, 00100 Helsinki, Finland"
+    }
+  },
+  "plant": {
+    "id": "P001",
+    "name": "Factory X - Zinc-Phosphating",
+    "customer_id": "900135",
+    "available_containers": 50,
+    "location": {
+      "city": "Jyväskylä",
+      "country": "Finland",
+      "timezone": "Europe/Helsinki"
+    },
+    "production_schedule": {
+      "weeks_per_year": 48,
+      "days_per_week": 5,
+      "shifts_per_day": 3,
+      "hours_per_shift": 8.0,
+      "annual_production_hours": 3840.0,
+      "description": "Standard production schedule: 48 weeks/year, 5 days/week, 2 shifts/day, 8 hours/shift"
+    },
+    "production_targets": {
+      "annual": [
+        {
+          "product_id": "155KR88",
+          "target_quantity": 80000,
+          "unit": "pieces",
+          "priority": 1
+        },
+        {
+          "product_id": "155 OP",
+          "target_quantity": 80000,
+          "unit": "pieces",
+          "priority": 1
+        }
+      ],
+      "notes": "Annual production targets per product"
+    }
+  },
+  "products": [
+    {
+      "id": "155KR88",
+      "plant_id": "P001",
+      "name": "Steel Component A",
+      "description": "Medium-sized steel component requiring zinc phosphating",
+      "properties": {
+        "surface_area_mm2": 250000,
+        "weight_kg": 5.5,
+        "treatment_program": 1,
+        "pieces_per_batch": 8,
+        "material": "Steel",
+        "coating_type": "Zinc-Phosphate"
+      },
+      "dimensions": {
+        "length_mm": 500,
+        "width_mm": 200,
+        "height_mm": 100
+      },
+      "quality_requirements": {
+        "coating_thickness_min_um": 5.0,
+        "coating_thickness_max_um": 15.0,
+        "surface_finish": "Smooth"
+      }
+    },
+    {
+      "id": "155 OP",
+      "plant_id": "P001",
+      "name": "Steel Component B",
+      "description": "Medium-sized steel component requiring zinc phosphating",
+      "properties": {
+        "surface_area_mm2": 250000,
+        "weight_kg": 5.5,
+        "treatment_program": 1,
+        "pieces_per_batch": 8,
+        "material": "Steel",
+        "coating_type": "Zinc-Phosphate"
+      },
+      "dimensions": {
+        "length_mm": 500,
+        "width_mm": 200,
+        "height_mm": 100
+      },
+      "quality_requirements": {
+        "coating_thickness_min_um": 5.0,
+        "coating_thickness_max_um": 15.0,
+        "surface_finish": "Smooth"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-11-13",
+    "description": "Customer, plant, and product master data for simulation",
+    "relationships": {
+      "customer_to_plant": "1:n (one customer can have multiple plants)",
+      "plant_to_customer": "n:1 (each plant belongs to one customer)",
+      "plant_to_product": "1:n (one plant can produce multiple products)",
+      "product_to_plant": "n:1 (each product is produced at one plant)",
+      "product_to_batch": "1:n (one product type fills multiple batches)",
+      "simulation_scope": "One plant at a time - simulation directory is plant-specific"
+    },
+    "fields": {
+      "customer": {
+        "id": "Unique customer identifier (used in directory naming and reporting)",
+        "name": "Customer company name",
+        "description": "Brief description of customer's main business",
+        "contact": "Customer contact information for reporting purposes"
+      },
+      "plant": {
+        "id": "Unique plant identifier within customer organization",
+        "name": "Plant name (used in directory naming and reporting)",
+        "customer_id": "Reference to parent customer",
+        "available_containers": "Number of transport containers/carriers available for batch transport (affects WIP capacity)",
+        "location": "Physical location of the plant",
+        "production_schedule": {
+          "weeks_per_year": "Number of production weeks per year (accounting for holidays/maintenance)",
+          "days_per_week": "Number of production days per week",
+          "shifts_per_day": "Number of work shifts per day",
+          "hours_per_shift": "Duration of one shift in hours",
+          "annual_production_hours": "Calculated: weeks * days * shifts * hours"
+        },
+        "production_targets": {
+          "annual": "List of annual production targets per product",
+          "target_quantity": "Target number of pieces to produce annually",
+          "priority": "Production priority (1=highest)"
+        }
+      },
+      "products": {
+        "id": "Unique product identifier",
+        "plant_id": "Reference to plant where this product is manufactured",
+        "name": "Product name",
+        "description": "Detailed product description",
+        "properties": {
+          "surface_area_mm2": "Total surface area in square millimeters",
+          "weight_kg": "Product weight in kilograms",
+          "treatment_program": "Treatment program number (links to treatment_program_XXX.csv)",
+          "pieces_per_batch": "Number of product pieces that fit in one batch/carrier",
+          "material": "Base material type",
+          "coating_type": "Type of coating/treatment applied"
+        },
+        "dimensions": {
+          "length_mm": "Product length in millimeters",
+          "width_mm": "Product width in millimeters",
+          "height_mm": "Product height in millimeters"
+        },
+        "quality_requirements": {
+          "coating_thickness_min_um": "Minimum acceptable coating thickness in micrometers",
+          "coating_thickness_max_um": "Maximum acceptable coating thickness in micrometers",
+          "surface_finish": "Required surface finish quality"
+        }
+      }
+    },
+    "simulation_usage": {
+      "directory_naming": "Format: {customer_id}_-_{plant_name}_-_{treatment}_YYYY-MM-DD_HH-MM-SS",
+      "reporting": "Customer and plant info displayed in all reports for identification",
+      "product_batching": "Production.csv references product_id; pieces_per_batch determines batch size",
+      "capacity_planning": "Production targets and schedule used for long-term capacity analysis"
+    },
+    "notes": [
+      "Simulation always runs for ONE plant at a time",
+      "Multiple products can be processed in the same simulation run",
+      "Each product has a treatment_program which references treatment_program_XXX.csv files",
+      "pieces_per_batch determines how many product units are loaded into one batch carrier",
+      "available_containers limits the maximum number of batches in-process (WIP capacity constraint)",
+      "Annual production hours = weeks_per_year × days_per_week × shifts_per_day × hours_per_shift",
+      "Product surface_area and weight may be used for chemical consumption calculations"
+    ]
+  }
+}

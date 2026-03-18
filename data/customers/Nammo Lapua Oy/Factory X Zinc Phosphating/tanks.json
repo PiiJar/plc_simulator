@@ -1,0 +1,309 @@
+{
+  "tanks": [
+    {
+      "tank_id": 101,
+      "name": "Loading/Unloading",
+      "x_position": 100,
+      "y_position": 0,
+      "type": 0,
+      "process": "LOADING",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 102,
+      "name": "Buffer",
+      "x_position": 1550,
+      "y_position": 0,
+      "type": 0,
+      "process": "LOADING",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 103,
+      "name": "Buffer",
+      "x_position": 3000,
+      "y_position": 0,
+      "type": 0,
+      "process": "BUFFER",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 104,
+      "name": "Dryer",
+      "x_position": 4450,
+      "y_position": 0,
+      "type": 0,
+      "process": "DRYER",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 105,
+      "name": "Dryer",
+      "x_position": 5900,
+      "y_position": 0,
+      "type": 0,
+      "process": "DRYER",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 106,
+      "name": "Dryer",
+      "x_position": 7350,
+      "y_position": 0,
+      "type": 0,
+      "process": "DRYER",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 107,
+      "name": "Hot Rinse",
+      "x_position": 8800,
+      "y_position": 0,
+      "type": 20,
+      "process": "RINSE_HOT",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 108,
+      "name": "Cold Rinse",
+      "x_position": 10250,
+      "y_position": 0,
+      "type": 20,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 109,
+      "name": "Passivation",
+      "x_position": 11700,
+      "y_position": 0,
+      "type": 20,
+      "process": "PASSIVATION",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 110,
+      "name": "Cold Rinse #2",
+      "x_position": 13150,
+      "y_position": 0,
+      "type": 20,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 111,
+      "name": "Cold Rinse #1",
+      "x_position": 14600,
+      "y_position": 0,
+      "type": 20,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 112,
+      "name": "Zinc-Phosphate",
+      "x_position": 16050,
+      "y_position": 0,
+      "type": 20,
+      "process": "ZINC_PHOSPHATE",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 113,
+      "name": "Activation",
+      "x_position": 17500,
+      "y_position": 0,
+      "type": 10,
+      "process": "ACTIVATION",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 114,
+      "name": "Buffer",
+      "x_position": 18950,
+      "y_position": 0,
+      "type": 0,
+      "process": "BUFFER",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 115,
+      "name": "Degreasing",
+      "x_position": 20400,
+      "y_position": 0,
+      "type": 20,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 116,
+      "name": "Degreasing",
+      "x_position": 21850,
+      "y_position": 0,
+      "type": 20,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 117,
+      "name": "Cold Rinse #1",
+      "x_position": 23300,
+      "y_position": 0,
+      "type": 20,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 118,
+      "name": "Cold Rinse #2",
+      "x_position": 24750,
+      "y_position": 0,
+      "type": 20,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 119,
+      "name": "Buffer",
+      "x_position": 26200,
+      "y_position": 0,
+      "type": 0,
+      "process": "BUFFER",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 120,
+      "name": "Buffer",
+      "x_position": 27650,
+      "y_position": 0,
+      "type": 0,
+      "process": "BUFFER",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 121,
+      "name": "Dissolution",
+      "x_position": 29100,
+      "y_position": 0,
+      "type": 10,
+      "process": "DISSOLUTION",
+      "dimensions": {
+        "length_mm": 950,
+        "width_mm": 1200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    }
+  ],
+  "metadata": {
+    "version": "2.0",
+    "created": "2026-02-03",
+    "description": "Tank configuration for Nammo Lapua Oy Factory X Zinc Phosphating",
+    "notes": [
+      "tank_id matches station.tank reference (1:1 mapping)",
+      "type = physical structure (0=platform/dry, 10=plastic PP, 20=stainless steel)",
+      "process = what the tank is used for (RINSE, DEGREASE, ZINC_PHOSPHATE, etc.)",
+      "Standard dimensions: 950x1200mm"
+    ]
+  }
+}

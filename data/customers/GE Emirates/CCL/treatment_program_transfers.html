@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Käsittelyohjelmien Siirtotehtävät</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 { color: #333; }
+        .summary {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .transporter-boxes {
+            display: flex;
+            gap: 20px;
+        }
+        .transporter-box {
+            flex: 1;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        .transporter-box h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .transporter-1 {
+            background-color: #E3F2FD;
+            border-left-color: #2196F3;
+        }
+        .transporter-2 {
+            background-color: #E8F5E9;
+            border-left-color: #4CAF50;
+        }
+        .stat-label { font-weight: bold; color: #555; }
+        .stat-value { color: #2196F3; font-weight: bold; }
+        .area-input {
+            width: 60px;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .area-input:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+        }
+        .area-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th {
+            background-color: #2196F3;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+        }
+        th:hover {
+            background-color: #1976D2;
+        }
+        th.sort-asc::after {
+            content: ' ▲';
+            font-size: 0.8em;
+        }
+        th.sort-desc::after {
+            content: ' ▼';
+            font-size: 0.8em;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover { background-color: #f0f7ff; }
+        .can-transporter-1 { background-color: #E3F2FD; }
+        .can-transporter-2 { background-color: #E8F5E9; }
+        .can-both { background-color: #B2DFDB; }
+    </style>
+    <script>
+        let sortColumn = -1;
+        let sortAscending = true;
+        
+        // Nostimien ajoalueet (lista linjoista per nostin)
+        let transporterAreas = {
+            1: [{"lift_min": 101, "lift_max": 111, "sink_min": 101, "sink_max": 110}, {"lift_min": 201, "lift_max": 205, "sink_min": 201, "sink_max": 212}],
+            2: [{"lift_min": 106, "lift_max": 116, "sink_min": 106, "sink_max": 116}, {"lift_min": 204, "lift_max": 214, "sink_min": 204, "sink_max": 214}],
+        };
+        
+        function updateTransporterAreas() {
+            // Lue arvot kentistä
+            const inputs = document.querySelectorAll('.area-input[data-transporter]');
+            
+            inputs.forEach(input => {
+                const tid = parseInt(input.dataset.transporter);
+                const lineIdx = parseInt(input.dataset.line);
+                const field = input.dataset.field;
+                const value = parseInt(input.value) || 0;
+                
+                if (!transporterAreas[tid]) {
+                    transporterAreas[tid] = [];
+                }
+                if (!transporterAreas[tid][lineIdx]) {
+                    transporterAreas[tid][lineIdx] = {};
+                }
+                
+                transporterAreas[tid][lineIdx][field] = value;
+            });
+            
+            // Päivitä taulukon värit
+            updateTableColors();
+        }
+        
+        function canTransporterDoTransfer(tid, fromStation, toStation) {
+            const lines = transporterAreas[tid];
+            if (!lines || !Array.isArray(lines)) return false;
+            
+            // Tarkista voiko nostaa lähtöasemalta (millä tahansa linjalla)
+            let canLift = false;
+            for (const line of lines) {
+                if (fromStation >= line.lift_min && fromStation <= line.lift_max) {
+                    canLift = true;
+                    break;
+                }
+            }
+            
+            // Tarkista voiko laskea kohdeasemalle (millä tahansa linjalla)
+            let canSink = false;
+            for (const line of lines) {
+                if (toStation >= line.sink_min && toStation <= line.sink_max) {
+                    canSink = true;
+                    break;
+                }
+            }
+            
+            return canLift && canSink;
+        }
+        
+        function updateTableColors() {
+            const rows = document.querySelectorAll('tbody tr');
+            console.log('Updating colors for', rows.length, 'rows');
+            console.log('TransporterAreas:', transporterAreas);
+            
+            rows.forEach((row, index) => {
+                const fromStation = parseInt(row.cells[1].textContent);
+                const toStation = parseInt(row.cells[3].textContent);
+                
+                const can1 = canTransporterDoTransfer(1, fromStation, toStation);
+                const can2 = canTransporterDoTransfer(2, fromStation, toStation);
+                
+                if (index < 3) {
+                    console.log(`Row ${index}: ${fromStation} → ${toStation}, can1=${can1}, can2=${can2}`);
+                }
+                
+                // Poista vanhat luokat
+                row.classList.remove('can-transporter-1', 'can-transporter-2', 'can-both');
+                
+                // Lisää uusi luokka
+                if (can1 && can2) {
+                    row.classList.add('can-both');
+                } else if (can1) {
+                    row.classList.add('can-transporter-1');
+                } else if (can2) {
+                    row.classList.add('can-transporter-2');
+                }
+            });
+        }
+        
+        // Alusta sivun latauksen jälkeen
+        window.addEventListener('DOMContentLoaded', () => {{
+            updateTransporterAreas();
+            
+            // Kuuntele kenttien muutoksia
+            document.querySelectorAll('.area-input').forEach(input => {{
+                input.addEventListener('input', () => {{
+                    updateTransporterAreas();
+                }});
+            }});
+        }});
+
+        function sortTable(columnIndex) {{
+            const table = document.querySelector('table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Toggle sort direction if same column
+            if (sortColumn === columnIndex) {{
+                sortAscending = !sortAscending;
+            }} else {{
+                sortAscending = true;
+                sortColumn = columnIndex;
+            }}
+            
+            // Sort rows
+            rows.sort((a, b) => {{
+                let aVal = a.cells[columnIndex].textContent.trim();
+                let bVal = b.cells[columnIndex].textContent.trim();
+                
+                // Try to parse as number
+                const aNum = parseFloat(aVal);
+                const bNum = parseFloat(bVal);
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {{
+                    return sortAscending ? aNum - bNum : bNum - aNum;
+                }} else {{
+                    return sortAscending ? 
+                        aVal.localeCompare(bVal, 'fi') : 
+                        bVal.localeCompare(aVal, 'fi');
+                }}
+            }});
+            
+            // Re-append rows in sorted order
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Update row numbers
+            rows.forEach((row, index) => {{
+                row.cells[0].textContent = index + 1;
+            }});
+            
+            // Update header styling
+            const headers = table.querySelectorAll('th');
+            headers.forEach((header, index) => {{
+                header.classList.remove('sort-asc', 'sort-desc');
+                if (index === columnIndex) {{
+                    header.classList.add(sortAscending ? 'sort-asc' : 'sort-desc');
+                }}
+            }});
+        }}
+    </script>
+</head>
+<body>
+    <h1>Käsittelyohjelmien Erilaiset Siirtotehtävät</h1>
+    
+    <div class="summary">
+        <h2>Nostimien nykyiset ajoalueet</h2>
+        <div class="transporter-boxes">
+            <div class="transporter-box transporter-1">
+                <h3>Nostin 1</h3>
+            <div class="area-group">
+                <span>Linja 1 nosto:</span>
+                <input type="number" class="area-input" value="101" data-transporter="1" data-line="0" data-field="lift_min" />
+                <span>–</span>
+                <input type="number" class="area-input" value="111" data-transporter="1" data-line="0" data-field="lift_max" />
+            </div>
+            <div class="area-group">
+                <span>Linja 1 lasku:</span>
+                <input type="number" class="area-input" value="101" data-transporter="1" data-line="0" data-field="sink_min" />
+                <span>–</span>
+                <input type="number" class="area-input" value="110" data-transporter="1" data-line="0" data-field="sink_max" />
+            </div>
+            <div class="area-group">
+                <span>Linja 2 nosto:</span>
+                <input type="number" class="area-input" value="201" data-transporter="1" data-line="1" data-field="lift_min" />
+                <span>–</span>
+                <input type="number" class="area-input" value="205" data-transporter="1" data-line="1" data-field="lift_max" />
+            </div>
+            <div class="area-group">
+                <span>Linja 2 lasku:</span>
+                <input type="number" class="area-input" value="201" data-transporter="1" data-line="1" data-field="sink_min" />
+                <span>–</span>
+                <input type="number" class="area-input" value="212" data-transporter="1" data-line="1" data-field="sink_max" />
+            </div>
+            </div>
+            <div class="transporter-box transporter-2">
+                <h3>Nostin 2</h3>
+            <div class="area-group">
+                <span>Linja 1 nosto:</span>
+                <input type="number" class="area-input" value="106" data-transporter="2" data-line="0" data-field="lift_min" />
+                <span>–</span>
+                <input type="number" class="area-input" value="116" data-transporter="2" data-line="0" data-field="lift_max" />
+            </div>
+            <div class="area-group">
+                <span>Linja 1 lasku:</span>
+                <input type="number" class="area-input" value="106" data-transporter="2" data-line="0" data-field="sink_min" />
+                <span>–</span>
+                <input type="number" class="area-input" value="116" data-transporter="2" data-line="0" data-field="sink_max" />
+            </div>
+            <div class="area-group">
+                <span>Linja 2 nosto:</span>
+                <input type="number" class="area-input" value="204" data-transporter="2" data-line="1" data-field="lift_min" />
+                <span>–</span>
+                <input type="number" class="area-input" value="214" data-transporter="2" data-line="1" data-field="lift_max" />
+            </div>
+            <div class="area-group">
+                <span>Linja 2 lasku:</span>
+                <input type="number" class="area-input" value="204" data-transporter="2" data-line="1" data-field="sink_min" />
+                <span>–</span>
+                <input type="number" class="area-input" value="214" data-transporter="2" data-line="1" data-field="sink_max" />
+            </div>
+            </div>
+        </div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">#</th>
+                <th onclick="sortTable(1)">Lähtöasema</th>
+                <th onclick="sortTable(2)">Lähtö X (mm)</th>
+                <th onclick="sortTable(3)">Kohdeasema</th>
+                <th onclick="sortTable(4)">Kohde X (mm)</th>
+                <th onclick="sortTable(5)">Etäisyys (mm)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>202</td>
+                <td>16730</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>21240</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>203</td>
+                <td>18660</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>19310</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>112</td>
+                <td>32175</td>
+                <td>201</td>
+                <td>12943</td>
+                <td>19232</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>204</td>
+                <td>20594</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>17376</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>202</td>
+                <td>16730</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>17372</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td>107</td>
+                <td>22358</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>15612</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>107</td>
+                <td>22358</td>
+                <td>15612</td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td>205</td>
+                <td>22523</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>15447</td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td>112</td>
+                <td>32175</td>
+                <td>202</td>
+                <td>16730</td>
+                <td>15445</td>
+            </tr>
+            <tr>
+                <td>10</td>
+                <td>203</td>
+                <td>18660</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>15442</td>
+            </tr>
+            <tr>
+                <td>11</td>
+                <td>208</td>
+                <td>28312</td>
+                <td>201</td>
+                <td>12943</td>
+                <td>15369</td>
+            </tr>
+            <tr>
+                <td>12</td>
+                <td>109</td>
+                <td>26380</td>
+                <td>101</td>
+                <td>11464</td>
+                <td>14916</td>
+            </tr>
+            <tr>
+                <td>13</td>
+                <td>206</td>
+                <td>24453</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>13517</td>
+            </tr>
+            <tr>
+                <td>14</td>
+                <td>204</td>
+                <td>20594</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>13508</td>
+            </tr>
+            <tr>
+                <td>15</td>
+                <td>102</td>
+                <td>13110</td>
+                <td>109</td>
+                <td>26380</td>
+                <td>13270</td>
+            </tr>
+            <tr>
+                <td>16</td>
+                <td>107</td>
+                <td>22358</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>11744</td>
+            </tr>
+            <tr>
+                <td>17</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>107</td>
+                <td>22358</td>
+                <td>11744</td>
+            </tr>
+            <tr>
+                <td>18</td>
+                <td>112</td>
+                <td>32175</td>
+                <td>204</td>
+                <td>20594</td>
+                <td>11581</td>
+            </tr>
+            <tr>
+                <td>19</td>
+                <td>205</td>
+                <td>22523</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>11579</td>
+            </tr>
+            <tr>
+                <td>20</td>
+                <td>104</td>
+                <td>16415</td>
+                <td>109</td>
+                <td>26380</td>
+                <td>9965</td>
+            </tr>
+            <tr>
+                <td>21</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>208</td>
+                <td>28312</td>
+                <td>9658</td>
+            </tr>
+            <tr>
+                <td>22</td>
+                <td>208</td>
+                <td>28312</td>
+                <td>203</td>
+                <td>18660</td>
+                <td>9652</td>
+            </tr>
+            <tr>
+                <td>23</td>
+                <td>112</td>
+                <td>32175</td>
+                <td>205</td>
+                <td>22523</td>
+                <td>9652</td>
+            </tr>
+            <tr>
+                <td>24</td>
+                <td>206</td>
+                <td>24453</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>9649</td>
+            </tr>
+            <tr>
+                <td>25</td>
+                <td>204</td>
+                <td>20594</td>
+                <td>209</td>
+                <td>30242</td>
+                <td>9648</td>
+            </tr>
+            <tr>
+                <td>26</td>
+                <td>107</td>
+                <td>22358</td>
+                <td>209</td>
+                <td>30242</td>
+                <td>7884</td>
+            </tr>
+            <tr>
+                <td>27</td>
+                <td>112</td>
+                <td>32175</td>
+                <td>206</td>
+                <td>24453</td>
+                <td>7722</td>
+            </tr>
+            <tr>
+                <td>28</td>
+                <td>205</td>
+                <td>22523</td>
+                <td>209</td>
+                <td>30242</td>
+                <td>7719</td>
+            </tr>
+            <tr>
+                <td>29</td>
+                <td>208</td>
+                <td>28312</td>
+                <td>204</td>
+                <td>20594</td>
+                <td>7718</td>
+            </tr>
+            <tr>
+                <td>30</td>
+                <td>105</td>
+                <td>18337</td>
+                <td>101</td>
+                <td>11464</td>
+                <td>6873</td>
+            </tr>
+            <tr>
+                <td>31</td>
+                <td>210</td>
+                <td>32166</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>5804</td>
+            </tr>
+            <tr>
+                <td>32</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>112</td>
+                <td>32175</td>
+                <td>5795</td>
+            </tr>
+            <tr>
+                <td>33</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>208</td>
+                <td>28312</td>
+                <td>5790</td>
+            </tr>
+            <tr>
+                <td>34</td>
+                <td>208</td>
+                <td>28312</td>
+                <td>205</td>
+                <td>22523</td>
+                <td>5789</td>
+            </tr>
+            <tr>
+                <td>35</td>
+                <td>112</td>
+                <td>32175</td>
+                <td>213</td>
+                <td>37962</td>
+                <td>5787</td>
+            </tr>
+            <tr>
+                <td>36</td>
+                <td>102</td>
+                <td>13110</td>
+                <td>105</td>
+                <td>18337</td>
+                <td>5227</td>
+            </tr>
+            <tr>
+                <td>37</td>
+                <td>213</td>
+                <td>37962</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>3860</td>
+            </tr>
+            <tr>
+                <td>38</td>
+                <td>201</td>
+                <td>12943</td>
+                <td>104</td>
+                <td>16415</td>
+                <td>3472</td>
+            </tr>
+            <tr>
+                <td>39</td>
+                <td>210</td>
+                <td>32166</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>1936</td>
+            </tr>
+            <tr>
+                <td>40</td>
+                <td>209</td>
+                <td>30242</td>
+                <td>208</td>
+                <td>28312</td>
+                <td>1930</td>
+            </tr>
+            <tr>
+                <td>41</td>
+                <td>113</td>
+                <td>34102</td>
+                <td>112</td>
+                <td>32175</td>
+                <td>1927</td>
+            </tr>
+            <tr>
+                <td>42</td>
+                <td>104</td>
+                <td>16415</td>
+                <td>105</td>
+                <td>18337</td>
+                <td>1922</td>
+            </tr>
+            <tr>
+                <td>43</td>
+                <td>201</td>
+                <td>12943</td>
+                <td>102</td>
+                <td>13110</td>
+                <td>167</td>
+            </tr>
+            <tr>
+                <td>44</td>
+                <td>112</td>
+                <td>32175</td>
+                <td>210</td>
+                <td>32166</td>
+                <td>9</td>
+            </tr>
+            <tr>
+                <td>45</td>
+                <td>213</td>
+                <td>37962</td>
+                <td>115</td>
+                <td>37970</td>
+                <td>8</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

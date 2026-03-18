@@ -1,0 +1,70 @@
+{
+  "transporters": [
+    {
+      "id": 1,
+      "model": "2D",
+      "start_station": 201,
+      "task_areas": {
+        "line_100": {
+          "min_lift_station": 0,
+          "max_lift_station": 0,
+          "min_sink_station": 0,
+          "max_sink_station": 0
+        },
+        "line_200": {
+          "min_lift_station": 201,
+          "max_lift_station": 220,
+          "min_sink_station": 201,
+          "max_sink_station": 220
+        },
+        "line_300": {
+          "min_lift_station": 0,
+          "max_lift_station": 0,
+          "min_sink_station": 0,
+          "max_sink_station": 0
+        },
+        "line_400": {
+          "min_lift_station": 0,
+          "max_lift_station": 0,
+          "min_sink_station": 0,
+          "max_sink_station": 0
+        }
+      },
+      "physics_2D": {
+        "x_acceleration_time_s": 2.0,
+        "x_deceleration_time_s": 2.0,
+        "x_max_speed_mm_s": 300,
+        "z_total_distance_mm": 1700,
+        "z_slow_distance_dry_mm": 300,
+        "z_slow_distance_wet_mm": 800,
+        "z_slow_end_distance_mm": 50,
+        "z_slow_speed_mm_s": 50,
+        "z_fast_speed_mm_s": 200,
+        "drip_tray_delay_s": 5.0,
+        "avoid_distance_mm": 2000
+      },
+      "physics_3D": {
+        "x_acceleration_time_s": 0.0,
+        "x_deceleration_time_s": 0.0,
+        "x_max_speed_mm_s": 0.0,
+        "y_acceleration_time_s": 0.0,
+        "y_deceleration_time_s": 0.0,
+        "y_max_speed_mm_s": 0,
+        "z_total_distance_mm": 0,
+        "z_idle_height_mm": 0,
+        "z_speed_change_limit_dry_mm": 0,
+        "z_speed_change_limit_wet_mm": 0,
+        "z_slow_end_distance_mm": 0,
+        "z_slow_speed_mm_s": 0,
+        "z_fast_speed_mm_s": 0,
+        "drip_tray_delay_s": 0.0,
+        "catcher_delay_s": 0.0,
+        "avoid_distance_mm": 0
+      },
+      "x_min_drive_limit": 0,
+      "x_max_drive_limit": 0,
+      "y_min_drive_limit": 0,
+      "y_max_drive_limit": 0
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+{
+  "transporters": [
+    {
+      "id": 1,
+      "model": "3D",
+      "start_station": 100,
+      "physics_2D": {
+        "x_acceleration_time_s": 0.0,
+        "x_deceleration_time_s": 0.0,
+        "x_max_speed_mm_s": 0.0,
+        "z_total_distance_mm": 0,
+        "z_slow_distance_dry_mm": 0,
+        "z_slow_distance_wet_mm": 0,
+        "z_slow_end_distance_mm": 0,
+        "z_slow_speed_mm_s": 0,
+        "z_fast_speed_mm_s": 0,
+        "drip_tray_delay_s": 0.0,
+        "avoid_distance_mm": 0
+      },
+      "physics_3D": {
+        "x_acceleration_time_s": 2.0,
+        "x_deceleration_time_s": 2.0,
+        "x_max_speed_mm_s": 300,
+        "y_acceleration_time_s": 2.0,
+        "y_deceleration_time_s": 2.0,
+        "y_max_speed_mm_s": 300,
+        "z_total_distance_mm": 4000,
+        "z_idle_height_mm": 2000,
+        "z_speed_change_limit_dry_mm": 100,
+        "z_speed_change_limit_wet_mm": 1500,
+        "z_slow_end_distance_mm": 50,
+        "z_slow_speed_mm_s": 50,
+        "z_fast_speed_mm_s": 200,
+        "drip_tray_delay_s": 5.0,
+        "catcher_delay_s": 2.0,
+        "avoid_distance_mm": 2000
+      },
+      "task_areas": {
+        "line_100": {
+          "min_lift_station": 99,
+          "max_lift_station": 110,
+          "min_sink_station": 99,
+          "max_sink_station": 110
+        },
+        "line_200": {
+          "min_lift_station": 202,
+          "max_lift_station": 210,
+          "min_sink_station": 202,
+          "max_sink_station": 205
+        },
+        "line_300": {
+          "min_lift_station": 0,
+          "max_lift_station": 0,
+          "min_sink_station": 0,
+          "max_sink_station": 0
+        },
+        "line_400": {
+          "min_lift_station": 0,
+          "max_lift_station": 0,
+          "min_sink_station": 0,
+          "max_sink_station": 0
+        }
+      },
+      "x_min_drive_limit": 0,
+      "x_max_drive_limit": 0,
+      "y_min_drive_limit": 0,
+      "y_max_drive_limit": 0
+    },
+    {
+      "id": 2,
+      "model": "3D",
+      "start_station": 110,
+      "physics_2D": {
+        "x_acceleration_time_s": 0.0,
+        "x_deceleration_time_s": 0.0,
+        "x_max_speed_mm_s": 0.0,
+        "z_total_distance_mm": 0,
+        "z_slow_distance_dry_mm": 0,
+        "z_slow_distance_wet_mm": 0,
+        "z_slow_end_distance_mm": 0,
+        "z_slow_speed_mm_s": 0,
+        "z_fast_speed_mm_s": 0,
+        "drip_tray_delay_s": 0.0,
+        "avoid_distance_mm": 0
+      },
+      "physics_3D": {
+        "x_acceleration_time_s": 2.0,
+        "x_deceleration_time_s": 2.0,
+        "x_max_speed_mm_s": 300,
+        "y_acceleration_time_s": 2.0,
+        "y_deceleration_time_s": 2.0,
+        "y_max_speed_mm_s": 300,
+        "z_total_distance_mm": 4000,
+        "z_idle_height_mm": 2000,
+        "z_speed_change_limit_dry_mm": 100,
+        "z_speed_change_limit_wet_mm": 1500,
+        "z_slow_end_distance_mm": 50,
+        "z_slow_speed_mm_s": 50,
+        "z_fast_speed_mm_s": 200,
+        "drip_tray_delay_s": 5.0,
+        "catcher_delay_s": 2.0,
+        "avoid_distance_mm": 2000
+      },
+      "task_areas": {
+        "line_100": {
+          "min_lift_station": 103,
+          "max_lift_station": 110,
+          "min_sink_station": 103,
+          "max_sink_station": 110
+        },
+        "line_200": {
+          "min_lift_station": 204,
+          "max_lift_station": 211,
+          "min_sink_station": 204,
+          "max_sink_station": 211
+        },
+        "line_300": {
+          "min_lift_station": 0,
+          "max_lift_station": 0,
+          "min_sink_station": 0,
+          "max_sink_station": 0
+        },
+        "line_400": {
+          "min_lift_station": 0,
+          "max_lift_station": 0,
+          "min_sink_station": 0,
+          "max_sink_station": 0
+        }
+      },
+      "x_min_drive_limit": 0,
+      "x_max_drive_limit": 0,
+      "y_min_drive_limit": 0,
+      "y_max_drive_limit": 0
+    }
+  ],
+  "metadata": {
+    "description": "Transporter configuration including physics, task areas, and start positions",
+    "version": "2.0",
+    "fields": {
+      "id": "Unique transporter identifier",
+      "model": "Transporter model type ('2D' or '3D') - determines which physics section to use",
+      "start_station": "Station number where transporter begins operation",
+      "physics_2D": {
+        "description": "Physics parameters for 2D transporters (X and Z axes only)",
+        "x_acceleration_time_s": "Time in seconds to reach maximum speed in X direction",
+        "x_deceleration_time_s": "Time in seconds to decelerate from maximum speed to stop in X direction",
+        "x_max_speed_mm_s": "Maximum X-axis travel speed in millimeters per second",
+        "z_total_distance_mm": "Maximum Z-axis height in millimeters",
+        "z_slow_distance_dry_mm": "Initial slow distance for dry stations in mm",
+        "z_slow_distance_wet_mm": "Initial slow distance for wet stations in mm",
+        "z_slow_end_distance_mm": "Final slow approach/departure distance in mm",
+        "z_slow_speed_mm_s": "Slow vertical movement speed in mm/s",
+        "z_fast_speed_mm_s": "Fast vertical movement speed in mm/s",
+        "drip_tray_delay_s": "Time to open/close drip tray in seconds",
+        "avoid_distance_mm": "Minimum collision avoidance distance in mm"
+      },
+      "physics_3D": {
+        "description": "Physics parameters for 3D transporters (X, Y, and Z axes)",
+        "x_acceleration_time_s": "Time in seconds to reach maximum speed in X direction",
+        "x_deceleration_time_s": "Time in seconds to decelerate from maximum speed to stop in X direction",
+        "x_max_speed_mm_s": "Maximum X-axis travel speed in millimeters per second",
+        "y_acceleration_time_s": "Time in seconds to reach maximum speed in Y direction",
+        "y_deceleration_time_s": "Time in seconds to decelerate from maximum speed to stop in Y direction",
+        "y_max_speed_mm_s": "Maximum Y-axis travel speed in millimeters per second",
+        "z_total_distance_mm": "Maximum Z-axis height (physical limit) in millimeters",
+        "z_idle_height_mm": "Height for empty transporter movement/transfer in millimeters",
+        "z_speed_change_limit_dry_mm": "Height where dry stations switch from slow to fast speed in mm",
+        "z_speed_change_limit_wet_mm": "Height where wet stations switch from slow to fast speed in mm",
+        "z_slow_end_distance_mm": "Final slow approach/departure distance in mm",
+        "z_slow_speed_mm_s": "Slow vertical movement speed in mm/s",
+        "z_fast_speed_mm_s": "Fast vertical movement speed in mm/s",
+        "drip_tray_delay_s": "Time to open/close drip tray in seconds",
+        "catcher_delay_s": "Time to engage/release catchers in seconds",
+        "avoid_distance_mm": "Minimum collision avoidance distance in mm"
+      },
+      "task_areas": {
+        "description": "Defines operational boundaries for each production line",
+        "line_xxx": {
+          "min_lift_station": "Lowest station number where transporter can lift loads",
+          "max_lift_station": "Highest station number where transporter can lift loads",
+          "min_sink_station": "Lowest station number where transporter can lower loads",
+          "max_sink_station": "Highest station number where transporter can lower loads"
+        },
+        "notes": [
+          "2D transporters typically serve only one line (one line_xxx with non-zero values)",
+          "3D transporters can serve multiple lines (multiple line_xxx with non-zero values)",
+          "Station numbers with value 0 indicate the line is not operational or not assigned to this transporter"
+        ]
+      }
+    },
+    "units": {
+      "time": "seconds (s)",
+      "speed": "millimeters per second (mm/s)",
+      "distance": "millimeters (mm)"
+    },
+    "notes": [
+      "Station numbers with value 0 indicate the line is not operational or not assigned to this transporter",
+      "Task areas define operational zones - transporters cannot operate outside their assigned min/max ranges",
+      "Physics parameters are critical for accurate movement time calculations in simulation",
+      "2D transporters serve a single line, 3D transporters can serve multiple lines"
+    ]
+  }
+}

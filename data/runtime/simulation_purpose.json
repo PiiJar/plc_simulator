@@ -1,0 +1,37 @@
+{
+  "customer": "Nammo Lapua Oy",
+  "plant": {
+    "name": "Factory X Zinc Phosphating",
+    "country": "Finland",
+    "town": "Lapua"
+  },
+  "purpose": "QUOTATION",
+  "_purpose_options": [
+    "TEST",
+    "QUOTATION",
+    "AGREEMENT",
+    "ACTUAL"
+  ],
+  "treatment_program_batches": [
+    {
+      "treatment_program": 1,
+      "batches": 10,
+      "start_station": 101,
+      "end_station": 101
+    }
+  ],
+  "simulation_duration": 1,
+  "available_containers": 50,
+  "_metadata": {
+    "description": "Simulation configuration for customer and treatment programs",
+    "fields": {
+      "customer": "Customer name",
+      "plant": "Plant location and description",
+      "purpose": "Simulation purpose: TEST (testing/development), QUOTATION (customer quote), AGREEMENT (agreed configuration), ACTUAL (real production data)",
+      "treatment_program_batches": "List of treatment programs with batch counts",
+      "simulation_duration": "Simulation time window in hours",
+      "available_containers": "Number of available containers for batches"
+    }
+  },
+  "updated_at": "2026-03-16T06:09:50.594Z"
+}

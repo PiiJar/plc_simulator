@@ -1,0 +1,69 @@
+{
+  "customer": "Lufthansa",
+  "plant": {
+    "name": "CCL Chemical Cleaning Line",
+    "country": "Portugal",
+    "town": "Lisbon"
+  },
+  "purpose": "QUOTATION",
+  "_purpose_options": ["TEST", "QUOTATION", "AGREEMENT", "ACTUAL"],
+  "treatment_program_batches": [
+    {
+      "treatment_program": 120,
+      "batches": 3
+    },
+    {
+      "treatment_program": 160,
+      "batches": 8
+    },
+    {
+      "treatment_program": 300,
+      "batches": 2
+    },
+    {
+      "treatment_program": 320,
+      "batches": 5
+    },
+    {
+      "treatment_program": 323,
+      "batches": 2
+    },
+    {
+      "treatment_program": 350,
+      "batches": 1
+    },
+    {
+      "treatment_program": 353,
+      "batches": 1
+    },
+    {
+      "treatment_program": 370,
+      "batches": 1
+    },
+    {
+      "treatment_program": 383,
+      "batches": 1
+    },
+    {
+      "treatment_program": 390,
+      "batches": 1
+    },
+    {
+      "treatment_program": 393,
+      "batches": 1
+    }
+  ],
+  "simulation_duration": 16,
+  "available_containers": 20,
+  "_metadata": {
+    "description": "Simulation configuration for customer and treatment programs",
+    "fields": {
+      "customer": "Customer name",
+      "plant": "Plant location and description",
+      "purpose": "Simulation purpose: TEST (testing/development), QUOTATION (customer quote), AGREEMENT (agreed configuration), ACTUAL (real production data)",
+      "treatment_program_batches": "List of treatment programs with batch counts",
+      "simulation_duration": "Simulation time window in hours",
+      "available_containers": "Number of available containers for batches"
+    }
+  }
+}

@@ -44,4 +44,5 @@ Current migration status:
 - gateway sources migrated to `services/gateway/`
 - gateway currently expects PostgreSQL event storage
 - UI sources migrated to `services/ui/`
-- data and infrastructure migration pending
+- active data migrated to `data/customers/`, `data/plant_templates/`, and `data/runtime/`
+- database assets, infrastructure, and final documentation still pending

@@ -1,0 +1,83 @@
+{
+  "_description": "Unit Target based transport tasks (non-treatment program related). Defines per target and transporter which stations a Unit can be moved to. Each transporter has primary stations and fallback_stations (used when primary is occupied).",
+  "targets": {
+    "to_loading": {
+      "description": "Move Unit to loading station (return empty Unit for loading)",
+      "transporters": {
+        "1": {
+          "stations": [101],
+          "fallback_stations": [102, 103]
+        },
+        "2": {
+          "stations": [114],
+          "fallback_stations": []
+        }
+      }
+    },
+    "to_unloading": {
+      "description": "Move Unit to unloading station (unload finished batch)",
+      "transporters": {
+        "1": {
+          "stations": [101],
+          "fallback_stations": [102, 103]
+        },
+        "2": {
+          "stations": [114],
+          "fallback_stations": []
+        }
+      }
+    },
+    "to_empty_buffer": {
+      "description": "Move empty Unit to buffer station (store while waiting)",
+      "transporters": {
+        "1": {
+          "stations": [101, 102, 103, 104, 105, 106],
+          "fallback_stations": [114]
+        },
+        "2": {
+          "stations": [114],
+          "fallback_stations": []
+        }
+      }
+    },
+    "to_loaded_buffer": {
+      "description": "Move loaded Unit to buffer station (wait for processing)",
+      "transporters": {
+        "1": {
+          "stations": [114],
+          "fallback_stations": [102, 103]
+        },
+        "2": {
+          "stations": [],
+          "fallback_stations": []
+        }
+      }
+    },
+    "to_processed_buffer": {
+      "description": "Move processed Unit to buffer station (wait for unloading)",
+      "transporters": {
+        "1": {
+          "stations": [101],
+          "fallback_stations": [102, 103]
+        },
+        "2": {
+          "stations": [114],
+          "fallback_stations": []
+        }
+      }
+    },
+    "to_avoid": {
+      "description": "Move empty Unit away from a process station where a batch is incoming (avoid collision)",
+      "transporters": {
+        "1": {
+          "stations": [114],
+          "fallback_stations": [102, 103]
+        },
+        "2": {
+          "stations": [119, 120],
+          "fallback_stations": []
+        }
+      }
+    }
+  }
+}

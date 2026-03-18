@@ -1,0 +1,155 @@
+{
+  "tanks": [
+    {
+      "tank_id": 101,
+      "name": "Loading",
+      "x_position": 1000,
+      "y_position": 0,
+      "type": 0,
+      "process": "LOADING",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 102,
+      "name": "Degrease",
+      "x_position": 2000,
+      "y_position": 0,
+      "type": 20,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 103,
+      "name": "Rinse 1",
+      "x_position": 3000,
+      "y_position": 0,
+      "type": 10,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 104,
+      "name": "Acid",
+      "x_position": 4000,
+      "y_position": 0,
+      "type": 10,
+      "process": "ACID",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 105,
+      "name": "Rinse 2",
+      "x_position": 5000,
+      "y_position": 0,
+      "type": 10,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 106,
+      "name": "Zinc Plating",
+      "x_position": 6000,
+      "y_position": 0,
+      "type": 10,
+      "process": "ZINC",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 107,
+      "name": "Rinse 3",
+      "x_position": 7000,
+      "y_position": 0,
+      "type": 10,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 108,
+      "name": "Passivation",
+      "x_position": 8000,
+      "y_position": 0,
+      "type": 20,
+      "process": "PASSIVATION",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 109,
+      "name": "DI Rinse",
+      "x_position": 9000,
+      "y_position": 0,
+      "type": 10,
+      "process": "RINSE_DI",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 110,
+      "name": "Unloading",
+      "x_position": 10000,
+      "y_position": 0,
+      "type": 0,
+      "process": "LOADING",
+      "dimensions": {
+        "length_mm": 650,
+        "width_mm": 1300,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    }
+  ],
+  "metadata": {
+    "version": "2.0",
+    "created": "2026-02-02",
+    "description": "Tank configuration for Galvatek 1_One_Line_One_2D_Transporter",
+    "notes": [
+      "tank_id matches station.tank reference",
+      "type = physical structure (0=platform, 10=plastic PP, 20=stainless steel, etc.)",
+      "process = what the tank is used for (RINSE, DEGREASE, PLATING, ACID, etc.)",
+      "Dimensions: 650x1300mm"
+    ]
+  }
+}

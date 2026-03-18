@@ -1,0 +1,26 @@
+{
+  "customer": "--",
+  "plant": {
+    "name": "--",
+    "country": "--",
+    "town": "--"
+  },
+  "purpose": "TEST",
+  "_purpose_options": ["TEST", "QUOTATION", "AGREEMENT", "ACTUAL"],
+  "treatment_program_batches": [
+    {"treatment_program": 1, "batches": 1}
+  ],
+  "simulation_duration": 8,
+  "available_containers": 20,
+  "_metadata": {
+    "description": "Simulation configuration for customer and treatment programs",
+    "fields": {
+      "customer": "Customer name",
+      "plant": "Plant location and description",
+      "purpose": "Simulation purpose: TEST (testing/development), QUOTATION (customer quote), AGREEMENT (agreed configuration), ACTUAL (real production data)",
+      "treatment_program_batches": "List of treatment programs with batch counts",
+      "simulation_duration": "Simulation time window in hours",
+      "available_containers": "Number of available containers for batches"
+    }
+  }
+}

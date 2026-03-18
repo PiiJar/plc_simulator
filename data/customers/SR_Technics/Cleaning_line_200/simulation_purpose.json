@@ -1,0 +1,27 @@
+{
+  "customer": "SR Technics",
+  "plant": {
+    "name": "Cleaning line 200",
+    "country": "Ireland",
+    "town": "Cork"
+  },
+  "purpose": "QUOTATION",
+  "_purpose_options": ["TEST", "QUOTATION", "AGREEMENT", "ACTUAL"],
+  "treatment_program_batches": [
+    {"treatment_program": 2027, "batches": 16},
+    {"treatment_program": 3001, "batches": 8}
+  ],
+  "simulation_duration": 8,
+  "available_containers": 20,
+  "_metadata": {
+    "description": "Simulation configuration for customer and treatment programs",
+    "fields": {
+      "customer": "Customer name",
+      "plant": "Plant location and description",
+      "purpose": "Simulation purpose: TEST (testing/development), QUOTATION (customer quote), AGREEMENT (agreed configuration), ACTUAL (real production data)",
+      "treatment_program_batches": "List of treatment programs with batch counts",
+      "simulation_duration": "Simulation time window in hours",
+      "available_containers": "Number of available containers for batches"
+    }
+  }
+}

@@ -1,0 +1,424 @@
+{
+  "tanks": [
+    {
+      "tank_id": 101,
+      "name": "Load/Unload",
+      "x_position": 11464,
+      "y_position": 1799,
+      "type": 0,
+      "process": "LOADING",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 102,
+      "name": "Storage",
+      "x_position": 13110,
+      "y_position": 1799,
+      "type": 1,
+      "process": "STORAGE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 103,
+      "name": "Storage",
+      "x_position": 14766,
+      "y_position": 1799,
+      "type": 1,
+      "process": "STORAGE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 104,
+      "name": "Storage",
+      "x_position": 16415,
+      "y_position": 1799,
+      "type": 1,
+      "process": "STORAGE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 105,
+      "name": "Ardrox 185L",
+      "x_position": 18337,
+      "y_position": 1790,
+      "type": 10,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 106,
+      "name": "Ardrox 1873A",
+      "x_position": 20272,
+      "y_position": 1790,
+      "type": 30,
+      "process": "DRYER",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 107,
+      "name": "Dryer",
+      "x_position": 22358,
+      "y_position": 1790,
+      "type": 11,
+      "process": "WATER_DI",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 108,
+      "name": "DI-Water",
+      "x_position": 24446,
+      "y_position": 1801,
+      "type": 10,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 109,
+      "name": "Ardrox 6376",
+      "x_position": 26380,
+      "y_position": 1800,
+      "type": 1,
+      "process": "SPARE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 110,
+      "name": "Hot Rinse",
+      "x_position": 28311,
+      "y_position": 1795,
+      "type": 10,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 111,
+      "name": "Cold Rinse",
+      "x_position": 30254,
+      "y_position": 1808,
+      "type": 11,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 112,
+      "name": "Spray Rinse",
+      "x_position": 32175,
+      "y_position": 1808,
+      "type": 10,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 113,
+      "name": "Ardrox 1435",
+      "x_position": 34102,
+      "y_position": 1795,
+      "type": 11,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 114,
+      "name": "Spare",
+      "x_position": 36040,
+      "y_position": 1795,
+      "type": 11,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 115,
+      "name": "test",
+      "x_position": 37970,
+      "y_position": 1788,
+      "type": 1,
+      "process": "SPARE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 116,
+      "name": "Spare",
+      "x_position": 39900,
+      "y_position": 1788,
+      "type": 1,
+      "process": "TEST",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 201,
+      "name": "Spray booth",
+      "x_position": 12943,
+      "y_position": 5620,
+      "type": 31,
+      "process": "SPRAY",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 202,
+      "name": "Ardrox Light Duty Alkaline",
+      "x_position": 16730,
+      "y_position": 5620,
+      "type": 11,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 203,
+      "name": "Ardrox 185L",
+      "x_position": 18660,
+      "y_position": 5628,
+      "type": 1,
+      "process": "SPARE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 204,
+      "name": "Ardrox 1435",
+      "x_position": 20594,
+      "y_position": 5621,
+      "type": 10,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 205,
+      "name": "Spare",
+      "x_position": 22523,
+      "y_position": 5621,
+      "type": 10,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 206,
+      "name": "Adrox 1218 Phosphoric Acid",
+      "x_position": 24453,
+      "y_position": 5628,
+      "type": 10,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 207,
+      "name": "Hot Rinse",
+      "x_position": 26380,
+      "y_position": 5621,
+      "type": 1,
+      "process": "SPARE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 208,
+      "name": "Cold Rinse",
+      "x_position": 28312,
+      "y_position": 5632,
+      "type": 12,
+      "process": "ACID",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 209,
+      "name": "Spray Rinse",
+      "x_position": 30242,
+      "y_position": 5619,
+      "type": 10,
+      "process": "DEGREASE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 210,
+      "name": "Ardrox 1873A",
+      "x_position": 32166,
+      "y_position": 5619,
+      "type": 1,
+      "process": "SPARE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 211,
+      "name": "Spare",
+      "x_position": 34102,
+      "y_position": 5627,
+      "type": 11,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 212,
+      "name": "Ultrasonic Cleaner",
+      "x_position": 36029,
+      "y_position": 5627,
+      "type": 11,
+      "process": "RINSE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 213,
+      "name": "Spare",
+      "x_position": 37962,
+      "y_position": 5627,
+      "type": 10,
+      "process": "ULTRASONIC",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    },
+    {
+      "tank_id": 214,
+      "name": "Spare",
+      "x_position": 39895,
+      "y_position": 5627,
+      "type": 1,
+      "process": "SPARE",
+      "dimensions": {
+        "length_mm": 1250,
+        "width_mm": 2200,
+        "depth_mm": 1000,
+        "wall_thickness_mm": 6
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "layout": {
+    "xDirection": "left-to-right",
+    "yDirection": "top-to-bottom",
+    "margins": {
+      "singleLine": {
+        "top": 200,
+        "right": 60,
+        "bottom": 200,
+        "left": 60
+      },
+      "multiLine": {
+        "top": 40,
+        "right": 60,
+        "bottom": 40,
+        "left": 60
+      }
+    },
+    "grid": {
+      "show": false,
+      "spacing": 100,
+      "color": "#e0e0e0"
+    },
+    "stations": {
+      "showShadow": true,
+      "showLabels": true,
+      "labelPosition": "bottom-right",
+      "widthMM": 500,
+      "heightMM": 1200
+    },
+    "transporters": {
+      "heightMM": 1400,
+      "widthScaleFactor": 0.8
+    },
+    "cross-transporters": {
+      "showConnections": true,
+      "lineWidth": 2,
+      "lineColor": "#666666",
+      "lineStyle": "dashed"
+    },
+    "colors": {
+      "background": "#ffffff",
+      "type0": "#e0e0e0",
+      "type1": "#e3f2fd",
+      "type10": "#e0e0e0",
+      "type11": "#e3f2fd",
+      "border": "#000000",
+      "text": "#555555"
+    }
+  }
+}

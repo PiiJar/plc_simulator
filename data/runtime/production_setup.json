@@ -1,0 +1,9 @@
+{
+  "start_station": 101,
+  "finish_station": 101,
+  "loading_time_s": 60,
+  "unloading_time_s": 60,
+  "duration_hours": 1,
+  "plant_setup": "Nammo Lapua Oy/Factory X Zinc Phosphating",
+  "updated_at": "2026-03-16T06:09:50.583Z"
+}

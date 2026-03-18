@@ -1,0 +1,10 @@
+{
+  "units": [
+    { "unit_id": 1, "location": 101, "batch_id": null, "status": "used", "state": "empty", "target": "to_none" },
+    { "unit_id": 2, "location": 102, "batch_id": null, "status": "used", "state": "empty", "target": "to_none" },
+    { "unit_id": 3, "location": 103, "batch_id": null, "status": "used", "state": "empty", "target": "to_none" },
+    { "unit_id": 4, "location": 104, "batch_id": null, "status": "used", "state": "empty", "target": "to_none" },
+    { "unit_id": 5, "location": 105, "batch_id": null, "status": "used", "state": "empty", "target": "to_none" },
+    { "unit_id": 6, "location": 106, "batch_id": null, "status": "used", "state": "empty", "target": "to_none" }
+  ]
+}
