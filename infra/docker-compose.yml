@@ -2,7 +2,8 @@ name: plc_simulator
 
 services:
   codesys:
-    image: joyja/codesys-control:version-4.12.00
+    build:
+      context: ../services/codesys
     container_name: codesys
     network_mode: host
     restart: unless-stopped
@@ -54,7 +55,8 @@ services:
     restart: unless-stopped
 
   database:
-    image: postgres:16-alpine
+    build:
+      context: ../services/db
     container_name: database
     environment:
       POSTGRES_USER: plc
