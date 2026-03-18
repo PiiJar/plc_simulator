@@ -19,7 +19,7 @@ const {
   DataType,
   StatusCodes,
   TimestampsToReturn,
-} = require('node-opcua');
+, UserTokenType} = require('node-opcua');
 
 const http = require('http');
 
