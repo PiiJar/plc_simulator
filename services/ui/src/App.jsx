@@ -24,8 +24,31 @@ import { api, request } from './api/client';
 // Preload palette on module load
 loadPalette();
 export default function App() {
-  const [config, setConfig] = useState(null);
-  const [loadError, setLoadError] = useState(null);
+
+  const {
+    config, setConfig,
+    stations, setStations,
+    tanks, setTanks,
+    transporters, setTransporters,
+    batches, setBatches,
+    units, setUnits,
+    customers, setCustomers,
+    selectedCustomer, setSelectedCustomer,
+    selectedPlant, setSelectedPlant,
+    customerPlants, setCustomerPlants,
+    plantStatus, setPlantStatus
+  } = usePlant();
+
+  const {
+    showBatches, setShowBatches,
+    showTasks, setShowTasks,
+    showProduction, setShowProduction,
+    showCustomer, setShowCustomer,
+    showConfig, setShowConfig,
+    showCalibration, setShowCalibration,
+    debugTransporterId, setDebugTransporterId
+  } = useUiPanels();
+    const [loadError, setLoadError] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -37,10 +60,7 @@ export default function App() {
     completedCount: 0,
     totalBatches: 0
   });
-  const [showBatches, setShowBatches] = useState(false);
-  const [showTasks, setShowTasks] = useState(false);
-  const [showProduction, setShowProduction] = useState(false);
-  const [productionPrograms, setProductionPrograms] = useState([]);
+        const [productionPrograms, setProductionPrograms] = useState([]);
   const [productionProgramDetails, setProductionProgramDetails] = useState([]);
   const [productionRows, setProductionRows] = useState([]);
   const [productionSaving, setProductionSaving] = useState(false);
@@ -54,34 +74,22 @@ export default function App() {
   });
   const [productionSetupSaving, setProductionSetupSaving] = useState(false);
   const [taskInputs, setTaskInputs] = useState({}); // { [transporterId]: { lift: '', sink: '' } }
-  const [transporters, setTransporters] = useState([]);
-  const [stations, setStations] = useState([]);
-  const [tanks, setTanks] = useState([]);
-  const [batches, setBatches] = useState([]);
-  const [units, setUnits] = useState([]);
-  const [transporterTasks, setTransporterTasks] = useState([]);
+            const [transporterTasks, setTransporterTasks] = useState([]);
   const [manualTasks, setManualTasks] = useState([]); // Käsin annetut tehtävät (pending queue)
   const [avoidStatuses, setAvoidStatuses] = useState({}); // { [stationNumber]: 0|1|2 }
   const [transporterStates, setTransporterStates] = useState([]); // backend snapshots
   const [displayTransporterStates, setDisplayTransporterStates] = useState([]); // interpolated for smooth UI
-  const [debugTransporterId, setDebugTransporterId] = useState(null);
-  const [editingBatchId, setEditingBatchId] = useState(null);
+    const [editingBatchId, setEditingBatchId] = useState(null);
   const [plantSetups, setPlantSetups] = useState([]);
   const [selectedPlantSetup, setSelectedPlantSetup] = useState('');
   // Customer management
-  const [showCustomer, setShowCustomer] = useState(false);
-  const [customers, setCustomers] = useState([]);
-  const [selectedCustomer, setSelectedCustomer] = useState('');
-  const [selectedPlant, setSelectedPlant] = useState('');
-  const [customerPlants, setCustomerPlants] = useState([]);
-  const [customerError, setCustomerError] = useState('');
+            const [customerError, setCustomerError] = useState('');
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [creatingPlant, setCreatingPlant] = useState(false);
   const [newPlantName, setNewPlantName] = useState('');
   // Plant status and template
-  const [plantStatus, setPlantStatus] = useState(null);
-  const [selectedTemplate, setSelectedTemplate] = useState('');
+    const [selectedTemplate, setSelectedTemplate] = useState('');
   const [copyingTemplate, setCopyingTemplate] = useState(false);
   // Simulation purpose form
   const [simPurpose, setSimPurpose] = useState(null);
@@ -103,9 +111,7 @@ export default function App() {
   const [productionStartTime, setProductionStartTime] = useState(null);
   const [productionDuration, setProductionDuration] = useState(0);
   // Layout config editor
-  const [showConfig, setShowConfig] = useState(false);
-  const [showCalibration, setShowCalibration] = useState(false);
-  const [configForm, setConfigForm] = useState(null);
+      const [configForm, setConfigForm] = useState(null);
   const [configSaving, setConfigSaving] = useState(false);
   const [configError, setConfigError] = useState('');
   const emptyBatchForm = {
