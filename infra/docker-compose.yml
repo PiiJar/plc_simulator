@@ -1,7 +1,9 @@
+name: plc_simulator
+
 services:
   codesys:
     image: joyja/codesys-control:version-4.12.00
-    container_name: codesys_plc
+    container_name: codesys
     network_mode: host
     restart: unless-stopped
     volumes:
@@ -11,14 +13,14 @@ services:
   gateway:
     build:
       context: ../services/gateway
-    container_name: codesys_gateway
+    container_name: gateway
     ports:
       - "3001:3001"
     environment:
       API_PORT: "3001"
       POLL_MS: "100"
       OPCUA_ENDPOINT: opc.tcp://host.docker.internal:4840
-      DB_HOST: plc_db
+      DB_HOST: database
       DB_PORT: "5432"
       DB_USER: plc
       DB_PASS: plc_pass
@@ -26,7 +28,7 @@ services:
       CUSTOMERS_ROOT: /data/customers
       PLANT_TEMPLATES_ROOT: /data/plant_templates
       RUNTIME_ROOT: /data/runtime
-      PLC_CONTAINER: codesys_plc
+      PLC_CONTAINER: codesys
       DOCKER_SOCKET: /var/run/docker.sock
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -38,22 +40,22 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - codesys
-      - db
+      - database
     restart: unless-stopped
 
   ui:
     build:
       context: ../services/ui
-    container_name: plc_ui
+    container_name: ui
     ports:
       - "5173:80"
     depends_on:
       - gateway
     restart: unless-stopped
 
-  db:
+  database:
     image: postgres:16-alpine
-    container_name: plc_db
+    container_name: database
     environment:
       POSTGRES_USER: plc
       POSTGRES_PASSWORD: plc_pass
@@ -61,10 +63,10 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - plc_db_data:/var/lib/postgresql/data
+      - database_data:/var/lib/postgresql/data
       - ../services/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     restart: unless-stopped
 
 volumes:
-  plc_db_data:
+  database_data:
   codesys_data:
