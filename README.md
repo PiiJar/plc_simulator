@@ -46,4 +46,5 @@ Current migration status:
 - UI sources migrated to `services/ui/`
 - active data migrated to `data/customers/`, `data/plant_templates/`, and `data/runtime/`
 - PostgreSQL init schema migrated to `services/db/init.sql`
-- infrastructure and final documentation still pending
+- clean stack compose added at `infra/docker-compose.yml`
+- final documentation still pending
