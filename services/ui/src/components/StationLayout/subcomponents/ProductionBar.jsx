@@ -125,3 +125,4 @@ function ProductionBar({ width, avgCycleSec = 0, productionStats = {} }) {
 }
 
 export default ProductionBar;
+

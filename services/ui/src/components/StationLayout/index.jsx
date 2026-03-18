@@ -297,4 +297,4 @@ function StationLayout({
   );
 }
 
-export default StationLayout;
+export default React.memo(StationLayout);
