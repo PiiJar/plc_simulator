@@ -11,4 +11,6 @@ COPY index.js plc_adapter.js opcua_adapter.js opcua_nodes.js \
 
 EXPOSE 3001
 
-CMD ["node", "index.js"]
+# CODESYS OPC UA uses RSA PKCS#1 v1.5 which Node >= 20 rejects by default
+# --security-revert must be a direct CLI arg (not allowed in NODE_OPTIONS)
+CMD ["node", "--security-revert=CVE-2023-46809", "index.js"]

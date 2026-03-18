@@ -5,6 +5,7 @@ services:
     network_mode: host
     restart: unless-stopped
     volumes:
+      - ../services/codesys/CODESYSControl_User.cfg:/etc/codesyscontrol/CODESYSControl_User.cfg:ro
       - codesys_data:/var/opt/codesys
 
   gateway:
