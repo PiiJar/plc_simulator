@@ -43,4 +43,5 @@ Current migration status:
 - CODESYS core sources migrated to `services/codesys/`
 - gateway sources migrated to `services/gateway/`
 - gateway currently expects PostgreSQL event storage
-- UI and data migration pending
+- UI sources migrated to `services/ui/`
+- data and infrastructure migration pending

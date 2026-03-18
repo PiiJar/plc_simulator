@@ -1,0 +1,232 @@
+{
+  "materials": {
+    "PLASTIC_PP": {
+      "base": "#d4b896",
+      "dark": "#b89870",
+      "light": "#e8d4b8",
+      "border": "#8b7355",
+      "description": "Polypropylene - light brown/tan"
+    },
+    "PLASTIC_PVC": {
+      "base": "#d4d4d4",
+      "dark": "#b0b0b0",
+      "light": "#ececec",
+      "border": "#888888",
+      "description": "PVC - light gray"
+    },
+    "PLASTIC_HDPE": {
+      "base": "#2d5a8a",
+      "dark": "#1e3d5c",
+      "light": "#4a7ab0",
+      "border": "#1a3050",
+      "description": "HDPE - blue"
+    },
+    "STEEL": {
+      "base": "#a0a8b0",
+      "dark": "#707880",
+      "light": "#c8d0d8",
+      "border": "#333333",
+      "description": "Steel - neutral gray"
+    },
+    "STEEL_STAINLESS": {
+      "base": "#c0c8d0",
+      "dark": "#8a9298",
+      "light": "#e8ecf0",
+      "border": "#333333",
+      "description": "Stainless steel - blue-gray"
+    },
+    "STEEL_CARBON": {
+      "base": "#606060",
+      "dark": "#404040",
+      "light": "#808080",
+      "border": "#303030",
+      "description": "Carbon steel - dark gray"
+    },
+    "STEEL_GALVANIZED": {
+      "base": "#b8c0c8",
+      "dark": "#909aa0",
+      "light": "#d8e0e8",
+      "border": "#707880",
+      "description": "Galvanized - silvery"
+    },
+    "RUBBER": {
+      "base": "#2a2a2a",
+      "dark": "#1a1a1a",
+      "light": "#404040",
+      "border": "#101010",
+      "description": "Black rubber"
+    },
+    "CONCRETE": {
+      "base": "#a0a090",
+      "dark": "#808070",
+      "light": "#c0c0b0",
+      "border": "#606050",
+      "description": "Concrete gray"
+    }
+  },
+  
+  "liquids": {
+    "NONE": {
+      "fill": "transparent",
+      "surface": "transparent",
+      "opacity": 0
+    },
+    "WATER": {
+      "fill": "#b3d9ff",
+      "surface": "#80c0ff",
+      "opacity": 0.6,
+      "description": "Clear water - light blue"
+    },
+    "WATER_DI": {
+      "fill": "#c8e8ff",
+      "surface": "#a0d8ff",
+      "opacity": 0.5,
+      "description": "DI Water - very light blue"
+    },
+    "ACID": {
+      "fill": "#ffe0b0",
+      "surface": "#ffd080",
+      "opacity": 0.7,
+      "description": "Acid - yellow/orange tint"
+    },
+    "ALKALINE": {
+      "fill": "#d0e8d0",
+      "surface": "#b0d8b0",
+      "opacity": 0.6,
+      "description": "Alkaline - greenish"
+    },
+    "OIL": {
+      "fill": "#e8d8a0",
+      "surface": "#d0c080",
+      "opacity": 0.8,
+      "description": "Oil - brownish yellow"
+    },
+    "SOLVENT": {
+      "fill": "#e0d0f0",
+      "surface": "#d0c0e0",
+      "opacity": 0.5,
+      "description": "Solvent - slight purple"
+    }
+  },
+  
+  "tankTypes": {
+    "0": {
+      "name": "Loading/Unloading",
+      "material": null,
+      "liquid": "NONE",
+      "style": "platform",
+      "colors": {
+        "base": "#f0f0f0",
+        "dark": "#d0d0d0",
+        "light": "#ffffff",
+        "border": "#a0a0a0"
+      }
+    },
+    "1": {
+      "name": "Storage",
+      "material": null,
+      "liquid": "NONE",
+      "style": "storage",
+      "colors": {
+        "base": "#e8e8e8",
+        "dark": "#c8c8c8",
+        "light": "#f8f8f8",
+        "border": "#909090"
+      }
+    },
+    "10": {
+      "name": "Plastic Tank (Empty)",
+      "material": "PLASTIC_PP",
+      "liquid": "NONE",
+      "style": "tank"
+    },
+    "11": {
+      "name": "Plastic Tank (Water)",
+      "material": "PLASTIC_PP",
+      "liquid": "WATER",
+      "style": "tank"
+    },
+    "12": {
+      "name": "Plastic Tank (Acid)",
+      "material": "PLASTIC_PP",
+      "liquid": "ACID",
+      "style": "tank"
+    },
+    "20": {
+      "name": "Steel Tank (Empty)",
+      "material": "STEEL_STAINLESS",
+      "liquid": "NONE",
+      "style": "tank"
+    },
+    "21": {
+      "name": "Steel Tank (Water)",
+      "material": "STEEL_STAINLESS",
+      "liquid": "WATER",
+      "style": "tank"
+    },
+    "22": {
+      "name": "Steel Tank (Empty)",
+      "material": "STEEL",
+      "liquid": "NONE",
+      "style": "tank"
+    },
+    "23": {
+      "name": "Steel Tank (Full)",
+      "material": "STEEL",
+      "liquid": "WATER",
+      "style": "tank"
+    },
+    "30": {
+      "name": "Dryer",
+      "material": "STEEL_STAINLESS",
+      "liquid": "NONE",
+      "style": "equipment",
+      "colors": {
+        "base": "#d0d8e0",
+        "dark": "#a0a8b0",
+        "light": "#e8f0f8",
+        "border": "#707880"
+      }
+    },
+    "31": {
+      "name": "Spray Booth",
+      "material": "STEEL_STAINLESS",
+      "liquid": "NONE",
+      "style": "equipment",
+      "colors": {
+        "base": "#c8d0d8",
+        "dark": "#98a0a8",
+        "light": "#e0e8f0",
+        "border": "#606870"
+      }
+    }
+  },
+  
+  "ui": {
+    "SUCCESS": "#4caf50",
+    "WARNING": "#ff9800",
+    "ERROR": "#e53935",
+    "INFO": "#2196f3",
+    "BATCH_PROCESSING": "#2196f3",
+    "BATCH_READY": "#4caf50",
+    "BATCH_OVERDUE": "#e53935",
+    "BATCH_WAITING": "#90caf9",
+    "TRANSPORTER_IDLE": "#78909c",
+    "TRANSPORTER_MOVING": "#42a5f5",
+    "TRANSPORTER_BUSY": "#66bb6a",
+    "TEXT_PRIMARY": "#212121",
+    "TEXT_SECONDARY": "#757575",
+    "TEXT_LIGHT": "#ffffff",
+    "TEXT_ON_DARK": "#f5f5f5"
+  },
+  
+  "_metadata": {
+    "version": "1.0",
+    "description": "KOKKO Color Palette - Edit colors here without rebuild",
+    "notes": [
+      "Changes take effect on browser refresh",
+      "tankTypes use 'material' key to reference materials colors",
+      "tankTypes with 'colors' override material colors"
+    ]
+  }
+}

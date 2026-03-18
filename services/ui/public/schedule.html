@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule - PLC Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .header {
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-label {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #ff9800;
+            border: 1px solid #e65100;
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            background: #f57c00;
+        }
+        
+        .btn-secondary {
+            background: #fff;
+            border: 1px solid #ccc;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #f5f5f5;
+        }
+        
+        .btn-icon {
+            padding: 6px 10px;
+            font-size: 16px;
+            min-width: 36px;
+        }
+        
+        .btn-group {
+            display: flex;
+        }
+        
+        .btn-group .btn {
+            border-radius: 0;
+        }
+        
+        .btn-group .btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .btn-group .btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .btn-group .btn.active {
+            background: #1976d2;
+            border-color: #1565c0;
+            color: #fff;
+        }
+        
+        .toggle-group {
+            display: flex;
+            background: #eee;
+            border-radius: 4px;
+            padding: 2px;
+        }
+        
+        .toggle-btn {
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+        
+        .toggle-btn.active {
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .main-container {
+            padding: 16px 24px;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+        }
+        
+        .chart-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chart-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .chart-info {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .chart-body {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+        }
+        
+        .gantt-container {
+            min-height: 100%;
+            position: relative;
+        }
+        
+        /* Y-axis labels (left side) */
+        .y-axis {
+            position: sticky;
+            left: 0;
+            background: #fff;
+            z-index: 10;
+            border-right: 1px solid #eee;
+        }
+        
+        .y-axis-label {
+            height: 40px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 500;
+            border-bottom: 1px solid #f0f0f0;
+            white-space: nowrap;
+        }
+        
+        /* Time axis (top) */
+        .time-axis {
+            position: sticky;
+            top: 0;
+            background: #fafafa;
+            z-index: 11;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            height: 32px;
+        }
+        
+        .time-tick {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #666;
+            border-right: 1px solid #eee;
+            flex-shrink: 0;
+        }
+        
+        .time-tick.major {
+            font-weight: 600;
+            color: #333;
+            border-right: 1px solid #ccc;
+        }
+        
+        .time-tick.zero {
+            font-weight: 700;
+            color: #ff9800;
+            background: #fff3e0;
+            border-right: 2px solid #ff9800;
+        }
+        
+        /* Gantt chart area */
+        .gantt-chart {
+            position: relative;
+        }
+        
+        .gantt-row {
+            height: 40px;
+            position: relative;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .gantt-row:hover {
+            background: #fafafa;
+        }
+        
+        .gantt-bar {
+            position: absolute;
+            height: 28px;
+            top: 6px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+            overflow: visible;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: left 0.5s ease-out, opacity 0.3s, transform 0.1s;
+        }
+        
+        .gantt-bar:hover {
+            transform: scaleY(1.1);
+            z-index: 5;
+        }
+        
+        .gantt-bar.batch-1 { background: #1976d2; }
+        .gantt-bar.batch-2 { background: #388e3c; }
+        .gantt-bar.batch-3 { background: #7b1fa2; }
+        .gantt-bar.batch-4 { background: #c62828; }
+        .gantt-bar.batch-5 { background: #00838f; }
+        .gantt-bar.batch-6 { background: #ef6c00; }
+        .gantt-bar.batch-7 { background: #5d4037; }
+        .gantt-bar.batch-8 { background: #455a64; }
+        
+        /* Grid lines */
+        .grid-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: #f0f0f0;
+        }
+        
+        .grid-line.major {
+            background: #ddd;
+        }
+        
+        .grid-line.zero {
+            background: #ff9800;
+            width: 2px;
+            z-index: 10;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 16px;
+            border-radius: 6px;
+            margin: 16px;
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: fixed;
+            background: #333;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 300px;
+            display: none;
+        }
+        
+        .tooltip.visible {
+            display: block;
+        }
+
+        /* Konfliktipaneeli */
+        .conflict-panel {
+            position: fixed;
+            right: 20px;
+            top: 70px;
+            width: 400px;
+            max-height: calc(100vh - 100px);
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .conflict-panel.visible {
+            display: flex;
+        }
+
+        .conflict-panel-header {
+            padding: 12px 16px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .conflict-panel-header h3 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .conflict-panel-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .conflict-panel-close:hover {
+            color: #333;
+        }
+
+        .conflict-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        /* Old conflict-item styles removed - replaced by cycle-card styles */
+
+        /* Cycle cards */
+        .cycle-card {
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid;
+        }
+        .cycle-card:hover { filter: brightness(0.97); }
+        .cycle-card.rejected {
+            background: #fff5f5;
+            border-color: #ef9a9a;
+        }
+        .cycle-card.activated {
+            background: #f1f8e9;
+            border-color: #a5d6a7;
+        }
+        .cycle-card.max-iter {
+            background: #fff8e1;
+            border-color: #ffe082;
+        }
+        .cycle-card.in-progress {
+            background: #f5f5f5;
+            border-color: #ccc;
+        }
+        .cycle-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cycle-card-batch {
+            font-weight: 700;
+            font-size: 13px;
+        }
+        .cycle-card-outcome {
+            font-weight: 600;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .cycle-card-outcome.rejected { background: #ffcdd2; color: #b71c1c; }
+        .cycle-card-outcome.activated { background: #c8e6c9; color: #1b5e20; }
+        .cycle-card-outcome.max-iter { background: #fff9c4; color: #f57f17; }
+        .cycle-card-outcome.in-progress { background: #e0e0e0; color: #616161; }
+        .cycle-card-blocking {
+            margin-top: 6px;
+            font-size: 11px;
+            color: #c62828;
+            font-family: monospace;
+        }
+        .cycle-card-stats {
+            margin-top: 4px;
+            font-size: 10px;
+            color: #888;
+        }
+        .cycle-card-details {
+            display: none;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(0,0,0,0.08);
+        }
+        .cycle-card.expanded .cycle-card-details {
+            display: block;
+        }
+        .detail-conflict {
+            padding: 6px 8px;
+            margin: 4px 0;
+            background: rgba(0,0,0,0.03);
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .detail-conflict .dc-header {
+            display: flex; justify-content: space-between;
+        }
+        .detail-conflict .dc-pair { font-weight: 600; font-family: monospace; }
+        .detail-conflict .dc-result { font-weight: 600; }
+        .detail-conflict .dc-result.ok { color: #2e7d32; }
+        .detail-conflict .dc-result.fail { color: #c62828; }
+        .detail-conflict .dc-actions {
+            margin-top: 2px;
+            font-size: 10px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        .conflict-panel-footer {
+            padding: 8px 12px;
+            background: #f5f5f5;
+            border-top: 1px solid #ddd;
+            font-size: 11px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .conflict-toggle-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            color: #e65100;
+            border: 1px solid #ccc;
+            background: #fff;
+            transition: all 0.2s;
+        }
+
+        .conflict-toggle-btn.active {
+            background: #ffebee;
+            border-color: #e53935;
+            color: #c62828;
+        }
+        
+        /* Transporter colors */
+        .gantt-bar.transporter-1 { background: #1565c0; }
+        .gantt-bar.transporter-2 { background: #c62828; }
+        .gantt-bar.transporter-3 { background: #2e7d32; }
+        .gantt-bar.transporter-4 { background: #6a1b9a; }
+        .gantt-bar.transporter-5 { background: #e65100; }
+        .gantt-bar.transporter-6 { background: #00838f; }
+        
+        .gantt-bar.waiting-task {
+            opacity: 0.7;
+            border: 2px dashed;
+            background: transparent;
+            box-sizing: border-box;
+        }
+        
+        .y-axis-label.separator {
+            background: #f5f5f5;
+            font-weight: 700;
+            font-size: 11px;
+            color: #888;
+            border-top: 2px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📅 Batch Schedule</h1>
+        
+        <div class="header-controls">
+            <div class="control-group">
+                <span class="control-label">View:</span>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="view-stations" onclick="setViewMode('stations')">Stations</button>
+                    <button class="toggle-btn" id="view-batches" onclick="setViewMode('batches')">Batches</button>
+                    <button class="toggle-btn" id="view-transporters" onclick="setViewMode('transporters')">Transporters</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <span class="control-label">Zoom:</span>
+                <div class="btn-group">
+                    <button class="btn btn-secondary btn-icon" onclick="zoomOut()">−</button>
+                    <button class="btn btn-secondary btn-icon" onclick="zoomIn()">+</button>
+                </div>
+                <span id="zoom-level" style="font-size: 12px; color: #666; min-width: 50px;">15s/div</span>
+            </div>
+            
+            <div class="control-group">
+                <span class="control-label">Update:</span>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="update-1s" onclick="setUpdateInterval(1000)">1s</button>
+                    <button class="toggle-btn" id="update-5s" onclick="setUpdateInterval(5000)">5s</button>
+                    <button class="toggle-btn" id="update-10s" onclick="setUpdateInterval(10000)">10s</button>
+                    <button class="toggle-btn" id="update-30s" onclick="setUpdateInterval(30000)">30s</button>
+                    <button class="toggle-btn" id="update-1min" onclick="setUpdateInterval(60000)">1min</button>
+                </div>
+                <button class="toggle-btn" id="pause-btn" onclick="togglePause()" style="background: #fff3e0; border-color: #ff9800; color: #e65100; font-weight: bold;">⏸️ PAUSE</button>
+            </div>
+            
+            <button class="conflict-toggle-btn" id="conflict-toggle" onclick="toggleConflictPanel()">
+                🚀 Departures (<span id="conflict-count">0</span>)
+            </button>
+            
+            <button class="btn btn-secondary" onclick="window.close()">🚪 Close</button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="chart-container">
+            <div class="chart-header">
+                <span class="chart-title" id="chart-title">Schedule by Stations</span>
+                <span class="chart-info" id="chart-info">Loading...</span>
+            </div>
+            <div class="chart-body" id="chart-body">
+                <div class="loading">Loading schedule...</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <!-- Lähtöpäätöspaneeli -->
+    <div class="conflict-panel" id="conflict-panel">
+        <div class="conflict-panel-header">
+            <h3>🚀 Departure Decisions</h3>
+            <button class="conflict-panel-close" onclick="toggleConflictPanel()">×</button>
+        </div>
+        <div class="conflict-list" id="conflict-list">
+            <div style="padding: 20px; text-align: center; color: #666;">
+                Loading...
+            </div>
+        </div>
+        <div class="conflict-panel-footer">
+            <span id="conflict-summary">0 cycles</span>
+            <button class="btn btn-secondary" onclick="refreshConflicts()" style="padding: 4px 10px; font-size: 11px;">
+                🔄 Refresh
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '';
+        
+        // State
+        let viewMode = 'stations';  // 'stations' | 'batches' | 'transporters'
+        let secondsPerDiv = 15;     // Time scale: seconds per division (grid cell)
+        let isPaused = false;       // Pause all updates for analysis
+        let pixelsPerDiv = 60;      // Pixels per division
+        let scheduleData = null;    // Cached schedule data
+        let currentTimeSec = 0;     // Current simulation time
+        let autoRefreshInterval = null;  // Auto-refresh timer
+        let updateIntervalMs = 1000;  // Update interval in milliseconds (default 1s)
+        let lastRenderedHtml = '';
+        let lastRenderedMode = '';
+        let isFirstLoad = true;     // Auto-fit zoom on first load
+        
+        // Zoom levels (seconds per division) - can be extended dynamically
+        let zoomLevels = [5, 10, 15, 30, 60, 120, 300, 600];
+        
+        // Format time as MM:SS or HH:MM:SS (handles negative times)
+        function formatTime(seconds) {
+            if (seconds === undefined || seconds === null) return '-';
+            const sign = seconds < 0 ? '-' : '+';
+            const s = Math.abs(Math.round(seconds));
+            const hrs = Math.floor(s / 3600);
+            const mins = Math.floor((s % 3600) / 60);
+            const secs = s % 60;
+            
+            if (hrs > 0) {
+                return `${sign}${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+            return `${sign}${mins}:${String(secs).padStart(2, '0')}`;
+        }
+        
+        // Format time without sign (for "time from now" displays)
+        function formatTimeSimple(seconds) {
+            if (seconds === undefined || seconds === null) return '-';
+            const s = Math.abs(Math.round(seconds));
+            const hrs = Math.floor(s / 3600);
+            const mins = Math.floor((s % 3600) / 60);
+            const secs = s % 60;
+            
+            if (hrs > 0) {
+                return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+            return `${mins}:${String(secs).padStart(2, '0')}`;
+        }
+        
+        // Format zoom level label
+        function formatZoomLabel(secs) {
+            if (secs >= 60) {
+                return `${secs / 60}m/div`;
+            }
+            return `${secs}s/div`;
+        }
+        
+        // Transporter colors (matching CSS)
+        const transporterColors = [
+            '#1565c0', '#c62828', '#2e7d32', '#6a1b9a', '#e65100', '#00838f'
+        ];
+        
+        function getTransporterColor(transporterId) {
+            return transporterColors[(transporterId - 1) % transporterColors.length];
+        }
+        
+        // View mode toggle
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('view-stations').classList.toggle('active', mode === 'stations');
+            document.getElementById('view-batches').classList.toggle('active', mode === 'batches');
+            document.getElementById('view-transporters').classList.toggle('active', mode === 'transporters');
+            document.getElementById('chart-title').textContent = 
+                mode === 'stations' ? 'Schedule by Stations' : 
+                mode === 'batches' ? 'Schedule by Batches' : 'Schedule by Transporters';
+            isFirstLoad = true; // Re-fit zoom for new view
+            if (mode === 'transporters') {
+                loadTransporterSchedule();
+            } else {
+                loadSchedule();
+            }
+        }
+        
+        // Zoom controls
+        function zoomIn() {
+            const idx = zoomLevels.indexOf(secondsPerDiv);
+            if (idx > 0) {
+                secondsPerDiv = zoomLevels[idx - 1];
+                updateZoomLabel();
+                renderChart();
+            }
+        }
+        
+        function zoomOut() {
+            const idx = zoomLevels.indexOf(secondsPerDiv);
+            if (idx < zoomLevels.length - 1) {
+                secondsPerDiv = zoomLevels[idx + 1];
+                updateZoomLabel();
+                renderChart();
+            }
+        }
+        
+        function updateZoomLabel() {
+            document.getElementById('zoom-level').textContent = formatZoomLabel(secondsPerDiv);
+        }
+        
+        // Tooltip handling
+        const tooltip = document.getElementById('tooltip');
+        
+        function showTooltip(e, content) {
+            tooltip.innerHTML = content;
+            tooltip.classList.add('visible');
+            
+            const x = e.clientX + 10;
+            const y = e.clientY + 10;
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+        }
+        
+        function hideTooltip() {
+            tooltip.classList.remove('visible');
+        }
+        
+        // Batch colors
+        const batchColors = [
+            '#1976d2', '#388e3c', '#7b1fa2', '#c62828', 
+            '#00838f', '#ef6c00', '#5d4037', '#455a64'
+        ];
+        
+        function getBatchColor(batchId) {
+            return batchColors[(batchId - 1) % batchColors.length];
+        }
+        
+        // Lighten a hex color by mixing with white
+        function lightenColor(hex, amount = 0.4) {
+            // Remove # if present
+            hex = hex.replace('#', '');
+            // Parse RGB
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            // Mix with white
+            const newR = Math.round(r + (255 - r) * amount);
+            const newG = Math.round(g + (255 - g) * amount);
+            const newB = Math.round(b + (255 - b) * amount);
+            // Return as hex
+            return '#' + [newR, newG, newB].map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Update bar positions smoothly without re-rendering
+        async function updateBars() {
+            if (!scheduleData) {
+                console.log('updateBars: no scheduleData, calling loadSchedule');
+                await loadSchedule();
+                return;
+            }
+            
+            try {
+                // Fetch current schedule data
+                const schedulesRes = await fetch(`${API_BASE}/api/schedules`);
+                const schedulesData = await schedulesRes.json();
+                
+                if (!schedulesData.success) {
+                    console.log('updateBars: API returned success=false');
+                    return;
+                }
+                
+                const newSchedules = schedulesData.schedules || [];
+                const newCurrentTimeSec = schedulesData.currentTimeSec || 0;
+                console.log('updateBars: fetched', newSchedules.length, 'schedules, time=', newCurrentTimeSec);
+                
+                // Check if schedule structure changed (batch count, stage count)
+                const structureChanged = !scheduleData.schedules || 
+                    scheduleData.schedules.length !== newSchedules.length ||
+                    scheduleData.schedules.some((oldSched, idx) => {
+                        const newSched = newSchedules[idx];
+                        return !newSched || 
+                               oldSched.batch_id !== newSched.batch_id ||
+                               oldSched.stages.length !== newSched.stages.length;
+                    });
+                
+                if (structureChanged) {
+                    console.log('Schedule structure changed, full reload needed');
+                    await loadSchedule();
+                    return;
+                }
+                
+                // Update current time
+                currentTimeSec = newCurrentTimeSec;
+                console.log('updateBars: updating positions, currentTime=', currentTimeSec);
+                
+                // Update info text
+                const chartInfo = document.getElementById('chart-info');
+                if (chartInfo) {
+                    chartInfo.textContent = `${newSchedules.length} batch${newSchedules.length !== 1 ? 'es' : ''} • Current time: ${formatTime(currentTimeSec)}`;
+                }
+                
+                // Recalculate time range (NOW at left edge = 0, times are relative to currentTimeSec)
+                const displayStartTime = currentTimeSec;
+                
+                // Update each bar's position based on API data
+                let barsUpdated = 0;
+                let visibleBars = 0;
+                let totalBars = 0;
+                
+                newSchedules.forEach((schedule, scheduleIdx) => {
+                    // Odottava batch (batchState=0 = NOT_PROCESSED)
+                    const isWaitingBatch = schedule.batchState === 0;
+                    const stage0Entry = schedule.stages[0]?.entry_time_s || displayStartTime;
+                    
+                    schedule.stages.forEach((stage, stageIdx) => {
+                        totalBars++;
+                        const barId = `bar-${schedule.batch_id}-${stage.stage}`;
+                        const bar = document.getElementById(barId);
+                        
+                        if (!bar) {
+                            // Bar doesn't exist in DOM - need full reload
+                            console.log('updateBars: bar not found, triggering reload');
+                            loadSchedule();
+                            return;
+                        }
+                        
+                        // Calculate position: time relative to current time (left edge)
+                        // Odottavat: käytä suhteellista aikaa stage0:sta (pysyy paikallaan)
+                        // Linjassa olevat: käytä absoluuttista aikaa
+                        let stageStartOffset;
+                        if (isWaitingBatch) {
+                            // Odottava: stage0 = vasen reuna (0), muut suhteessa siihen
+                            stageStartOffset = stage.entry_time_s - stage0Entry;
+                        } else {
+                            // Linjassa: absoluuttinen aika
+                            stageStartOffset = stage.entry_time_s - displayStartTime;
+                        }
+                        const stageDuration = stage.exit_time_s - stage.entry_time_s;
+                        
+                        const barLeft = (stageStartOffset / secondsPerDiv) * pixelsPerDiv;
+                        const barWidth = (stageDuration / secondsPerDiv) * pixelsPerDiv;
+                        
+                        // Update position and width
+                        bar.style.left = `${barLeft}px`;
+                        bar.style.width = `${Math.max(barWidth, 5)}px`;
+                        
+                        // Show/hide based on visibility
+                        const isVisible = (barLeft + barWidth > 0); // At least partially visible
+                        bar.style.display = isVisible ? 'block' : 'none';
+                        
+                        if (isVisible) visibleBars++;
+                        barsUpdated++;
+                    });
+                });
+                
+                // If more than 50% of bars are hidden, reload the chart
+                if (totalBars > 0 && visibleBars < totalBars * 0.5) {
+                    console.log('updateBars: too many bars off-screen, reloading chart');
+                    loadSchedule();
+                    return;
+                }
+                
+                console.log('updateBars: updated', barsUpdated, 'bars,', visibleBars, 'visible');
+                
+                // Update stored schedule data
+                scheduleData.schedules = newSchedules;
+                
+            } catch (err) {
+                console.error('Error updating bars:', err);
+            }
+        }
+        
+        // Load schedule data (full render)
+        async function loadSchedule() {
+            const chartBody = document.getElementById('chart-body');
+            const hasContent = chartBody && chartBody.innerHTML.trim().length > 0;
+            // Only show loading text on first load (when no content exists)
+            // This prevents "flashing" during refresh
+            if (!hasContent) {
+                chartBody.innerHTML = '<div class="loading">Loading schedule...</div>';
+            }
+            
+            try {
+                // Fetch calculated schedules from API
+                const schedulesRes = await fetch(`${API_BASE}/api/schedules`);
+                const schedulesData = await schedulesRes.json();
+                
+                if (!schedulesData.success) {
+                    throw new Error(schedulesData.error || 'Failed to load schedules');
+                }
+                
+                const schedules = schedulesData.schedules || [];
+                currentTimeSec = schedulesData.currentTimeSec || 0;
+                
+                // Fetch stations config
+                const stationsRes = await fetch(`${API_BASE}/api/config/stations`);
+                const stationsData = await stationsRes.json();
+                const stations = stationsData.stations || [];
+
+                // Fetch first departure conflict from scheduler state
+                let firstConflict = null;
+                try {
+                    const stateRes = await fetch(`${API_BASE}/api/scheduler/state`);
+                    const stateData = await stateRes.json();
+                    firstConflict = stateData.firstDepartureConflict || null;
+                } catch (e) {
+                    // Ignore - conflict indicator is optional
+                }
+
+                // Store data
+                scheduleData = { schedules, stations, firstConflict };
+                
+                // Auto-fit zoom on first load: find max exit time and set zoom to fit all bars
+                if (isFirstLoad && schedules.length > 0) {
+                    isFirstLoad = false;
+                    
+                    // Find the maximum exit time relative to current time
+                    let maxExitFromNow = 0;
+                    schedules.forEach(sch => {
+                        if (sch.stages && sch.stages.length > 0) {
+                            const isWaiting = sch.batchState === 0;
+                            const stage0Entry = sch.stages[0]?.entry_time_s || currentTimeSec;
+                            
+                            sch.stages.forEach(stage => {
+                                let exitFromNow;
+                                if (isWaiting) {
+                                    // Waiting batches: relative to stage0
+                                    exitFromNow = stage.exit_time_s - stage0Entry;
+                                } else {
+                                    // Active batches: relative to current time
+                                    exitFromNow = stage.exit_time_s - currentTimeSec;
+                                }
+                                if (exitFromNow > maxExitFromNow) {
+                                    maxExitFromNow = exitFromNow;
+                                }
+                            });
+                        }
+                    });
+                    
+                    // Calculate exact secondsPerDiv to fit bars to container width
+                    // Chart width = (maxTime / secondsPerDiv) * pixelsPerDiv
+                    // We want chart to fill availableWidth, so:
+                    // secondsPerDiv = maxTime * pixelsPerDiv / availableWidth
+                    const chartContainer = document.querySelector('.chart-container');
+                    const availableWidth = chartContainer ? chartContainer.clientWidth - 100 : 800;
+                    const numDivisions = availableWidth / pixelsPerDiv;
+                    
+                    // Calculate exact seconds per div needed (with 5% margin for last bar)
+                    const exactSecondsPerDiv = (maxExitFromNow * 1.05) / numDivisions;
+                    
+                    // Round UP to nearest nice value for readability
+                    // Nice values: 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600
+                    const niceValues = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600];
+                    let foundZoom = niceValues[niceValues.length - 1];
+                    for (let i = 0; i < niceValues.length; i++) {
+                        if (niceValues[i] >= exactSecondsPerDiv) {
+                            foundZoom = niceValues[i];
+                            break;
+                        }
+                    }
+                    secondsPerDiv = foundZoom;
+                    
+                    // Update zoomLevels to include this value if not already present
+                    if (!zoomLevels.includes(foundZoom)) {
+                        zoomLevels.push(foundZoom);
+                        zoomLevels.sort((a, b) => a - b);
+                    }
+                    
+                    updateZoomLabel();
+                    console.log(`[schedule] Auto-fit: maxExit=${maxExitFromNow.toFixed(0)}s, exact=${exactSecondsPerDiv.toFixed(1)}s/div, selected=${secondsPerDiv}s/div, width=${availableWidth}px`);
+                }
+                
+                // Update info
+                const totalDuration = schedules.length > 0 ? 
+                    Math.max(...schedules.map(s => s.total_duration_s || 0)) : 0;
+                document.getElementById('chart-info').textContent = 
+                    `${schedules.length} batches, ${stations.length} stations, Total: ${formatTime(totalDuration)}`;
+                
+                renderChart();
+                
+            } catch (err) {
+                chartBody.innerHTML = `
+                    <div class="error">
+                        <strong>Error loading schedule:</strong> ${err.message}
+                        <br><br>
+                        Make sure the simulator server is running on port 3001.
+                    </div>
+                `;
+            }
+        }
+        
+        // Render the Gantt chart
+        function renderChart() {
+            if (!scheduleData) return;
+
+            const { schedules, stations, firstConflict } = scheduleData;
+            const chartBody = document.getElementById('chart-body');
+
+            if (schedules.length === 0) {
+                chartBody.innerHTML = `
+                    <div class="loading">
+                        No batches in system. Add batches from main visualization.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Calculate time range: 0 = now (left edge), maxTime = furthest future event
+            let maxTime = 120; // Default: at least 2 minutes into future
+            
+            schedules.forEach(sch => {
+                if (sch.stages && sch.stages.length > 0) {
+                    const lastStage = sch.stages[sch.stages.length - 1];
+                    const timeFromNow = lastStage.exit_time_s - currentTimeSec;
+                    
+                    if (timeFromNow > 0) {
+                        maxTime = Math.max(maxTime, timeFromNow);
+                    }
+                }
+            });
+            
+            // Add some margin
+            maxTime = Math.ceil(maxTime / secondsPerDiv) * secondsPerDiv + secondsPerDiv;
+            
+            // Calculate chart width - ensure it fills at least the container width
+            const containerWidth = chartBody ? chartBody.clientWidth - 50 : 800; // -50 for y-axis
+            const minDivisions = Math.ceil(containerWidth / pixelsPerDiv);
+            const dataDivisions = Math.ceil(maxTime / secondsPerDiv);
+            const totalDivisions = Math.max(minDivisions, dataDivisions);
+            const chartWidth = totalDivisions * pixelsPerDiv;
+            
+            // Build rows based on view mode
+            let rows = [];
+            if (viewMode === 'stations') {
+                // One row per station
+                rows = stations.map(s => ({
+                    id: s.number,
+                    label: `${s.number}`,
+                    name: s.name || 'Station',
+                    type: 'station'
+                }));
+            } else {
+                // One row per batch
+                rows = schedules.map(sch => ({
+                    id: sch.batch_id,
+                    label: `Batch ${sch.batch_id}`,
+                    type: 'batch',
+                    schedule: sch
+                }));
+            }
+            
+            const yAxisWidth = 80;
+            const rowHeight = 40;
+            const chartHeight = rows.length * rowHeight;
+            
+            // Build HTML
+            let html = `
+                <div class="gantt-container" style="min-width: ${yAxisWidth + chartWidth}px;">
+                    <!-- Time axis -->
+                    <div class="time-axis" style="margin-left: ${yAxisWidth}px; width: ${chartWidth}px;">
+            `;
+            
+            // Time ticks (0 = now at left edge)
+            for (let i = 0; i <= totalDivisions; i++) {
+                const timeFromNow = i * secondsPerDiv;
+                const isMajor = i % 4 === 0;
+                const isZero = i === 0;
+                html += `
+                    <div class="time-tick ${isMajor ? 'major' : ''} ${isZero ? 'zero' : ''}" style="width: ${pixelsPerDiv}px;">
+                        ${isMajor || isZero ? (isZero ? 'NOW' : '+' + formatTimeSimple(timeFromNow)) : ''}
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                    
+                    <div style="display: flex;">
+                        <!-- Y-axis -->
+                        <div class="y-axis" style="width: ${yAxisWidth}px;">
+            `;
+            
+            // Y-axis labels
+            for (const row of rows) {
+                html += `<div class="y-axis-label">${row.label}</div>`;
+            }
+            
+            html += `
+                        </div>
+                        
+                        <!-- Chart area -->
+                        <div class="gantt-chart" style="width: ${chartWidth}px; height: ${chartHeight}px; position: relative;">
+            `;
+            
+            // Grid lines (0 = now at left edge)
+            for (let i = 0; i <= totalDivisions; i++) {
+                const isMajor = i % 4 === 0;
+                const isZero = i === 0;
+                html += `<div class="grid-line ${isMajor ? 'major' : ''} ${isZero ? 'zero' : ''}" style="left: ${i * pixelsPerDiv}px; height: ${chartHeight}px;"></div>`;
+            }
+            
+            // First departure conflict line (red vertical line showing where conflict prevents batch from starting)
+            if (firstConflict && firstConflict.time_s > 0) {
+                const conflictTimeFromNow = firstConflict.time_s - currentTimeSec;
+                if (conflictTimeFromNow > 0 && conflictTimeFromNow < totalDivisions * secondsPerDiv) {
+                    const conflictX = (conflictTimeFromNow / secondsPerDiv) * pixelsPerDiv;
+                    
+                    // Muodosta tarkka aikainfo
+                    const prevEndFromNow = firstConflict.prev_end_s ? (firstConflict.prev_end_s - currentTimeSec) : null;
+                    const currStartFromNow = firstConflict.curr_start_s ? (firstConflict.curr_start_s - currentTimeSec) : null;
+                    let timeInfo = '';
+                    if (prevEndFromNow !== null && currStartFromNow !== null) {
+                        timeInfo = ` | ${firstConflict.blocked_by} end: ${formatTime(prevEndFromNow)}, start: ${formatTime(currStartFromNow)}`;
+                    }
+                    
+                    html += `
+                        <div class="departure-conflict-line" style="position: absolute; left: ${conflictX}px; top: 0; bottom: 0; width: 3px; background: #e53935; opacity: 0.9; z-index: 50;"></div>
+                        <div class="departure-conflict-label" style="position: absolute; left: ${conflictX + 5}px; top: 2px; background: rgba(229,57,53,0.95); color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; z-index: 51; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                            ⚠ ${firstConflict.reason || 'Conflict'}${timeInfo}
+                        </div>
+                    `;
+                }
+            }
+            
+            // Rows and bars
+            if (viewMode === 'stations') {
+                // Station view: each row is a station, show batch bars
+                for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+                    const row = rows[rowIdx];
+                    html += `<div class="gantt-row" style="top: ${rowIdx * rowHeight}px; height: ${rowHeight}px; position: absolute; left: 0; right: 0;">`;
+                    
+                    // Find all schedule entries for this station
+                    schedules.forEach((sch) => {
+                        if (sch.stages) {
+                            // Odottava batch: batchState=0 = NOT_PROCESSED
+                            const isWaiting = sch.batchState === 0;
+                            const stage0Entry = sch.stages[0]?.entry_time_s || currentTimeSec;
+                            
+                            sch.stages.forEach((stage) => {
+                                if (stage.station === row.id) {
+                                    // Time from now (0 = left edge = current time)
+                                    // Odottavat: suhteessa stage0:aan (pysyy paikallaan)
+                                    let entryFromNow, exitFromNow;
+                                    if (isWaiting) {
+                                        entryFromNow = stage.entry_time_s - stage0Entry;
+                                        exitFromNow = stage.exit_time_s - stage0Entry;
+                                    } else {
+                                        entryFromNow = stage.entry_time_s - currentTimeSec;
+                                        exitFromNow = stage.exit_time_s - currentTimeSec;
+                                    }
+                                    
+                                    // Only show if not completely in the past
+                                    if (exitFromNow > 0) {
+                                        const startPx = Math.max(0, (entryFromNow / secondsPerDiv) * pixelsPerDiv);
+                                        const endPx = (exitFromNow / secondsPerDiv) * pixelsPerDiv;
+                                        const widthPx = endPx - startPx;
+                                        const color = getBatchColor(sch.batch_id);
+                                        
+                                        const statusText = isWaiting ? ' (waiting)' : '';
+                                        
+                                        const barId = `bar-${sch.batch_id}-${stage.stage}`;
+                                        // Min time for extended bar display
+                                        const minTimeS = stage.min_time_s || 0;
+                                        const maxTimeS = stage.max_time_s || 0;
+                                        
+                                        // Calculate duration (calc_time)
+                                        const durationS = exitFromNow - entryFromNow;
+                                        const hasExtendedTime = durationS > minTimeS && minTimeS > 0;
+                                        
+                                        // Lighter color for extended portion
+                                        const lightColor = lightenColor(color, 0.4);
+                                        // Waiting batches: dashed border, no fill
+                                        const barBaseStyle = isWaiting
+                                            ? `left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: transparent; border: 2px dashed ${color}; box-sizing: border-box; color: ${color};`
+                                            : `left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: ${color};`;
+                                        const barOpacity = isWaiting ? 'opacity: 0.7;' : '';
+                                        
+                                        // Active stage: batch is currently at this station (entry in past, exit in future)
+                                        const isActiveStage = !isWaiting && entryFromNow < 0 && exitFromNow > 0;
+                                        const elapsed = Math.max(0, -entryFromNow);
+                                        
+                                        // Calculate bar portions
+                                        let barHtml = '';
+                                        if (isActiveStage && minTimeS > 0) {
+                                            // Progress indicator: blue fills from left toward MinTime
+                                            const progressPct = Math.min(100, (elapsed / minTimeS) * 100).toFixed(1);
+                                            barHtml = `
+                                                <div class="gantt-bar" 
+                                                     id="${barId}"
+                                                     style="left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: linear-gradient(to right, ${color} ${progressPct}%, ${lightColor} ${progressPct}%);"
+                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_id}<br>Station ${stage.station}<br>Elapsed: ${formatTimeSimple(elapsed)}<br>MinTime: ${formatTimeSimple(minTimeS)} (${progressPct}%)<br>Remaining: ${formatTimeSimple(exitFromNow)}<br>Max: ${formatTimeSimple(maxTimeS)}')"
+                                                     onmouseleave="hideTooltip()">
+                                                    B${sch.batch_id}s${stage.stage}
+                                                </div>
+                                            `;
+                                        } else if (isWaiting) {
+                                            // Waiting batch: AINA katkoviiva, riippumatta hasExtendedTime
+                                            barHtml = `
+                                                <div class="gantt-bar" 
+                                                     id="${barId}"
+                                                     style="${barBaseStyle} ${barOpacity}"
+                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_id}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
+                                                     onmouseleave="hideTooltip()">
+                                                    B${sch.batch_id}s${stage.stage}
+                                                </div>
+                                            `;
+                                        } else if (hasExtendedTime) {
+                                            // Future stage: minTime portion (full color) + extended portion (light color)
+                                            const minWidthPx = (minTimeS / secondsPerDiv) * pixelsPerDiv;
+                                            
+                                            barHtml = `
+                                                <div class="gantt-bar" 
+                                                     id="${barId}"
+                                                     style="left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: linear-gradient(to right, ${color} ${minWidthPx}px, ${lightColor} ${minWidthPx}px); ${barOpacity}"
+                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_id}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
+                                                     onmouseleave="hideTooltip()">
+                                                    B${sch.batch_id}s${stage.stage}
+                                                </div>
+                                            `;
+                                        } else {
+                                            // Single color bar (calc_time = min_time, or future stage)
+                                            barHtml = `
+                                                <div class="gantt-bar" 
+                                                     id="${barId}"
+                                                     style="${barBaseStyle}"
+                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_id}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
+                                                     onmouseleave="hideTooltip()">
+                                                    B${sch.batch_id}s${stage.stage}
+                                                </div>
+                                            `;
+                                        }
+                                        
+                                        html += barHtml;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                    
+                    html += `</div>`;
+                }
+            } else {
+                // Batch view: each row is a batch, show station bars
+                for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+                    const row = rows[rowIdx];
+                    const sch = row.schedule;
+                    html += `<div class="gantt-row" style="top: ${rowIdx * rowHeight}px; height: ${rowHeight}px; position: absolute; left: 0; right: 0;">`;
+                    
+                    if (sch && sch.stages) {
+                        const color = getBatchColor(sch.batch_id);
+                        const isWaiting = sch.batchState === 0;
+                        // Odottava batch: käytä suhteellista aikaa stage0:sta
+                        const stage0Entry = sch.stages[0]?.entry_time_s || currentTimeSec;
+                        
+                        sch.stages.forEach((stage) => {
+                            // Time from now (0 = left edge = current time)
+                            // Odottavat: suhteessa stage0:aan (pysyy paikallaan)
+                            let entryFromNow, exitFromNow;
+                            if (isWaiting) {
+                                entryFromNow = stage.entry_time_s - stage0Entry;
+                                exitFromNow = stage.exit_time_s - stage0Entry;
+                            } else {
+                                entryFromNow = stage.entry_time_s - currentTimeSec;
+                                exitFromNow = stage.exit_time_s - currentTimeSec;
+                            }
+                            
+                            // Only show if not completely in the past
+                            if (exitFromNow > 0) {
+                                const startPx = Math.max(0, (entryFromNow / secondsPerDiv) * pixelsPerDiv);
+                                const endPx = (exitFromNow / secondsPerDiv) * pixelsPerDiv;
+                                const widthPx = endPx - startPx;
+                                
+                                const statusText = isWaiting ? ' (waiting)' : '';
+                                
+                                const barId = `bar-${sch.batch_id}-${stage.stage}`;
+                                // Min time for extended bar display
+                                const minTimeS = stage.min_time_s || 0;
+                                const maxTimeS = stage.max_time_s || 0;
+                                
+                                // Calculate duration (calc_time)
+                                const durationS = exitFromNow - entryFromNow;
+                                const hasExtendedTime = durationS > minTimeS && minTimeS > 0;
+                                
+                                // Lighter color for extended portion
+                                const lightColor = lightenColor(color, 0.4);
+                                // Waiting batches: dashed border, no fill
+                                const barBaseStyle = isWaiting
+                                    ? `left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: transparent; border: 2px dashed ${color}; box-sizing: border-box; color: ${color};`
+                                    : `left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: ${color};`;
+                                const barOpacity = isWaiting ? 'opacity: 0.7;' : '';
+                                
+                                // Active stage: batch is currently at this station
+                                const isActiveStage = !isWaiting && entryFromNow < 0 && exitFromNow > 0;
+                                const elapsed = Math.max(0, -entryFromNow);
+                                
+                                // Calculate bar portions
+                                let barHtml = '';
+                                if (isActiveStage && minTimeS > 0) {
+                                    // Progress indicator: blue fills from left toward MinTime
+                                    const progressPct = Math.min(100, (elapsed / minTimeS) * 100).toFixed(1);
+                                    barHtml = `
+                                        <div class="gantt-bar" 
+                                             id="${barId}"
+                                             style="left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: linear-gradient(to right, ${color} ${progressPct}%, ${lightColor} ${progressPct}%);"
+                                             onmouseenter="showTooltip(event, 'Stage ${stage.stage}<br>Station ${stage.station}<br>Elapsed: ${formatTimeSimple(elapsed)}<br>MinTime: ${formatTimeSimple(minTimeS)} (${progressPct}%)<br>Remaining: ${formatTimeSimple(exitFromNow)}<br>Max: ${formatTimeSimple(maxTimeS)}')"
+                                             onmouseleave="hideTooltip()">
+                                            ${stage.station}
+                                        </div>
+                                    `;
+                                } else if (hasExtendedTime) {
+                                    // Future stage: minTime portion (full color) + extended portion (light color)
+                                    const minWidthPx = (minTimeS / secondsPerDiv) * pixelsPerDiv;
+                                    
+                                    barHtml = `
+                                        <div class="gantt-bar" 
+                                             id="${barId}"
+                                             style="left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: linear-gradient(to right, ${color} ${minWidthPx}px, ${lightColor} ${minWidthPx}px); ${barOpacity}"
+                                             onmouseenter="showTooltip(event, 'Stage ${stage.stage}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Transfer: ${formatTimeSimple(stage.transfer_time_s)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
+                                             onmouseleave="hideTooltip()">
+                                            ${stage.station}
+                                        </div>
+                                    `;
+                                } else {
+                                    // Single color bar (calc_time = min_time, or future stage)
+                                    barHtml = `
+                                        <div class="gantt-bar" 
+                                             id="${barId}"
+                                             style="${barBaseStyle}"
+                                             onmouseenter="showTooltip(event, 'Stage ${stage.stage}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Transfer: ${formatTimeSimple(stage.transfer_time_s)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
+                                             onmouseleave="hideTooltip()">
+                                            ${stage.station}
+                                        </div>
+                                    `;
+                                }
+                                
+                                html += barHtml;
+                            }
+                        });
+                    }
+                    
+                    html += `</div>`;
+                }
+            }
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Only update DOM if content actually changed (prevents flashing)
+            if (lastRenderedMode !== viewMode || html !== lastRenderedHtml) {
+                chartBody.innerHTML = html;
+                lastRenderedHtml = html;
+                lastRenderedMode = viewMode;
+            }
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════════════════
+        // TRANSPORTER SCHEDULE VIEW
+        // ═══════════════════════════════════════════════════════════════════════════════
+        
+        let transporterScheduleData = null;
+        
+        async function loadTransporterSchedule() {
+            const chartBody = document.getElementById('chart-body');
+            const hasContent = chartBody && chartBody.innerHTML.trim().length > 0;
+            if (!hasContent) {
+                chartBody.innerHTML = '<div class="loading">Loading transporter schedule...</div>';
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/transporter-schedule`);
+                const data = await res.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load transporter schedule');
+                }
+                
+                currentTimeSec = data.currentTimeSec || 0;
+                transporterScheduleData = data;
+                
+                // Auto-fit zoom on first load
+                if (isFirstLoad) {
+                    isFirstLoad = false;
+                    
+                    let maxTimeFromNow = 120;
+                    for (const t of data.transporters) {
+                        for (const task of t.tasks) {
+                            if (task.task_finished_time != null) {
+                                const fromNow = task.task_finished_time - currentTimeSec;
+                                if (fromNow > maxTimeFromNow) maxTimeFromNow = fromNow;
+                            }
+                        }
+                    }
+                    for (const task of (data.waitingTasks || [])) {
+                        if (task.task_finished_time != null) {
+                            // Waiting tasks: relative to first task
+                            const firstStart = (data.waitingTasks || []).reduce((min, t) => 
+                                t.task_start_time != null ? Math.min(min, t.task_start_time) : min, Infinity);
+                            const fromZero = task.task_finished_time - (firstStart !== Infinity ? firstStart : currentTimeSec);
+                            if (fromZero > maxTimeFromNow) maxTimeFromNow = fromZero;
+                        }
+                    }
+                    
+                    const chartContainer = document.querySelector('.chart-container');
+                    const availableWidth = chartContainer ? chartContainer.clientWidth - 100 : 800;
+                    const numDivisions = availableWidth / pixelsPerDiv;
+                    const exactSecondsPerDiv = (maxTimeFromNow * 1.05) / numDivisions;
+                    
+                    const niceValues = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600];
+                    let foundZoom = niceValues[niceValues.length - 1];
+                    for (let i = 0; i < niceValues.length; i++) {
+                        if (niceValues[i] >= exactSecondsPerDiv) {
+                            foundZoom = niceValues[i];
+                            break;
+                        }
+                    }
+                    secondsPerDiv = foundZoom;
+                    if (!zoomLevels.includes(foundZoom)) {
+                        zoomLevels.push(foundZoom);
+                        zoomLevels.sort((a, b) => a - b);
+                    }
+                    updateZoomLabel();
+                }
+                
+                renderTransporterChart();
+                
+            } catch (err) {
+                chartBody.innerHTML = `<div class="error"><strong>Error:</strong> ${err.message}</div>`;
+            }
+        }
+        
+        function renderTransporterChart() {
+            if (!transporterScheduleData) return;
+            
+            const { transporters, waitingTasks } = transporterScheduleData;
+            const chartBody = document.getElementById('chart-body');
+            
+            if (!transporters || transporters.length === 0) {
+                chartBody.innerHTML = '<div class="loading">No transporters found.</div>';
+                return;
+            }
+            
+            // Ryhmittele odottavat taskit nostimittain
+            const waitingByTransporter = {};
+            for (const task of (waitingTasks || [])) {
+                const tId = task.transporter_id;
+                if (!waitingByTransporter[tId]) waitingByTransporter[tId] = [];
+                waitingByTransporter[tId].push(task);
+            }
+            
+            // Rivit: ensin nostimet, sitten "Waiting" otsikko, sitten odottavat per nostin
+            const rows = [];
+            for (const t of transporters.sort((a, b) => a.id - b.id)) {
+                rows.push({ type: 'transporter', id: t.id, label: `T${t.id}`, tasks: t.tasks });
+            }
+            
+            // Lisää odottavan erän taskit jos niitä on
+            const hasWaiting = waitingTasks && waitingTasks.length > 0;
+            if (hasWaiting) {
+                rows.push({ type: 'separator', label: '── Waiting ──' });
+                // Yksi rivi per nostin jolle on odottavia
+                const waitTransporterIds = [...new Set(waitingTasks.map(t => t.transporter_id))].sort((a, b) => a - b);
+                for (const tId of waitTransporterIds) {
+                    rows.push({ 
+                        type: 'waiting', 
+                        id: tId, 
+                        label: `T${tId} (wait)`,
+                        tasks: waitingByTransporter[tId] || []
+                    });
+                }
+            }
+            
+            // Aikaskaala
+            let maxTime = 120;
+            for (const t of transporters) {
+                for (const task of t.tasks) {
+                    if (task.task_finished_time != null) {
+                        const fromNow = task.task_finished_time - currentTimeSec;
+                        if (fromNow > maxTime) maxTime = fromNow;
+                    }
+                }
+            }
+            // Waiting tasks: käytä suhteellista aikaa (stage0 = 0)
+            let waitingBaseTime = Infinity;
+            if (hasWaiting) {
+                for (const task of waitingTasks) {
+                    if (task.task_start_time != null && task.task_start_time < waitingBaseTime) {
+                        waitingBaseTime = task.task_start_time;
+                    }
+                }
+                for (const task of waitingTasks) {
+                    if (task.task_finished_time != null) {
+                        const fromZero = task.task_finished_time - waitingBaseTime;
+                        if (fromZero > maxTime) maxTime = fromZero;
+                    }
+                }
+            }
+            
+            maxTime = Math.ceil(maxTime / secondsPerDiv) * secondsPerDiv + secondsPerDiv;
+            
+            const containerWidth = chartBody ? chartBody.clientWidth - 50 : 800;
+            const minDivisions = Math.ceil(containerWidth / pixelsPerDiv);
+            const dataDivisions = Math.ceil(maxTime / secondsPerDiv);
+            const totalDivisions = Math.max(minDivisions, dataDivisions);
+            const chartWidth = totalDivisions * pixelsPerDiv;
+            
+            const yAxisWidth = 100;
+            const rowHeight = 40;
+            const chartHeight = rows.length * rowHeight;
+            
+            // Info
+            const totalTasks = transporters.reduce((sum, t) => sum + t.tasks.length, 0);
+            document.getElementById('chart-info').textContent = 
+                `${transporters.length} transporters • ${totalTasks} tasks • Current time: ${formatTime(currentTimeSec)}`;
+            
+            // Build HTML
+            let html = `
+                <div class="gantt-container" style="min-width: ${yAxisWidth + chartWidth}px;">
+                    <!-- Time axis -->
+                    <div class="time-axis" style="margin-left: ${yAxisWidth}px; width: ${chartWidth}px;">
+            `;
+            
+            for (let i = 0; i <= totalDivisions; i++) {
+                const timeFromNow = i * secondsPerDiv;
+                const isMajor = i % 4 === 0;
+                const isZero = i === 0;
+                html += `
+                    <div class="time-tick ${isMajor ? 'major' : ''} ${isZero ? 'zero' : ''}" style="width: ${pixelsPerDiv}px;">
+                        ${isMajor || isZero ? (isZero ? 'NOW' : '+' + formatTimeSimple(timeFromNow)) : ''}
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                    <div style="display: flex;">
+                        <!-- Y-axis -->
+                        <div class="y-axis" style="width: ${yAxisWidth}px;">
+            `;
+            
+            for (const row of rows) {
+                const extraClass = row.type === 'separator' ? ' separator' : '';
+                const colorDot = (row.type === 'transporter' || row.type === 'waiting') 
+                    ? `<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${getTransporterColor(row.id)};margin-right:6px;vertical-align:middle;"></span>`
+                    : '';
+                html += `<div class="y-axis-label${extraClass}">${colorDot}${row.label}</div>`;
+            }
+            
+            html += `
+                        </div>
+                        <div class="gantt-chart" style="width: ${chartWidth}px; height: ${chartHeight}px; position: relative;">
+            `;
+            
+            // Grid lines
+            for (let i = 0; i <= totalDivisions; i++) {
+                const isMajor = i % 4 === 0;
+                const isZero = i === 0;
+                html += `<div class="grid-line ${isMajor ? 'major' : ''} ${isZero ? 'zero' : ''}" style="left: ${i * pixelsPerDiv}px; height: ${chartHeight}px;"></div>`;
+            }
+            
+            // Render bars per row
+            for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+                const row = rows[rowIdx];
+                if (row.type === 'separator') continue;
+                
+                html += `<div class="gantt-row" style="top: ${rowIdx * rowHeight}px; height: ${rowHeight}px; position: absolute; left: 0; right: 0;">`;
+                
+                const isWaiting = row.type === 'waiting';
+                const color = getTransporterColor(row.id);
+                
+                for (const task of (row.tasks || [])) {
+                    let startFromNow, endFromNow;
+                    
+                    if (isWaiting && waitingBaseTime !== Infinity) {
+                        // Odottavan erän taskit: suhteessa ensimmäiseen taskiin
+                        startFromNow = (task.task_start_time ?? 0) - waitingBaseTime;
+                        endFromNow = (task.task_finished_time ?? startFromNow + 10) - waitingBaseTime;
+                    } else {
+                        // Aktiiviset taskit: suhteessa nykyhetkeen
+                        startFromNow = (task.task_start_time ?? (currentTimeSec - 30)) - currentTimeSec;
+                        endFromNow = (task.task_finished_time ?? (startFromNow + currentTimeSec + 30)) - currentTimeSec;
+                    }
+                    
+                    if (endFromNow <= 0) continue; // Kokonaan menneisyydessä
+                    
+                    const startPx = Math.max(0, (startFromNow / secondsPerDiv) * pixelsPerDiv);
+                    const endPx = (endFromNow / secondsPerDiv) * pixelsPerDiv;
+                    const widthPx = endPx - startPx;
+                    
+                    const label = task.batch_id != null 
+                        ? `B${task.batch_id}${task.stage != null ? 's' + task.stage : ''}`
+                        : '?';
+                    
+                    const liftSink = `${task.lift_station_id || '?'} → ${task.sink_station_id || '?'}`;
+                    const durationS = endFromNow - startFromNow;
+                    const inFlightMark = task.in_flight ? ' 🔄' : '';
+                    
+                    const barStyle = isWaiting
+                        ? `left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: transparent; border: 2px dashed ${color}; box-sizing: border-box; color: ${color};`
+                        : `left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: ${color};`;
+                    
+                    const tooltipContent = isWaiting
+                        ? `${label} (waiting)${inFlightMark}<br>${liftSink}<br>Duration: ${formatTimeSimple(durationS)}`
+                        : `${label}${inFlightMark}<br>${liftSink}<br>Start: ${formatTime(startFromNow)}<br>End: ${formatTime(endFromNow)}<br>Duration: ${formatTimeSimple(durationS)}`;
+                    
+                    html += `
+                        <div class="gantt-bar ${isWaiting ? 'waiting-task' : ''}" 
+                             style="${barStyle}"
+                             onmouseenter="showTooltip(event, '${tooltipContent.replace(/'/g, "\\'")}')"
+                             onmouseleave="hideTooltip()">
+                            ${label}${inFlightMark}
+                        </div>
+                    `;
+                }
+                
+                html += `</div>`;
+            }
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (lastRenderedMode !== viewMode || html !== lastRenderedHtml) {
+                chartBody.innerHTML = html;
+                lastRenderedHtml = html;
+                lastRenderedMode = viewMode;
+            }
+        }
+        
+        // Auto-refresh functionality
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            autoRefreshInterval = setInterval(() => {
+                if (!isPaused) {
+                    if (viewMode === 'transporters') {
+                        loadTransporterSchedule();
+                    } else {
+                        loadSchedule();
+                    }
+                }
+            }, updateIntervalMs);
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+        
+        function togglePause() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('pause-btn');
+            if (isPaused) {
+                btn.textContent = '▶️ RESUME';
+                btn.style.background = '#ffcdd2';
+                btn.style.borderColor = '#e53935';
+                btn.style.color = '#c62828';
+                document.body.style.border = '4px solid #e53935';
+            } else {
+                btn.textContent = '⏸️ PAUSE';
+                btn.style.background = '#fff3e0';
+                btn.style.borderColor = '#ff9800';
+                btn.style.color = '#e65100';
+                document.body.style.border = 'none';
+                if (viewMode === 'transporters') {
+                    loadTransporterSchedule();
+                } else {
+                    loadSchedule();
+                }
+                if (conflictPanelVisible) refreshConflicts();
+            }
+        }
+        
+        function setUpdateInterval(intervalMs) {
+            updateIntervalMs = intervalMs;
+            
+            // Update active button
+            document.querySelectorAll('[id^="update-"]').forEach(btn => btn.classList.remove('active'));
+            const activeId = intervalMs === 1000 ? 'update-1s' :
+                           intervalMs === 5000 ? 'update-5s' :
+                           intervalMs === 10000 ? 'update-10s' :
+                           intervalMs === 30000 ? 'update-30s' :
+                           intervalMs === 60000 ? 'update-1min' : 'update-1s';
+            document.getElementById(activeId)?.classList.add('active');
+            
+            // Restart auto-refresh with new interval
+            startAutoRefresh();
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════════════════
+        // DEPARTURE DECISIONS PANEL
+        // ═══════════════════════════════════════════════════════════════════════════════
+        
+        let cycleData = [];
+        let conflictPanelVisible = false;
+        let expandedCycleIdx = null;
+        
+        function toggleConflictPanel() {
+            conflictPanelVisible = !conflictPanelVisible;
+            const panel = document.getElementById('conflict-panel');
+            const btn = document.getElementById('conflict-toggle');
+            
+            if (conflictPanelVisible) {
+                panel.classList.add('visible');
+                btn.classList.add('active');
+                refreshConflicts();
+            } else {
+                panel.classList.remove('visible');
+                btn.classList.remove('active');
+            }
+        }
+        
+        async function refreshConflicts() {
+            try {
+                const response = await fetch(`${API_BASE}/api/departure-cycles`);
+                const data = await response.json();
+                
+                if (data.success && data.cycles) {
+                    cycleData = data.cycles;
+                    document.getElementById('conflict-count').textContent = cycleData.length;
+                    renderCycleList();
+                }
+            } catch (err) {
+                console.error('Error loading departure cycles:', err);
+            }
+        }
+        
+        function toggleCycleDetails(idx) {
+            expandedCycleIdx = (expandedCycleIdx === idx) ? null : idx;
+            renderCycleList();
+        }
+        
+        function fmtTime(sec) {
+            if (sec == null) return '?';
+            const m = Math.floor(sec / 60);
+            const s = Math.round(sec % 60);
+            return `${m}:${String(s).padStart(2, '0')}`;
+        }
+        
+        function renderCycleList() {
+            const listEl = document.getElementById('conflict-list');
+            
+            if (cycleData.length === 0) {
+                listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No departure cycles yet</div>';
+                document.getElementById('conflict-summary').textContent = '0 cycles';
+                return;
+            }
+            
+            // Stats
+            const activated = cycleData.filter(c => c.outcome === 'ACTIVATED').length;
+            const rejected = cycleData.filter(c => c.outcome === 'REJECTED').length;
+            const maxIter = cycleData.filter(c => c.outcome === 'MAX_ITERATIONS').length;
+            const inProg = cycleData.filter(c => c.outcome === 'IN_PROGRESS').length;
+            
+            let summary = `${cycleData.length} cycles:`;
+            if (activated) summary += ` ${activated} ✅`;
+            if (rejected) summary += ` ${rejected} ❌`;
+            if (maxIter) summary += ` ${maxIter} ⚠`;
+            if (inProg) summary += ` ${inProg} ⏳`;
+            document.getElementById('conflict-summary').textContent = summary;
+            
+            // Render newest first
+            let html = '';
+            for (let i = cycleData.length - 1; i >= 0; i--) {
+                const cycle = cycleData[i];
+                html += renderCycleCard(cycle, i);
+            }
+            
+            listEl.innerHTML = html;
+        }
+        
+        function renderCycleCard(cycle, idx) {
+            const isExpanded = expandedCycleIdx === idx;
+            const oc = cycle.outcome || 'IN_PROGRESS';
+            const ocClass = oc === 'REJECTED' ? 'rejected' :
+                           oc === 'ACTIVATED' ? 'activated' :
+                           oc === 'MAX_ITERATIONS' ? 'max-iter' : 'in-progress';
+            const ocLabel = oc === 'REJECTED' ? '❌ REJECTED' :
+                           oc === 'ACTIVATED' ? '✅ ACTIVATED' :
+                           oc === 'MAX_ITERATIONS' ? '⚠ MAX ITER' : '⏳ ...';
+            
+            const timeStr = fmtTime(cycle.simTimeSec);
+            const nConflicts = cycle.conflicts ? cycle.conflicts.length : 0;
+            const details = cycle.outcomeDetails || {};
+            
+            let blockingHtml = '';
+            if (details.userReason) {
+                const reasonColor = oc === 'ACTIVATED' ? '#2e7d32' : '#c62828';
+                blockingHtml = `<div class="cycle-card-blocking" style="color:${reasonColor}; font-weight: 600;">${details.userReason}</div>`;
+            } else if (oc === 'REJECTED' && details.blockingConflict) {
+                blockingHtml = `<div class="cycle-card-blocking">`;
+                blockingHtml += `Blocked: ${details.blockingConflict}`;
+                if (details.missing) blockingHtml += ` — missing ${details.missing}s`;
+                blockingHtml += `</div>`;
+            } else if (oc === 'MAX_ITERATIONS') {
+                blockingHtml = `<div class="cycle-card-blocking" style="color:#f57f17;">Reached ${details.iterations || 50} iterations without convergence</div>`;
+            }
+            
+            let statsHtml = `<div class="cycle-card-stats">`;
+            if (nConflicts > 0) {
+                const solved = cycle.conflicts.filter(c => c.solved).length;
+                const failed = nConflicts - solved;
+                statsHtml += `${nConflicts} conflicts: ${solved} resolved`;
+                if (failed > 0) statsHtml += `, ${failed} failed`;
+            } else {
+                statsHtml += 'No conflicts in this cycle';
+            }
+            if (details.iterations) statsHtml += ` (${details.iterations} iter)`;
+            statsHtml += `</div>`;
+            
+            // Expanded details: show each conflict in the chain
+            let detailsHtml = '';
+            if (isExpanded && nConflicts > 0) {
+                detailsHtml = '<div class="cycle-card-details" style="display:block;">';
+                for (let ci = 0; ci < cycle.conflicts.length; ci++) {
+                    const conf = cycle.conflicts[ci];
+                    const pair = `B${conf.prevBatchId}s${conf.prevStage} ↔ B${conf.nextBatchId}s${conf.nextStage}`;
+                    const deficit = conf.deficit ? conf.deficit.toFixed(1) + 's' : '?';
+                    const resClass = conf.solved ? 'ok' : 'fail';
+                    const resText = conf.solved ? `✓ ${conf.reason}` : `✗ ${conf.reason}${conf.missing ? ' (missing ' + conf.missing + 's)' : ''}`;
+                    
+                    let actionsHtml = '';
+                    if (conf.actions && conf.actions.length > 0) {
+                        const acts = conf.actions.map(a => {
+                            if (a.action === 'ADVANCE') return `⬅ ADVANCE B${a.batchId}s${a.stage} ${a.amount}`;
+                            if (a.action === 'DELAY') return `➡ DELAY B${a.batchId}s${a.stage} ${a.amount}`;
+                            return `${a.action} B${a.batchId}s${a.stage}`;
+                        }).join(', ');
+                        actionsHtml = `<div class="dc-actions">${acts}</div>`;
+                    }
+                    
+                    detailsHtml += `<div class="detail-conflict">`;
+                    detailsHtml += `<div class="dc-header"><span class="dc-pair">${pair}</span> <span class="dc-result ${resClass}">${resText}</span></div>`;
+                    detailsHtml += `<div style="font-size:10px;color:#999;">overlap: ${deficit}</div>`;
+                    detailsHtml += actionsHtml;
+                    detailsHtml += `</div>`;
+                }
+                detailsHtml += '</div>';
+            }
+            
+            return `
+                <div class="cycle-card ${ocClass} ${isExpanded ? 'expanded' : ''}" onclick="toggleCycleDetails(${idx})">
+                    <div class="cycle-card-header">
+                        <span class="cycle-card-batch">B${cycle.batchId || '?'} @ ${timeStr}</span>
+                        <span class="cycle-card-outcome ${ocClass}">${ocLabel}</span>
+                    </div>
+                    ${blockingHtml}
+                    ${statsHtml}
+                    ${detailsHtml}
+                </div>
+            `;
+        }
+        
+        // Auto-refresh if panel is open and not paused
+        setInterval(() => {
+            if (conflictPanelVisible && !isPaused) {
+                refreshConflicts();
+            }
+        }, 3000);
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateZoomLabel();
+            loadSchedule();
+            startAutoRefresh();
+        });
+        
+        // Stop auto-refresh when page is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                startAutoRefresh();
+            }
+        });
+    </script>
+</body>
+</html>

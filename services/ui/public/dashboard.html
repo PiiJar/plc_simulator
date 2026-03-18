@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PLC Simulator</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .header {
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+        
+        .close-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+            color: #333;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .close-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .container {
+            padding: 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .page {
+            height: calc(100vh - 84px);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            align-items: stretch;
+            flex: 0 0 50%;
+            min-height: 360px;
+        }
+
+        .future-area {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        .future-col {
+            flex: 1 1 50%;
+            min-width: 520px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #hoistx-chart {
+            width: 100%;
+            flex: 1;
+            min-height: 260px;
+            overflow: hidden;
+        }
+
+        #timing-chart {
+            width: 100%;
+            flex: 1;
+            min-height: 260px;
+            overflow: hidden;
+        }
+
+        .left-col {
+            flex: 1 1 50%;
+            min-width: 520px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-col {
+            flex: 1 1 50%;
+            min-width: 520px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .card h2 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .stat-box {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 6px 8px;
+            min-width: 0;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stat-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #2196f3;
+            white-space: nowrap;
+            line-height: 1.1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stat-value-orange {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ff9800;
+            white-space: nowrap;
+            line-height: 1.1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #cycle-chart {
+            width: 100%;
+            flex: 1;
+            min-height: 180px;
+            overflow: hidden;
+        }
+
+        .batch-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .batch-controls label {
+            font-size: 13px;
+            color: #444;
+            font-weight: 600;
+        }
+
+        .batch-controls select {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+            font-size: 13px;
+        }
+
+        .legend {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        #batch-chart {
+            width: 100%;
+            flex: 1;
+            min-height: 260px;
+            overflow: hidden;
+        }
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #ddd;
+            shape-rendering: crispEdges;
+        }
+
+        .line {
+            fill: none;
+            stroke: #2196f3;
+            stroke-width: 1.5px;
+        }
+
+        .line2 {
+            fill: none;
+            stroke: #ff9800;
+            stroke-width: 1.5px;
+        }
+        
+        .area {
+            fill: #e3f2fd;
+            opacity: 0.5;
+        }
+
+        /* Departure chart styles */
+        .dep-line {
+            fill: none;
+            stroke: #4caf50;
+            stroke-width: 1.5px;
+        }
+        .dep-line2 {
+            fill: none;
+            stroke: #e91e63;
+            stroke-width: 1.5px;
+        }
+        .dep-area {
+            fill: #e8f5e9;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Dashboard</h1>
+        <button class="close-btn" onclick="window.close()">Close</button>
+    </div>
+
+    <div class="container">
+        <div class="page">
+        <div class="layout">
+            <div class="left-col">
+                <div class="card panel-card">
+                    <div class="panel-body">
+                        <!-- TASKS row -->
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                            <span style="font-size:11px;font-weight:700;color:#1565c0;min-width:75px;">TASKS</span>
+                            <div class="stat-grid" style="flex:1;margin-bottom:0;">
+                                <div class="stat-box"><div class="stat-label">Cycles</div><div class="stat-value" id="total-cycles">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Longest</div><div class="stat-value" id="last-cycle">- ms</div></div>
+                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value" id="avg-cycle">- ms</div></div>
+                                <div class="stat-box"><div class="stat-label">Tick</div><div class="stat-value-orange" id="tick-period">- ms</div></div>
+                                <div class="stat-box"><div class="stat-label">Longest</div><div class="stat-value-orange" id="last-cycle-ticks">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value-orange" id="avg-cycle-ticks">-</div></div>
+                            </div>
+                        </div>
+                        <!-- DEPARTURE row -->
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <span style="font-size:11px;font-weight:700;color:#2e7d32;min-width:75px;">DEPARTURE</span>
+                            <div class="stat-grid" style="flex:1;margin-bottom:0;">
+                                <div class="stat-box"><div class="stat-label">Cycles</div><div class="stat-value" style="color:#4caf50" id="dep-total-cycles">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Longest</div><div class="stat-value" style="color:#4caf50" id="dep-last-cycle">- ms</div></div>
+                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value" style="color:#4caf50" id="dep-avg-cycle">- ms</div></div>
+                                <div class="stat-box"><div class="stat-label">Tick</div><div class="stat-value" style="color:#e91e63" id="dep-tick-period">- ms</div></div>
+                                <div class="stat-box"><div class="stat-label">Longest</div><div class="stat-value" style="color:#e91e63" id="dep-last-cycle-ticks">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value" style="color:#e91e63" id="dep-avg-cycle-ticks">-</div></div>
+                            </div>
+                        </div>
+
+                        <h2>Cycle Time (Last 1000)</h2>
+                        <div class="legend" style="margin-bottom:6px;">
+                            <span class="legend-item"><span class="swatch" style="background:#2196f3"></span>Tasks wall</span>
+                            <span class="legend-item"><span class="swatch" style="background:#ff9800"></span>Tasks sim</span>
+                            <span class="legend-item"><span class="swatch" style="background:#4caf50"></span>Dep wall</span>
+                            <span class="legend-item"><span class="swatch" style="background:#e91e63"></span>Dep sim</span>
+                        </div>
+                        <div id="cycle-chart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-col">
+                <div class="card panel-card">
+                    <div class="batch-controls">
+                        <div>
+                            <label for="batch-select">Batch</label>
+                            <select id="batch-select"></select>
+                        </div>
+                        <div class="legend">
+                            <span class="legend-item"><span class="swatch" style="background:#2196f3"></span>Calculated</span>
+                            <span class="legend-item"><span class="swatch" style="background:#ff9800"></span>Actual</span>
+                        </div>
+                    </div>
+                    <h2>Batch Schedule (Calculated vs Actual)</h2>
+                    <div class="panel-body">
+                        <div id="batch-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reserved for future dashboard elements (bottom half) -->
+        <div class="future-area">
+            <div class="future-col">
+                <div class="card panel-card">
+                    <div class="batch-controls">
+                        <div>
+                            <label for="line-select">Line</label>
+                            <select id="line-select">
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                                <option value="300">300</option>
+                                <option value="400">400</option>
+                            </select>
+                        </div>
+                    </div>
+                    <h2>Transporter X (mm) vs Time</h2>
+                    <div class="panel-body">
+                        <div id="hoistx-chart"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="future-col">
+                <div class="card panel-card">
+                    <h2>Station Treatment Times (% of min-max window)</h2>
+                    <div class="panel-body">
+                        <div id="timing-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <script>
+        let chartInitialized = false;
+        let svg, x, y, line, line2, depLine, depLine2, area, path, path2, depPath, depPath2, areaPath, depAreaPath, g;
+        // Tighter margins to keep chart fully inside its panel
+        const margin = {top: 14, right: 14, bottom: 26, left: 44};
+        let cycleChartSize = { width: 0, height: 0 };
+
+        // Batch schedule chart
+        let batchChartInitialized = false;
+        let batchSvg, bx, by;
+        const batchMargin = { top: 10, right: 20, bottom: 40, left: 70 };
+
+        // Hoist X chart
+        let hoistChartInitialized = false;
+        let hoistSvg, hx, hy;
+        const hoistMargin = { top: 10, right: 14, bottom: 26, left: 44 };
+        let hoistChartSize = { width: 0, height: 0 };
+
+        // Timing chart (station treatment times)
+        let timingChartInitialized = false;
+        let timingSvg;
+        const timingMargin = { top: 20, right: 20, bottom: 40, left: 50 };
+        let timingChartSize = { width: 0, height: 0 };
+        
+        async function updateDashboard() {
+            try {
+                const res = await fetch('/api/scheduler/state');
+                const data = await res.json();
+                
+                if (data.success && data.state) {
+                    const s = data.state;
+                    
+                    // ── TASKS stats ──
+                    document.getElementById('total-cycles').textContent = s.totalCycles;
+                    document.getElementById('last-cycle').textContent = s.longestCycleTimeMs + ' ms';
+
+                    const tickPeriodMs = Number(s.cycleTickPeriodMs);
+                    document.getElementById('tick-period').textContent = (Number.isFinite(tickPeriodMs) && tickPeriodMs > 0)
+                        ? (Math.round(tickPeriodMs) + ' ms')
+                        : '-';
+
+                    const longestCycleTicks = Number(s.longestCycleTicks);
+                    document.getElementById('last-cycle-ticks').textContent = Number.isFinite(longestCycleTicks) && longestCycleTicks > 0
+                        ? String(longestCycleTicks)
+                        : '-';
+                    
+                    const history = s.cycleHistory || [];
+                    const simHistory = s.cycleSimTimeHistory || [];
+                    const tickHistory = s.cycleTickHistory || [];
+                    if (history.length > 0) {
+                        const last100 = history.slice(-100);
+                        const avg = Math.round(last100.reduce((a, b) => a + b, 0) / last100.length);
+                        document.getElementById('avg-cycle').textContent = avg + ' ms';
+
+                        if (tickHistory.length > 0) {
+                            const last100Ticks = tickHistory.slice(-100);
+                            const avgTicks = Math.round(last100Ticks.reduce((a, b) => a + b, 0) / last100Ticks.length);
+                            document.getElementById('avg-cycle-ticks').textContent = String(avgTicks);
+                        } else {
+                            document.getElementById('avg-cycle-ticks').textContent = '-';
+                        }
+                    }
+
+                    // ── DEPARTURE stats ──
+                    const dep = s.departureCycles || {};
+                    document.getElementById('dep-total-cycles').textContent = dep.totalCycles || 0;
+                    document.getElementById('dep-last-cycle').textContent = (dep.longestCycleTimeMs || 0) + ' ms';
+
+                    const depTickMs = Number(dep.cycleTickPeriodMs);
+                    document.getElementById('dep-tick-period').textContent = (Number.isFinite(depTickMs) && depTickMs > 0)
+                        ? (Math.round(depTickMs) + ' ms')
+                        : '-';
+
+                    const depLongestTicks = Number(dep.longestCycleTicks);
+                    document.getElementById('dep-last-cycle-ticks').textContent = Number.isFinite(depLongestTicks) && depLongestTicks > 0
+                        ? String(depLongestTicks)
+                        : '-';
+
+                    const depHistory = dep.cycleHistory || [];
+                    const depSimHistory = dep.cycleSimTimeHistory || [];
+                    const depTickHistory = dep.cycleTickHistory || [];
+                    if (depHistory.length > 0) {
+                        const depLast100 = depHistory.slice(-100);
+                        const depAvg = Math.round(depLast100.reduce((a, b) => a + b, 0) / depLast100.length);
+                        document.getElementById('dep-avg-cycle').textContent = depAvg + ' ms';
+
+                        if (depTickHistory.length > 0) {
+                            const depLast100Ticks = depTickHistory.slice(-100);
+                            const depAvgTicks = Math.round(depLast100Ticks.reduce((a, b) => a + b, 0) / depLast100Ticks.length);
+                            document.getElementById('dep-avg-cycle-ticks').textContent = String(depAvgTicks);
+                        } else {
+                            document.getElementById('dep-avg-cycle-ticks').textContent = '-';
+                        }
+                    }
+
+                    // ── Combined chart update ──
+                    updateChart(history, simHistory, depHistory, depSimHistory);
+                }
+
+                // Update hoist X chart (uses sim time)
+                await updateHoistXChart();
+            } catch (err) {
+                console.error('Failed to fetch dashboard data', err);
+            }
+        }
+
+        async function updateHoistXChart() {
+            try {
+                const lineKey = Number(document.getElementById('line-select').value);
+                const res = await fetch(`/api/dashboard/hoist-x?line=${lineKey}`);
+                const data = await res.json();
+                if (!data || !data.success) return;
+                renderHoistXChart(data);
+            } catch (err) {
+                // keep dashboard alive even if this fails
+            }
+        }
+
+        function initHoistChart() {
+            const container = document.getElementById('hoistx-chart');
+            const width = container.clientWidth - hoistMargin.left - hoistMargin.right;
+            const height = container.clientHeight - hoistMargin.top - hoistMargin.bottom;
+            hoistChartSize = { width, height };
+
+            const outerW = Math.max(10, width + hoistMargin.left + hoistMargin.right);
+            const outerH = Math.max(10, height + hoistMargin.top + hoistMargin.bottom);
+
+            const svg = d3.select('#hoistx-chart').append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .attr('viewBox', `0 0 ${outerW} ${outerH}`)
+                .attr('preserveAspectRatio', 'xMidYMid meet');
+
+            hoistSvg = svg.append('g')
+                .attr('transform', `translate(${hoistMargin.left},${hoistMargin.top})`);
+
+            // Add clipping path to prevent overflow - use local coordinates (relative to hoistSvg)
+            hoistSvg.append('defs').append('clipPath')
+                .attr('id', 'hoistx-clip')
+                .append('rect')
+                .attr('x', 0)
+                .attr('y', 0)
+                .attr('width', width)
+                .attr('height', height);
+
+            // Create a separate group for data lines with clipping (axes stay outside clip)
+            hoistSvg.append('g')
+                .attr('class', 'hoist-data-area')
+                .attr('clip-path', 'url(#hoistx-clip)');
+
+            hx = d3.scaleLinear().range([0, width]);
+            hy = d3.scaleLinear().range([height, 0]);
+
+            hoistSvg.append('g')
+                .attr('class', 'x axis')
+                .attr('transform', `translate(0,${height})`);
+            hoistSvg.append('g').attr('class', 'y axis');
+
+            hoistChartInitialized = true;
+        }
+
+        function renderHoistXChart(payload) {
+            const container = document.getElementById('hoistx-chart');
+            const width = container.clientWidth - hoistMargin.left - hoistMargin.right;
+            const height = container.clientHeight - hoistMargin.top - hoistMargin.bottom;
+
+            if (!hoistChartInitialized || Math.abs(width - hoistChartSize.width) > 1 || Math.abs(height - hoistChartSize.height) > 1) {
+                d3.select('#hoistx-chart svg').remove();
+                hoistChartInitialized = false;
+                initHoistChart();
+            }
+
+            const nowMs = Number(payload.nowSimTimeMs);
+            const windowMs = Number(payload.windowMs);
+            const yDomain = payload.yDomain || { minX: 0, maxX: 0 };
+            const minX = Number(yDomain.minX);
+            const maxX = Number(yDomain.maxX);
+
+            const x0 = (Number.isFinite(nowMs) && Number.isFinite(windowMs)) ? (nowMs - windowMs) : 0;
+            const x1 = Number.isFinite(nowMs) ? nowMs : 1;
+
+            hx.domain([x0, x1]);
+            const yPad = (Number.isFinite(minX) && Number.isFinite(maxX) && maxX > minX) ? (maxX - minX) * 0.05 : 0;
+            hy.domain([
+                Number.isFinite(minX) ? (minX - yPad) : 0,
+                Number.isFinite(maxX) ? (maxX + yPad) : 1
+            ]);
+
+            const xTickFmt = (d) => {
+                if (!Number.isFinite(d) || !Number.isFinite(nowMs)) return '';
+                const minsAgo = Math.round((nowMs - d) / 60000);
+                return minsAgo === 0 ? 'now' : `-${minsAgo}m`;
+            };
+
+            hoistSvg.select('.x.axis').call(d3.axisBottom(hx).ticks(6).tickFormat(xTickFmt));
+            hoistSvg.select('.y.axis').call(d3.axisLeft(hy).ticks(5));
+
+            const series = Array.isArray(payload.series) ? payload.series : [];
+            const color = d3.scaleOrdinal(d3.schemeTableau10);
+
+            const lineFn = d3.line()
+                .x(p => hx(p[0]))
+                .y(p => hy(p[1]));
+
+            // Use the clipped data area for lines
+            const dataArea = hoistSvg.select('.hoist-data-area');
+            const paths = dataArea.selectAll('path.hoist-line')
+                .data(series, d => String(d.transporterId));
+
+            paths.enter().append('path')
+                .attr('class', 'hoist-line')
+                .attr('fill', 'none')
+                .attr('stroke-width', 1.5)
+                .merge(paths)
+                .attr('stroke', d => color(String(d.transporterId)))
+                .attr('d', d => lineFn(Array.isArray(d.points) ? d.points : []));
+
+            paths.exit().remove();
+        }
+
+        async function loadBatchList() {
+            try {
+                const res = await fetch('/api/batch-schedules/batches');
+                const data = await res.json();
+                if (!data || !data.success) return;
+                const select = document.getElementById('batch-select');
+                const ids = Array.isArray(data.batchIds) ? data.batchIds : [];
+                
+                // Remember current selection
+                const currentValue = select.value;
+                const currentExists = ids.includes(Number(currentValue));
+                
+                select.innerHTML = '';
+                for (const id of ids) {
+                    const opt = document.createElement('option');
+                    opt.value = String(id);
+                    opt.textContent = `B${id}`;
+                    select.appendChild(opt);
+                }
+                
+                // Restore selection if it still exists, otherwise select first
+                if (currentExists) {
+                    select.value = currentValue;
+                } else if (ids.length > 0) {
+                    select.value = String(ids[0]);
+                    await updateBatchChart(ids[0]);
+                }
+            } catch (err) {
+                console.error('Failed to load batch list', err);
+            }
+        }
+
+        async function updateBatchChart(batchId) {
+            try {
+                const res = await fetch(`/api/batch-schedules/${batchId}`);
+                const data = await res.json();
+                if (!data || !data.success) return;
+                const calculated = Array.isArray(data.calculated) ? data.calculated : [];
+                const actual = Array.isArray(data.actual) ? data.actual : [];
+                renderBatchChart(calculated, actual);
+            } catch (err) {
+                console.error('Failed to fetch batch schedule data', err);
+            }
+        }
+
+        function initBatchChart() {
+            const container = document.getElementById('batch-chart');
+            const width = container.clientWidth - batchMargin.left - batchMargin.right;
+            const height = container.clientHeight - batchMargin.top - batchMargin.bottom;
+
+            batchSvg = d3.select('#batch-chart').append('svg')
+                .attr('width', width + batchMargin.left + batchMargin.right)
+                .attr('height', height + batchMargin.top + batchMargin.bottom)
+                .append('g')
+                .attr('transform', `translate(${batchMargin.left},${batchMargin.top})`);
+
+            bx = d3.scaleLinear().range([0, width]);
+            by = d3.scaleBand().range([0, height]).padding(0.25);
+
+            batchSvg.append('g').attr('class', 'x axis').attr('transform', `translate(0,${height})`);
+            batchSvg.append('g').attr('class', 'y axis');
+
+            batchChartInitialized = true;
+        }
+
+        function renderBatchChart(calculated, actual) {
+            if (!batchChartInitialized) initBatchChart();
+
+            const container = document.getElementById('batch-chart');
+            const width = container.clientWidth - batchMargin.left - batchMargin.right;
+            const height = container.clientHeight - batchMargin.top - batchMargin.bottom;
+
+            // Filter rows that have both entry & exit
+            const calcBars = (calculated || []).filter(r => Number.isFinite(r.entryTime_s) && Number.isFinite(r.exitTime_s));
+            const actBars = (actual || []).filter(r => Number.isFinite(r.entryTime_s) && Number.isFinite(r.exitTime_s));
+
+            // Union of stations
+            const stationSet = new Set();
+            calcBars.forEach(r => stationSet.add(r.station));
+            actBars.forEach(r => stationSet.add(r.station));
+            const stations = [...stationSet].sort((a, b) => a - b);
+
+            // Time domain from both sets
+            const times = [];
+            calcBars.forEach(r => { times.push(r.entryTime_s, r.exitTime_s); });
+            actBars.forEach(r => { times.push(r.entryTime_s, r.exitTime_s); });
+            const minT = times.length ? d3.min(times) : 0;
+            const maxT = times.length ? d3.max(times) : 10;
+
+            // Rebase times so the batch fits nicely into the chart width.
+            // Using relative seconds avoids compressing the bars when sim-time is large.
+            const t0 = Number.isFinite(minT) ? minT : 0;
+            const rawSpan = Number.isFinite(maxT) ? (maxT - t0) : 10;
+            const span = Math.max(1, rawSpan);
+            // Pieni padding oikealle, jotta viimeinen palkki ei osu reunaan
+            const padRight = Math.max(1, span * 0.02);
+            const toRel = (t) => t - t0;
+
+            // Skaalaa koko leveys: 0 → span+pad käyttää koko range [0, width]
+            bx.range([0, width]).domain([0, span + padRight]);
+            by.range([0, height]).domain(stations.map(s => String(s)));
+
+            // Formatoi aika MM:SS tai S jos lyhyt
+            const formatAxisTime = (relSec) => {
+                const absSec = Math.round(t0 + relSec);
+                if (span < 120) {
+                    return `${absSec}s`;
+                }
+                const m = Math.floor(absSec / 60);
+                const s = absSec % 60;
+                return `${m}:${String(s).padStart(2, '0')}`;
+            };
+
+            batchSvg.select('.x.axis')
+                .call(d3.axisBottom(bx).ticks(6).tickFormat(formatAxisTime));
+            batchSvg.select('.y.axis')
+                .call(d3.axisLeft(by));
+
+            // Calculated bars
+            const barH = Math.max(4, (by.bandwidth() - 6) / 2);
+            const yCalc = (s) => by(String(s)) + 2;
+            const yAct = (s) => by(String(s)) + 2 + barH + 2;
+
+            const calcSel = batchSvg.selectAll('rect.calc-bar')
+                .data(calcBars, d => `c-${d.station}`);
+            calcSel.enter().append('rect')
+                .attr('class', 'calc-bar')
+                .attr('rx', 2)
+                .attr('fill', '#2196f3')
+                .merge(calcSel)
+                .attr('x', d => bx(toRel(d.entryTime_s)))
+                .attr('y', d => yCalc(d.station))
+                .attr('height', barH)
+                .attr('width', d => Math.max(1, bx(toRel(d.exitTime_s)) - bx(toRel(d.entryTime_s))));
+            calcSel.exit().remove();
+
+            // Actual bars
+            const actSel = batchSvg.selectAll('rect.act-bar')
+                .data(actBars, d => `a-${d.station}`);
+            actSel.enter().append('rect')
+                .attr('class', 'act-bar')
+                .attr('rx', 2)
+                .attr('fill', '#ff9800')
+                .merge(actSel)
+                .attr('x', d => bx(toRel(d.entryTime_s)))
+                .attr('y', d => yAct(d.station))
+                .attr('height', barH)
+                .attr('width', d => Math.max(1, bx(toRel(d.exitTime_s)) - bx(toRel(d.entryTime_s))));
+            actSel.exit().remove();
+        }
+
+        function initChart() {
+            const container = document.getElementById('cycle-chart');
+            const width = container.clientWidth - margin.left - margin.right;
+            const height = container.clientHeight - margin.top - margin.bottom;
+
+            cycleChartSize = { width, height };
+
+            const outerW = Math.max(10, width + margin.left + margin.right);
+            const outerH = Math.max(10, height + margin.top + margin.bottom);
+
+            svg = d3.select("#cycle-chart").append("svg")
+                .attr("width", "100%")
+                .attr("height", "100%")
+                .attr("viewBox", `0 0 ${outerW} ${outerH}`)
+                .attr("preserveAspectRatio", "none")
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            x = d3.scaleLinear().range([0, width]);
+            y = d3.scaleLinear().range([height, 0]);
+
+            line = d3.line().x((d, i) => x(i)).y(d => y(d));
+            line2 = d3.line().x((d, i) => x(i)).y(d => y(d));
+            depLine = d3.line().x((d, i) => x(i)).y(d => y(d));
+            depLine2 = d3.line().x((d, i) => x(i)).y(d => y(d));
+
+            area = d3.area().x((d, i) => x(i)).y0(height).y1(d => y(d));
+
+            g = svg.append("g");
+            g.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")");
+            g.append("g").attr("class", "y axis");
+
+            // Areas (behind lines)
+            areaPath = g.append("path").attr("class", "area");
+            depAreaPath = g.append("path").attr("class", "dep-area");
+            // Lines
+            path = g.append("path").attr("class", "line");
+            path2 = g.append("path").attr("class", "line2");
+            depPath = g.append("path").attr("class", "dep-line");
+            depPath2 = g.append("path").attr("class", "dep-line2");
+
+            chartInitialized = true;
+        }
+
+        function updateChart(tasksWall, tasksSim, depWall, depSim) {
+            const container = document.getElementById('cycle-chart');
+            const width = container.clientWidth - margin.left - margin.right;
+            const height = container.clientHeight - margin.top - margin.bottom;
+
+            if (!chartInitialized || Math.abs(width - cycleChartSize.width) > 1 || Math.abs(height - cycleChartSize.height) > 1) {
+                d3.select("#cycle-chart svg").remove();
+                chartInitialized = false;
+                initChart();
+            }
+
+            const sA = Array.isArray(tasksWall) ? tasksWall : [];
+            const sB = Array.isArray(tasksSim) ? tasksSim : [];
+            const sC = Array.isArray(depWall) ? depWall : [];
+            const sD = Array.isArray(depSim) ? depSim : [];
+            const maxLen = Math.max(sA.length, sB.length, sC.length, sD.length);
+
+            x.domain([0, Math.max(0, maxLen - 1)]);
+            const maxY = Math.max(
+                50,
+                (sA.length ? d3.max(sA) : 0) * 1.1,
+                (sB.length ? d3.max(sB) : 0) * 1.1,
+                (sC.length ? d3.max(sC) : 0) * 1.1,
+                (sD.length ? d3.max(sD) : 0) * 1.1
+            );
+            y.domain([0, maxY]);
+
+            svg.select(".x.axis").call(d3.axisBottom(x).ticks(5));
+            svg.select(".y.axis").call(d3.axisLeft(y).ticks(5));
+
+            // Tasks
+            areaPath.datum(sA).attr("d", area);
+            path.datum(sA).attr("d", line);
+            path2.datum(sB).attr("d", line2);
+            // Departure
+            depAreaPath.datum(sC).attr("d", d3.area().x((d,i)=>x(i)).y0(height).y1(d=>y(d)));
+            depPath.datum(sC).attr("d", depLine);
+            depPath2.datum(sD).attr("d", depLine2);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════════════════
+        // TIMING CHART - Station Treatment Times
+        // ═══════════════════════════════════════════════════════════════════════════════════════
+        
+        async function updateTimingChart() {
+            try {
+                const res = await fetch('/api/station-timing-stats');
+                const data = await res.json();
+                if (!data || !data.success) return;
+                renderTimingChart(data);
+            } catch (err) {
+                console.error('Failed to fetch timing stats', err);
+            }
+        }
+
+        function renderTimingChart(payload) {
+            const container = document.getElementById('timing-chart');
+            if (!container) {
+                console.log('[TimingChart] No container found');
+                return;
+            }
+            
+            const fullWidth = container.clientWidth;
+            const fullHeight = container.clientHeight;
+            console.log('[TimingChart] Container size:', fullWidth, 'x', fullHeight);
+            
+            const width = fullWidth - timingMargin.left - timingMargin.right;
+            const height = fullHeight - timingMargin.top - timingMargin.bottom;
+            
+            if (width <= 0 || height <= 0) {
+                console.log('[TimingChart] Size too small, skipping');
+                return;
+            }
+            
+            // Rebuild if size changed
+            if (!timingChartInitialized || 
+                Math.abs(width - timingChartSize.width) > 1 || 
+                Math.abs(height - timingChartSize.height) > 1) {
+                d3.select('#timing-chart svg').remove();
+                timingChartInitialized = false;
+            }
+            
+            const stations = payload.stations || [];
+            const batches = payload.batches || [];
+            
+            // Create SVG if needed (even if no data)
+            if (!timingChartInitialized) {
+                timingChartSize = { width, height };
+                
+                timingSvg = d3.select('#timing-chart').append('svg')
+                    .attr('width', '100%')
+                    .attr('height', '100%')
+                    .attr('viewBox', `0 0 ${fullWidth} ${fullHeight}`)
+                    .attr('preserveAspectRatio', 'xMidYMid meet')
+                    .append('g')
+                    .attr('transform', `translate(${timingMargin.left},${timingMargin.top})`);
+                
+                timingSvg.append('g').attr('class', 'x-axis')
+                    .attr('transform', `translate(0,${height})`);
+                timingSvg.append('g').attr('class', 'y-axis');
+                timingSvg.append('g').attr('class', 'bars');
+                timingSvg.append('g').attr('class', 'limits');
+                
+                timingChartInitialized = true;
+            }
+            
+            // X scale: stations (or placeholder if no data)
+            const stationNumbers = stations.length > 0 
+                ? stations.map(s => s.station)
+                : ['No data'];
+            const xScale = d3.scaleBand()
+                .domain(stationNumbers)
+                .range([0, width])
+                .padding(0.2);
+            
+            // Y scale: -15% to 150% - bars start from bottom (-15%) so 0% bars are visible
+            const yMin = -15;  // Bottom of chart - bars start here
+            const yScale = d3.scaleLinear()
+                .domain([yMin, 150])  // Allow space below 0% and up to 150% for over-time display
+                .range([height, 0]);
+            
+            // Update axes
+            timingSvg.select('.x-axis')
+                .call(d3.axisBottom(xScale).tickFormat(d => String(d)));
+            
+            // Y-axis: only show ticks from 0% upwards
+            timingSvg.select('.y-axis')
+                .call(d3.axisLeft(yScale)
+                    .tickValues([0, 25, 50, 75, 100, 125, 150])
+                    .tickFormat(d => d + '%'));
+            
+            // Draw limit lines
+            const limitsG = timingSvg.select('.limits');
+            limitsG.selectAll('*').remove();
+            
+            // Min line at 0% (now visually above the x-axis)
+            limitsG.append('line')
+                .attr('x1', 0).attr('x2', width)
+                .attr('y1', yScale(0)).attr('y2', yScale(0))
+                .attr('stroke', '#4caf50').attr('stroke-width', 2)
+                .attr('stroke-dasharray', '5,5');
+            
+            // Max line at 100%
+            limitsG.append('line')
+                .attr('x1', 0).attr('x2', width)
+                .attr('y1', yScale(100)).attr('y2', yScale(100))
+                .attr('stroke', '#ff5722').attr('stroke-width', 2)
+                .attr('stroke-dasharray', '5,5');
+            
+            // Labels
+            limitsG.append('text')
+                .attr('x', width - 5).attr('y', yScale(0) - 4)
+                .attr('text-anchor', 'end').attr('font-size', '10px').attr('fill', '#4caf50')
+                .text('MIN');
+            
+            limitsG.append('text')
+                .attr('x', width - 5).attr('y', yScale(100) + 12)
+                .attr('text-anchor', 'end').attr('font-size', '10px').attr('fill', '#ff5722')
+                .text('MAX');
+            
+            // Calculate bar data
+            // Each batch gets a thin bar per station
+            // pct = (actual - min) / (max - min) * 100%
+            const maxBatches = 10;
+            const barData = [];
+            
+            for (const station of stations) {
+                const stNum = station.station;
+                const minS = station.min_s || 0;
+                const maxS = station.max_s || 1;
+                const range = maxS - minS;
+                
+                for (let bi = 0; bi < batches.length && bi < maxBatches; bi++) {
+                    const batch = batches[bi];
+                    const stationData = (batch.stations || []).find(s => s.station === stNum);
+                    
+                    if (stationData && stationData.duration_s != null) {
+                        const duration = stationData.duration_s;
+                        
+                        // Calculate percentage: (actual - min) / (max - min) * 100
+                        // 0% = at min time, 100% = at max time, >100% = over max
+                        let pct = range > 0 ? ((duration - minS) / range) * 100 : 0;
+                        pct = Math.max(0, pct); // Don't go negative
+                        
+                        barData.push({
+                            station: stNum,
+                            batchId: batch.batchId,
+                            batchIndex: bi,
+                            duration,
+                            pct,
+                            isOver: pct > 100
+                        });
+                    }
+                }
+            }
+            
+            // Draw bars - bars start from bottom (yMin) and go up to pct value
+            const barsG = timingSvg.select('.bars');
+            const barWidth = xScale.bandwidth() / Math.min(maxBatches, Math.max(batches.length, 1));
+            
+            const bars = barsG.selectAll('rect.timing-bar')
+                .data(barData, d => `${d.station}-${d.batchId}`);
+            
+            bars.enter().append('rect')
+                .attr('class', 'timing-bar')
+                .merge(bars)
+                .attr('x', d => xScale(d.station) + d.batchIndex * barWidth)
+                .attr('y', d => yScale(d.pct))
+                .attr('width', Math.max(barWidth - 1, 2))
+                .attr('height', d => yScale(yMin) - yScale(d.pct))  // From bottom (yMin) to pct
+                .attr('fill', d => d.isOver ? '#f44336' : '#4caf50')
+                .attr('opacity', 0.8);
+            
+            bars.exit().remove();
+        }
+
+        // Initial load
+        updateDashboard();
+        loadBatchList();
+        updateHoistXChart();
+        updateTimingChart();
+        
+        // Poll every 1s
+        setInterval(updateDashboard, 1000);
+        
+        // Poll batch list every 5s (new batches may start during simulation)
+        setInterval(loadBatchList, 5000);
+        
+        // Poll batch chart every 2s (actual-tiedosto päivittyy simulaation aikana)
+        setInterval(async () => {
+            const id = Number(document.getElementById('batch-select').value);
+            if (Number.isFinite(id)) await updateBatchChart(id);
+        }, 2000);
+
+        // Batch select handler
+        document.getElementById('batch-select').addEventListener('change', async (e) => {
+            const id = Number(e.target.value);
+            if (Number.isFinite(id)) {
+                await updateBatchChart(id);
+            }
+        });
+
+        // Line select handler
+        document.getElementById('line-select').addEventListener('change', async () => {
+            await updateHoistXChart();
+        });
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+            d3.select("#cycle-chart svg").remove();
+            chartInitialized = false;
+            updateDashboard();
+
+            d3.select('#batch-chart svg').remove();
+            batchChartInitialized = false;
+            const id = Number(document.getElementById('batch-select').value);
+            if (Number.isFinite(id)) updateBatchChart(id);
+
+            d3.select('#hoistx-chart svg').remove();
+            hoistChartInitialized = false;
+            updateHoistXChart();
+
+            d3.select('#timing-chart svg').remove();
+            timingChartInitialized = false;
+            updateTimingChart();
+        });
+        
+        // Poll timing chart every 5s (not as frequently as dashboard)
+        setInterval(updateTimingChart, 5000);
+    </script>
+</body>
+</html>
