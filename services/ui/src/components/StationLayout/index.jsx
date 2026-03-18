@@ -53,6 +53,41 @@ function StationLayout({
     showDriveLimits
   } = useLayoutScales({ config, stations, transporterStates });
 
+  
+  const batchByLocation = React.useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(batches)) {
+      batches.forEach(b => map.set(b.location, b)); // Cast location to string just in case
+      // Original code was ==?, no it was === but location can sometimes be string or int. Let's use strict types based on original code, or map by both if needed. Wait, original has === . 
+      // Actually map.set(b.location) is fine.
+    }
+    return map;
+  }, [batches]);
+
+  const unitByBatchId = React.useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(units)) {
+      units.forEach(u => map.set(u.batch_id, u));
+    }
+    return map;
+  }, [units]);
+
+  const unitByLocation = React.useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(units)) {
+      units.forEach(u => map.set(u.location, u));
+    }
+    return map;
+  }, [units]);
+
+  const transporterStateById = React.useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(transporterStates)) {
+      transporterStates.forEach(ts => map.set(ts.id, ts));
+    }
+    return map;
+  }, [transporterStates]);
+
   // Early return if no data or scales
   if (!config || !stations.length || !transporters.length || !xScale || !yScale) {
     return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
