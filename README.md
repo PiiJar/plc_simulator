@@ -47,4 +47,27 @@ Current migration status:
 - active data migrated to `data/customers/`, `data/plant_templates/`, and `data/runtime/`
 - PostgreSQL init schema migrated to `services/db/init.sql`
 - clean stack compose added at `infra/docker-compose.yml`
-- final documentation still pending
+- baseline setup and migration docs added under `docs/`
+
+## Quick start
+
+Build and start the stack:
+
+- `docker compose -f infra/docker-compose.yml up -d --build`
+
+Build the UI locally:
+
+- `cd services/ui`
+- `npm ci`
+- `npm run build`
+
+Build PLCopenXML locally:
+
+- `cd services/codesys`
+- `python3 build_codesys_xml.py`
+
+## Documentation
+
+- setup: `docs/setup/SETUP.md`
+- troubleshooting: `docs/troubleshooting/CODESYS_CONNECTIVITY.md`
+- migration source mapping: `docs/migration/SOURCE_FROM_OLD_REPO.md`
