@@ -78,7 +78,6 @@ export default function App() {
   const [manualTasks, setManualTasks] = useState([]); // Käsin annetut tehtävät (pending queue)
   const [avoidStatuses, setAvoidStatuses] = useState({}); // { [stationNumber]: 0|1|2 }
   const [transporterStates, setTransporterStates] = useState([]); // backend snapshots
-  const [displayTransporterStates, setDisplayTransporterStates] = useState([]); // interpolated for smooth UI
     const [editingBatchId, setEditingBatchId] = useState(null);
   const [plantSetups, setPlantSetups] = useState([]);
   const [selectedPlantSetup, setSelectedPlantSetup] = useState('');
@@ -257,11 +256,9 @@ export default function App() {
           if (resetData && resetData.success && resetData.transporters) {
             console.log("Transporter states reset on load:", resetData.transporters.length);
             setTransporterStates(resetData.transporters);
-            setDisplayTransporterStates(resetData.transporters);
-            latestSnapshotRef.current = {
-              timeMs: performance.now(),
-              transporters: resetData.transporters
-            };
+
+
+
           } else {
             throw new Error('Reset failed');
           }
@@ -411,12 +408,7 @@ export default function App() {
         const data = await api.get('/api/transporter-states');
         if (!cancelled && data && Array.isArray(data.transporters) && data.transporters.length > 0) {
           setTransporterStates(data.transporters);
-          setDisplayTransporterStates(data.transporters);
-          latestSnapshotRef.current = {
-            timeMs: performance.now(),
-            transporters: data.transporters
-          };
-        }
+                              }
       } catch (err) {
         console.error('Error polling transporter states:', err);
       }
@@ -429,22 +421,7 @@ export default function App() {
     };
   }, []);
 
-  // Interpolate/extrapolate between polls for smoother motion
-  useEffect(() => {
-    let rafId;
-    let lastRef = null;
-    const tick = () => {
-      const snapshot = latestSnapshotRef.current;
-      if (snapshot.transporters !== lastRef) {
-        lastRef = snapshot.transporters;
-        setDisplayTransporterStates(snapshot.transporters);
-      }
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
-
+  
   // Keep production programs in sync with current plant setup
   useEffect(() => {
     loadTreatmentPrograms();
@@ -539,11 +516,6 @@ export default function App() {
       };
     });
     setTransporterStates(initialStates);
-    setDisplayTransporterStates(initialStates);
-    latestSnapshotRef.current = {
-      timeMs: performance.now(),
-      transporters: initialStates
-    };
     return initialStates;
   };
   const fetchBatchesFromApi = async () => {
@@ -1146,7 +1118,7 @@ export default function App() {
   return <div className="app">
       <Toolbar config={config} plcStatus={plcStatus} plcToggling={plcToggling} onTogglePlc={handleTogglePlc} selectedCustomer={selectedCustomer} selectedPlant={selectedPlant} plantStatus={plantStatus} showCustomer={showCustomer} setShowCustomer={setShowCustomer} showConfig={showConfig} setShowConfig={setShowConfig} showProduction={showProduction} setShowProduction={setShowProduction} showBatches={showBatches} setShowBatches={setShowBatches} showTasks={showTasks} setShowTasks={setShowTasks} elapsedMs={elapsedMs} speed={speed} onSpeedChange={handleSpeedChange} productionStartTime={productionStartTime} isResetting={isResetting} onStart={handleStart} onReset={handleReset} />
       <main className="app-content">
-        <StationLayout config={config} stations={stations} tanks={tanks} transporters={transporters} transporterStates={displayTransporterStates} batches={plcBatches} units={units} currentSimMs={elapsedMs} avoidStatuses={avoidStatuses} onAvoidStatusChange={handleAvoidStatusChange} setDebugTransporterId={setDebugTransporterId} avgCycleSec={avgCycleSec} productionStats={productionStats} />
+        <StationLayout config={config} stations={stations} tanks={tanks} transporters={transporters} transporterStates={transporterStates} batches={plcBatches} units={units} currentSimMs={elapsedMs} avoidStatuses={avoidStatuses} onAvoidStatusChange={handleAvoidStatusChange} setDebugTransporterId={setDebugTransporterId} avgCycleSec={avgCycleSec} productionStats={productionStats} />
       </main>
       {debugTransporterState && debugTransporter && <DraggablePanel onClose={() => setDebugTransporterId(null)} title={`Transporter ${debugTransporter.id} – debug`}>
           <div style={{
