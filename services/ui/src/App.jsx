@@ -1167,21 +1167,11 @@ export default function App() {
       start_time: u.batch_start_time || 0 // unix seconds (same as currentTimeSec)
     }));
   }, [units]);
-  return <div style={{
-    width: '100vw',
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#f5f5f5'
-  }}>
+  return <div className="app">
       <Toolbar config={config} plcStatus={plcStatus} plcToggling={plcToggling} onTogglePlc={handleTogglePlc} selectedCustomer={selectedCustomer} selectedPlant={selectedPlant} plantStatus={plantStatus} showCustomer={showCustomer} setShowCustomer={setShowCustomer} showConfig={showConfig} setShowConfig={setShowConfig} showProduction={showProduction} setShowProduction={setShowProduction} showBatches={showBatches} setShowBatches={setShowBatches} showTasks={showTasks} setShowTasks={setShowTasks} elapsedMs={elapsedMs} speed={speed} onSpeedChange={handleSpeedChange} productionStartTime={productionStartTime} isResetting={isResetting} onStart={handleStart} onReset={handleReset} />
-      <div style={{
-      flex: 1,
-      overflow: 'hidden',
-      padding: '16px'
-    }}>
+      <main className="app-content">
         <StationLayout config={config} stations={stations} tanks={tanks} transporters={transporters} transporterStates={displayTransporterStates} batches={plcBatches} units={units} currentSimMs={elapsedMs} avoidStatuses={avoidStatuses} onAvoidStatusChange={handleAvoidStatusChange} setDebugTransporterId={setDebugTransporterId} avgCycleSec={avgCycleSec} productionStats={productionStats} />
-      </div>
+      </main>
       {debugTransporterState && debugTransporter && <DraggablePanel onClose={() => setDebugTransporterId(null)} title={`Transporter ${debugTransporter.id} – debug`}>
           <div style={{
         fontFamily: 'monospace',

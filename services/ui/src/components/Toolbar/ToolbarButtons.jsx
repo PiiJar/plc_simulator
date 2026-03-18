@@ -8,30 +8,12 @@ export default function ToolbarButtons({
   showBatches, setShowBatches,
   showTasks, setShowTasks
 }) {
-  const btnStyle = (active, isDisabled) => ({
-    padding: '8px 12px',
-    fontSize: '12px',
-    fontWeight: 600,
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    background: active ? '#1976d2' : '#fff',
-    color: active ? '#fff' : '#333',
-    cursor: isDisabled ? 'not-allowed' : 'pointer',
-    opacity: isDisabled ? 0.5 : 1,
-    height: 36,
-    width: 90,
-    whiteSpace: 'nowrap',
-    transition: 'all 0.2s',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 2
-  });
+  
 
   return (
     <div style={{ display: 'flex', gap: '8px' }}>
       <button 
-        style={btnStyle(showCustomer, false)} 
+        className={`toolbar-btn ${showCustomer ? 'toolbar-btn--active' : ''}`} 
         onClick={() => setShowCustomer(!showCustomer)}
       >
         <span style={{ fontSize: 14 }}>🏢</span>
@@ -40,7 +22,7 @@ export default function ToolbarButtons({
       
       <button 
         disabled={disabled}
-        style={btnStyle(showConfig, disabled)} 
+        className={`toolbar-btn ${showConfig ? 'toolbar-btn--active' : ''}`} 
         onClick={() => setShowConfig(!showConfig)}
       >
         <span style={{ fontSize: 14 }}>⚙️</span>
@@ -49,7 +31,7 @@ export default function ToolbarButtons({
 
       <button 
         disabled={disabled}
-        style={btnStyle(showProduction, disabled)} 
+        className={`toolbar-btn ${showProduction ? 'toolbar-btn--active' : ''}`} 
         onClick={() => setShowProduction(!showProduction)}
       >
         <span style={{ fontSize: 14 }}>📊</span>
@@ -58,7 +40,7 @@ export default function ToolbarButtons({
 
       <button 
         disabled={disabled}
-        style={btnStyle(showBatches, disabled)} 
+        className={`toolbar-btn ${showBatches ? 'toolbar-btn--active' : ''}`} 
         onClick={() => setShowBatches(!showBatches)}
       >
         <span style={{ fontSize: 14 }}>📦</span>
@@ -67,7 +49,7 @@ export default function ToolbarButtons({
 
       <button 
         disabled={disabled}
-        style={btnStyle(showTasks, disabled)} 
+        className={`toolbar-btn ${showTasks ? 'toolbar-btn--active' : ''}`} 
         onClick={() => setShowTasks(!showTasks)}
       >
         <span style={{ fontSize: 14 }}>📋</span>

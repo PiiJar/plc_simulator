@@ -40,7 +40,7 @@ export default function Toolbar({
       justifyContent: 'space-between',
       gap: '16px'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className="toolbar-left">
         <img src="/Codesys_logo.png" alt="CODESYS" style={{ height: 36, borderRadius: 6, objectFit: 'contain' }} />
         
         <PlcStatusButton 
