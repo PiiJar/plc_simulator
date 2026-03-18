@@ -10,6 +10,8 @@ import CalibrationPanel from './components/CalibrationPanel';
 // Load color palette at startup (runtime, no rebuild needed)
 import { loadPalette } from './hooks/useColorPalette';
 
+import { api, request } from './api/client';
+
 // MiniPieChart moved to ./components/StationLayout/helpers/MiniPieChart.jsx
 // DraggablePanel moved to ./components/StationLayout/helpers/DraggablePanel.jsx
 // StationLayout moved to ./components/StationLayout/index.jsx
@@ -117,9 +119,8 @@ export default function App() {
     // Poll PLC runtime status every 2 seconds
     const pollPlcStatus = async () => {
       try {
-        const res = await fetch('/api/plc/status');
-        if (res.ok) {
-          const data = await res.json();
+        const data = await api.get('/api/plc/status');
+        if (data) {
           setPlcStatus(data);
           if (typeof data.production_queue === 'number') setProductionQueue(data.production_queue);
         }
@@ -136,24 +137,24 @@ export default function App() {
         console.log("Loading configuration files...");
         // Try to load config from current plant setup via API
         // If no customer/plant is selected yet, the API will return errors — this is OK
-        const [configRes, transportersRes, stationsRes, tanksRes] = await Promise.all([
-          fetch('/api/config/layout_config.json'),
-          fetch('/api/config/transporters.json'),
-          fetch('/api/config/stations.json'),
-          fetch('/api/config/tanks.json')
+        const [configRes, transportersRes, stationsRes, tanksRes] = await Promise.allSettled([
+          api.get('/api/config/layout_config.json'),
+          api.get('/api/config/transporters.json'),
+          api.get('/api/config/stations.json'),
+          api.get('/api/config/tanks.json')
         ]);
 
-        // If any config fetch fails (no customer selected), show waiting state
-        if (!configRes.ok || !stationsRes.ok || !transportersRes.ok) {
+        // If any core config fetch fails (no customer selected), show waiting state
+        if (configRes.status === 'rejected' || stationsRes.status === 'rejected' || transportersRes.status === 'rejected') {
           console.log("No configuration loaded — waiting for customer/plant selection");
           setLoadError(null);  // Not an error, just no selection yet
           return;
         }
 
-        const configData = await configRes.json();
-        const transportersData = await transportersRes.json();
-        const stationsData = await stationsRes.json();
-        const tanksData = tanksRes.ok ? await tanksRes.json() : { tanks: [] };
+        const configData = configRes.value;
+        const transportersData = transportersRes.value;
+        const stationsData = stationsRes.value;
+        const tanksData = tanksRes.status === 'fulfilled' ? tanksRes.value : { tanks: [] };
         
         console.log("Config loaded:", configData.layout);
         console.log("Transporters loaded:", transportersData.transporters.length);
@@ -189,11 +190,8 @@ export default function App() {
         
         // Reset transporter states to ensure they match current configuration
         try {
-          const resetRes = await fetch(`/api/reset-transporters`, {
-            method: 'POST'
-          });
-          const resetData = await resetRes.json();
-          if (resetData.success && resetData.transporters) {
+          const resetData = await api.post(`/api/reset-transporters`);
+          if (resetData && resetData.success && resetData.transporters) {
             console.log("Transporter states reset on load:", resetData.transporters.length);
             setTransporterStates(resetData.transporters);
             setDisplayTransporterStates(resetData.transporters);
@@ -243,8 +241,7 @@ export default function App() {
   // Poll transporter tasks from backend
   const fetchTransporterTasks = async () => {
     try {
-      const res = await fetch('/api/transporter-tasks');
-      const data = await res.json();
+      const data = await api.get('/api/transporter-tasks');
       if (data && Array.isArray(data.tasks)) {
         setTransporterTasks(data.tasks);
       }
@@ -257,18 +254,17 @@ export default function App() {
     let cancelled = false;
     const fetchTasks = async () => {
       try {
-        const [tasksRes, manualRes] = await Promise.all([
-          fetch('/api/transporter-tasks'),
-          fetch('/api/manual-tasks')
+        const [tasksRes, manualRes] = await Promise.allSettled([
+          api.get('/api/transporter-tasks'),
+          api.get('/api/manual-tasks')
         ]);
         if (cancelled) return;
-        const tasksData = await tasksRes.json();
-        const manualData = await manualRes.json();
-        if (tasksData && Array.isArray(tasksData.tasks)) {
-          setTransporterTasks(tasksData.tasks);
+        
+        if (tasksRes.status === 'fulfilled' && tasksRes.value && Array.isArray(tasksRes.value.tasks)) {
+          setTransporterTasks(tasksRes.value.tasks);
         }
-        if (manualData && Array.isArray(manualData.tasks)) {
-          setManualTasks(manualData.tasks);
+        if (manualRes.status === 'fulfilled' && manualRes.value && Array.isArray(manualRes.value.tasks)) {
+          setManualTasks(manualRes.value.tasks);
         }
       } catch (err) {
         // silently ignore polling errors
@@ -287,13 +283,12 @@ export default function App() {
     let cancelled = false;
     const fetchSchedulerState = async () => {
       try {
-        const res = await fetch('/api/scheduler/state');
-        const data = await res.json();
+        const data = await api.get('/api/scheduler/state');
         if (cancelled) return;
-        if (data.state && typeof data.state.avgDepartureIntervalSec === 'number') {
+        if (data && data.state && typeof data.state.avgDepartureIntervalSec === 'number') {
           setAvgCycleSec(data.state.avgDepartureIntervalSec);
         }
-        if (data.productionStats) {
+        if (data && data.productionStats) {
           setProductionStats(data.productionStats);
         }
       } catch (err) {
@@ -344,14 +339,13 @@ export default function App() {
     if (!showCustomer) return;
     const loadCustomers = async () => {
       try {
-        const res = await fetch('/api/customers');
-        const data = await res.json();
-        if (data.success) {
+        const data = await api.get('/api/customers');
+        if (data && data.success) {
           setCustomers(data.customers);
         }
       } catch (error) {
         console.error('Failed to load customers:', error);
-        setCustomerError('Failed to load customers');
+        setCustomerError(error.message || 'Failed to load customers');
       }
     };
     loadCustomers();
@@ -365,9 +359,8 @@ export default function App() {
     }
     const loadPlants = async () => {
       try {
-        const res = await fetch(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants`);
-        const data = await res.json();
-        if (data.success) {
+        const data = await api.get(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants`);
+        if (data && data.success) {
           setCustomerPlants(data.plants);
         }
       } catch (error) {
@@ -386,9 +379,8 @@ export default function App() {
     }
     const loadSimPurpose = async () => {
       try {
-        const res = await fetch(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants/${encodeURIComponent(selectedPlant)}/simulation-purpose`);
-        const data = await res.json();
-        if (data.success) {
+        const data = await api.get(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants/${encodeURIComponent(selectedPlant)}/simulation-purpose`);
+        if (data && data.success) {
           setSimPurpose(data.data);
           setSimPurposeForm({
             country: data.data.plant?.country || '',
@@ -411,9 +403,8 @@ export default function App() {
     }
     const loadPlantStatus = async () => {
       try {
-        const res = await fetch(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants/${encodeURIComponent(selectedPlant)}/status`);
-        const data = await res.json();
-        if (data.success) {
+        const data = await api.get(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants/${encodeURIComponent(selectedPlant)}/status`);
+        if (data && data.success) {
           setPlantStatus(data);
         }
       } catch (error) {
@@ -428,8 +419,7 @@ export default function App() {
     let cancelled = false;
     const fetchStates = async () => {
       try {
-        const res = await fetch('/api/transporter-states');
-        const data = await res.json();
+        const data = await api.get('/api/transporter-states');
         if (!cancelled && data && Array.isArray(data.transporters) && data.transporters.length > 0) {
           setTransporterStates(data.transporters);
           setDisplayTransporterStates(data.transporters);
@@ -518,9 +508,8 @@ export default function App() {
 
   const syncSimTime = async () => {
     try {
-      const res = await fetch(`/api/sim/time`);
-      const data = await res.json();
-      if (typeof data.time === 'number') {
+      const data = await api.get(`/api/sim/time`);
+      if (data && typeof data.time === 'number') {
         const backendRunning = typeof data.running === 'boolean' ? data.running : isRunning;
         setElapsedMs((prev) => {
           if (backendRunning) return data.time;
@@ -528,10 +517,10 @@ export default function App() {
           return Math.min(prev, data.time);
         });
       }
-      if (typeof data.speedMultiplier === 'number') {
+      if (data && typeof data.speedMultiplier === 'number') {
         setSpeed(data.speedMultiplier);
       }
-      if (typeof data.running === 'boolean') {
+      if (data && typeof data.running === 'boolean') {
         setIsRunning(data.running);
         lastTickRef.current = data.running ? Date.now() : null;
       }
@@ -569,9 +558,7 @@ export default function App() {
 
   const fetchBatchesFromApi = async () => {
     const url = `/api/batches?ts=${Date.now()}`;
-    const res = await fetch(url, { cache: 'no-store' }); // url voi olla jo suhteellinen
-    if (!res.ok) throw new Error('Failed to load batches');
-    const data = await res.json();
+    const data = await api.get(url, { cache: 'no-store' });
     if (data && Array.isArray(data.batches)) {
       setBatches(data.batches);
     }
@@ -580,9 +567,7 @@ export default function App() {
 
   const fetchUnitsFromApi = async () => {
     try {
-      const res = await fetch(`/api/units?ts=${Date.now()}`, { cache: 'no-store' });
-      if (!res.ok) throw new Error('Failed to load units');
-      const data = await res.json();
+      const data = await api.get(`/api/units?ts=${Date.now()}`, { cache: 'no-store' });
       if (data && Array.isArray(data.units)) {
         setUnits(data.units);
       }
@@ -595,9 +580,7 @@ export default function App() {
 
   const loadAvoidStatuses = async () => {
     try {
-      const res = await fetch(`/api/avoid-statuses`);
-      if (!res.ok) throw new Error('Failed to load avoid statuses');
-      const data = await res.json();
+      const data = await api.get(`/api/avoid-statuses`);
       if (data && data.stations) {
         const statusMap = {};
         Object.entries(data.stations).forEach(([stationNum, info]) => {
@@ -612,9 +595,7 @@ export default function App() {
 
   const loadPlantSetups = async () => {
     try {
-      const res = await fetch(`/api/plant-setups`);
-      if (!res.ok) throw new Error('Failed to load plant setups');
-      const data = await res.json();
+      const data = await api.get(`/api/plant-setups`);
       if (data && Array.isArray(data.setups)) {
         setPlantSetups(data.setups);
         setSelectedPlantSetup(data.current || '');
@@ -626,8 +607,7 @@ export default function App() {
 
   const loadProductionSetup = async () => {
     try {
-      const res = await fetch(`/api/production-setup`);
-      const data = await res.json();
+      const data = await api.get(`/api/production-setup`);
       if (data && data.success && data.setup) {
         setProductionSetup((prev) => applyProductionDefaults({
           start_station: data.setup.start_station ?? '',
@@ -719,9 +699,7 @@ export default function App() {
 
   const loadTreatmentPrograms = async () => {
     try {
-      const res = await fetch(`/api/treatment-programs`);
-      if (!res.ok) throw new Error('Failed to load treatment programs');
-      const data = await res.json();
+      const data = await api.get(`/api/treatment-programs`);
       if (data && Array.isArray(data.programs)) {
         setProductionPrograms(data.programs);
         setProductionProgramDetails(data.programDetails || []);
@@ -737,12 +715,7 @@ export default function App() {
 
   const handleAvoidStatusChange = async (stationNumber, newStatus) => {
     try {
-      const res = await fetch(`/api/avoid-statuses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stationNumber: String(stationNumber), avoid_status: newStatus })
-      });
-      if (!res.ok) throw new Error('Failed to update avoid status');
+      await api.post(`/api/avoid-statuses`, { stationNumber: String(stationNumber), avoid_status: newStatus });
       await loadAvoidStatuses();
     } catch (err) {
       console.error('Error updating avoid status:', err);
@@ -789,20 +762,12 @@ export default function App() {
     setUnitSaving(true);
     setBatchError('');
     try {
-      const res = await fetch(`/api/units/${uid}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          batch_id: Number(unitBatchEdit) || 0,
-          location: newLoc,
-          status: Number(unitStatusEdit) || 0,
-          target: unitTargetEdit || 'none'
-        })
+      await api.put(`/api/units/${uid}`, {
+        batch_id: Number(unitBatchEdit) || 0,
+        location: newLoc,
+        status: Number(unitStatusEdit) || 0,
+        target: unitTargetEdit || 'none'
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Unit save failed');
-      }
       await fetchUnitsFromApi();
     } catch (err) {
       setBatchError(err.message || 'Unit save failed');
@@ -844,11 +809,7 @@ export default function App() {
   const handleDeleteBatch = async (batchId) => {
     if (!window.confirm(`Delete batch ${batchId}?`)) return;
     try {
-      const res = await fetch(`/api/batches/${batchId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Delete failed');
-      }
+      await api.delete(`/api/batches/${batchId}`);
       await fetchBatchesFromApi();
       await fetchUnitsFromApi();
       if (editingBatchId === batchId) {
@@ -888,14 +849,10 @@ export default function App() {
       : '/api/batches';
 
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Save failed');
+      if (method === 'PUT') {
+        await api.put(url, payload);
+      } else {
+        await api.post(url, payload);
       }
       await fetchBatchesFromApi();
       await fetchUnitsFromApi();
@@ -980,14 +937,9 @@ export default function App() {
 
     try {
       setProductionSaving(true);
-      const res = await fetch(`/api/production`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pairs })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create production files');
+      const data = await api.post(`/api/production`, { pairs });
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Failed to create production files');
       }
       syncProductionRowsWithPrograms(productionPrograms);
       return true;
@@ -1015,15 +967,10 @@ export default function App() {
         duration_hours: withDefaults.duration_hours === '' ? null : Number(withDefaults.duration_hours)
       };
       console.log('Saving production setup:', payload);
-      const res = await fetch(`/api/production-setup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
+      const data = await api.post(`/api/production-setup`, payload);
       console.log('Production setup response:', data);
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to save production setup');
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Failed to save production setup');
       }
       return true;
     } catch (err) {
@@ -1039,20 +986,15 @@ export default function App() {
     if (productionQueue === 1) return; // already running
     try {
       // Set production_queue = 1 on PLC
-      await fetch('/api/production-queue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: 1 })
-      });
+      await api.post('/api/production-queue', { value: 1 });
       setProductionQueue(1);
       setProductionStartTime(new Date());
       // Also start sim clock if not running
       if (!isRunning) {
-        const res = await fetch('/api/sim/start', { method: 'POST' });
-        const data = await res.json();
-        if (typeof data.time === 'number') setElapsedMs(data.time);
-        if (typeof data.speedMultiplier === 'number') setSpeed(data.speedMultiplier);
-        if (typeof data.running === 'boolean') {
+        const data = await api.post('/api/sim/start');
+        if (data && typeof data.time === 'number') setElapsedMs(data.time);
+        if (data && typeof data.speedMultiplier === 'number') setSpeed(data.speedMultiplier);
+        if (data && typeof data.running === 'boolean') {
           setIsRunning(data.running);
           lastTickRef.current = data.running ? Date.now() : null;
         } else {
@@ -1082,15 +1024,9 @@ export default function App() {
 
     try {
       console.log(`[RESET] Uploading config: ${selectedCustomer}/${selectedPlant}`);
-      const response = await fetch('/api/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customer: selectedCustomer, plant: selectedPlant })
-      });
+      const result = await api.post('/api/reset', { customer: selectedCustomer, plant: selectedPlant });
 
-      const result = await response.json();
-
-      if (result.success) {
+      if (result && result.success) {
         // Update UI layout with the returned config data
         if (result.layoutConfig) setConfig(result.layoutConfig);
         if (result.stations) setStations(result.stations);
@@ -1117,11 +1053,7 @@ export default function App() {
       lastTickRef.current = Date.now();
     }
     try {
-      await fetch(`/api/sim/speed`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ multiplier })
-      });
+      await api.post(`/api/sim/speed`, { multiplier });
       // re-sync after speed change to keep clocks aligned
       await syncSimTime();
     } catch (err) {
@@ -1145,27 +1077,20 @@ export default function App() {
 
     try {
       // Tehtävä menee jonoon — taskScheduler sovittaa idle-slottiin
-      const res = await fetch(`/api/command/move`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transporterId, lift_station: liftNumber, sink_station: sinkNumber })
-      });
-      const data = await res.json();
-      if (data.queued) {
+      const data = await api.post(`/api/command/move`, { transporterId, lift_station: liftNumber, sink_station: sinkNumber });
+      if (data && data.queued) {
         console.log(`Manual task queued: T${transporterId} ${liftNumber}→${sinkNumber} (id=${data.taskId})`);
         // Päivitä manual tasks heti
-        const manualRes = await fetch('/api/manual-tasks');
-        const manualData = await manualRes.json();
+        const manualData = await api.get('/api/manual-tasks');
         if (manualData && Array.isArray(manualData.tasks)) {
           setManualTasks(manualData.tasks);
         }
       }
 
       if (!isRunning) {
-        const startRes = await fetch(`/api/sim/start`, { method: 'POST' });
-        const startData = await startRes.json();
-        if (typeof startData.time === 'number') setElapsedMs(startData.time);
-        if (typeof startData.running === 'boolean') {
+        const startData = await api.post(`/api/sim/start`);
+        if (startData && typeof startData.time === 'number') setElapsedMs(startData.time);
+        if (startData && typeof startData.running === 'boolean') {
           setIsRunning(startData.running);
           lastTickRef.current = startData.running ? Date.now() : null;
         }
@@ -1177,7 +1102,7 @@ export default function App() {
 
   const handleCancelManualTask = async (taskId) => {
     try {
-      await fetch(`/api/manual-tasks/${taskId}`, { method: 'DELETE' });
+      await api.delete(`/api/manual-tasks/${taskId}`);
       setManualTasks(prev => prev.filter(t => t.id !== taskId));
     } catch (err) {
       console.error('Error cancelling manual task:', err);
@@ -1254,9 +1179,9 @@ export default function App() {
                   disabled={plcToggling}
                   onClick={async () => {
                     setPlcToggling(true);
-                    try { await fetch('/api/plc/stop', { method: 'POST' }); } catch {}
+                    try { await api.post('/api/plc/stop'); } catch {}
                     setTimeout(async () => {
-                      try { const r = await fetch('/api/plc/status'); if (r.ok) setPlcStatus(await r.json()); } catch {}
+                      try { const d = await api.get('/api/plc/status'); if (d) setPlcStatus(d); } catch {}
                       setPlcToggling(false);
                     }, 3000);
                   }}
@@ -1280,9 +1205,9 @@ export default function App() {
                   disabled={plcToggling}
                   onClick={async () => {
                     setPlcToggling(true);
-                    try { await fetch('/api/plc/start', { method: 'POST' }); } catch {}
+                    try { await api.post('/api/plc/start'); } catch {}
                     setTimeout(async () => {
-                      try { const r = await fetch('/api/plc/status'); if (r.ok) setPlcStatus(await r.json()); } catch {}
+                      try { const d = await api.get('/api/plc/status'); if (d) setPlcStatus(d); } catch {}
                       setPlcToggling(false);
                     }, 2000);
                   }}
@@ -1500,9 +1425,9 @@ export default function App() {
                 disabled={plcToggling}
                 onClick={async () => {
                   setPlcToggling(true);
-                  try { await fetch('/api/plc/stop', { method: 'POST' }); } catch {}
+                  try { await api.post('/api/plc/stop'); } catch {}
                   setTimeout(async () => {
-                    try { const r = await fetch('/api/plc/status'); if (r.ok) setPlcStatus(await r.json()); } catch {}
+                    try { const d = await api.get('/api/plc/status'); if (d) setPlcStatus(d); } catch {}
                     setPlcToggling(false);
                   }, 3000);
                 }}
@@ -1526,9 +1451,9 @@ export default function App() {
                 disabled={plcToggling}
                 onClick={async () => {
                   setPlcToggling(true);
-                  try { await fetch('/api/plc/start', { method: 'POST' }); } catch {}
+                  try { await api.post('/api/plc/start'); } catch {}
                   setTimeout(async () => {
-                    try { const r = await fetch('/api/plc/status'); if (r.ok) setPlcStatus(await r.json()); } catch {}
+                    try { const d = await api.get('/api/plc/status'); if (d) setPlcStatus(d); } catch {}
                     setPlcToggling(false);
                   }, 2000);
                 }}
@@ -2144,15 +2069,7 @@ export default function App() {
                         };
                         
                         // Save to backend (file and runtime)
-                        const res = await fetch('/api/config/layout_config.json', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(fullConfig)
-                        });
-                        
-                        if (!res.ok) {
-                          throw new Error('Failed to save configuration');
-                        }
+                        await api.put('/api/config/layout_config.json', fullConfig);
                         
                         // Update runtime config
                         setConfig(fullConfig.layout);
@@ -2206,11 +2123,7 @@ export default function App() {
                           setSimPurposeForm({ country: '', city: '', purpose: '' });
                           setSelectedTemplate('');
                           // Save selected customer to backend (plant is null until selected)
-                          await fetch('/api/current-selection', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ customer: newCustomer || null, plant: null })
-                          });
+                          await api.post('/api/current-selection', { customer: newCustomer || null, plant: null });
                         }}
                         style={{ flex: 1, padding: 8, borderRadius: 4, border: '1px solid #ccc', fontSize: 13 }}
                       >
@@ -2230,11 +2143,8 @@ export default function App() {
                           setSimPurposeForm({ country: '', city: '', purpose: '' });
                           setSelectedTemplate('');
                           // Clear backend selection
-                          fetch('/api/current-selection', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ customer: null, plant: null })
-                          }).catch(err => console.error('Failed to clear selection:', err));
+                          api.post('/api/current-selection', { customer: null, plant: null })
+                            .catch(err => console.error('Failed to clear selection:', err));
                         }}
                         style={{
                           padding: '8px 12px',
@@ -2259,13 +2169,8 @@ export default function App() {
                         onKeyDown={async (e) => {
                           if (e.key === 'Enter' && newCustomerName.trim()) {
                             try {
-                              const res = await fetch('/api/customers', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ name: newCustomerName.trim() })
-                              });
-                              const data = await res.json();
-                              if (data.success) {
+                              const data = await api.post('/api/customers', { name: newCustomerName.trim() });
+                              if (data && data.success) {
                                 const newCustomer = newCustomerName.trim();
                                 setCustomers(prev => [...prev, newCustomer].sort());
                                 // SET the newly created customer as selected
@@ -2283,16 +2188,12 @@ export default function App() {
                                 
                                 // Save the new customer selection to backend
                                 try {
-                                  await fetch('/api/current-selection', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ customer: newCustomer, plant: null })
-                                  });
+                                  await api.post('/api/current-selection', { customer: newCustomer, plant: null });
                                 } catch (err) {
                                   console.error('Failed to save current selection:', err);
                                 }
                               } else {
-                                setCustomerError(data.error || 'Failed to create customer');
+                                setCustomerError(data?.error || 'Failed to create customer');
                               }
                             } catch (error) {
                               setCustomerError('Failed to create customer');
@@ -2369,20 +2270,15 @@ export default function App() {
                           onKeyDown={async (e) => {
                             if (e.key === 'Enter' && newPlantName.trim()) {
                               try {
-                                const res = await fetch(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ name: newPlantName.trim() })
-                                });
-                                const data = await res.json();
-                                if (data.success) {
+                                const data = await api.post(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants`, { name: newPlantName.trim() });
+                                if (data && data.success) {
                                   setCustomerPlants(prev => [...prev, newPlantName.trim()].sort());
                                   setSelectedPlant(newPlantName.trim());
                                   setNewPlantName('');
                                   setCreatingPlant(false);
                                   setCustomerError('');
                                 } else {
-                                  setCustomerError(data.error || 'Failed to create plant');
+                                  setCustomerError(data?.error || 'Failed to create plant');
                                 }
                               } catch (error) {
                                 setCustomerError('Failed to create plant');
@@ -2465,32 +2361,25 @@ export default function App() {
                           if (!selectedTemplate) return;
                           setCopyingTemplate(true);
                           try {
-                            const res = await fetch(
+                            const data = await api.post(
                               `/api/customers/${encodeURIComponent(selectedCustomer)}/plants/${encodeURIComponent(selectedPlant)}/copy-template`,
                               {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  template: selectedTemplate,
-                                  customer: selectedCustomer,
-                                  plant: selectedPlant,
-                                  country: simPurposeForm.country,
-                                  city: simPurposeForm.city
-                                })
+                                template: selectedTemplate,
+                                customer: selectedCustomer,
+                                plant: selectedPlant,
+                                country: simPurposeForm.country,
+                                city: simPurposeForm.city
                               }
                             );
-                            const data = await res.json();
-                            if (data.success) {
+                            if (data && data.success) {
                               // Reload plant status
-                              const statusRes = await fetch(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants/${encodeURIComponent(selectedPlant)}/status`);
-                              const statusData = await statusRes.json();
-                              if (statusData.success) {
+                              const statusData = await api.get(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants/${encodeURIComponent(selectedPlant)}/status`);
+                              if (statusData && statusData.success) {
                                 setPlantStatus(statusData);
                               }
                               // Reload simulation purpose
-                              const purposeRes = await fetch(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants/${encodeURIComponent(selectedPlant)}/simulation-purpose`);
-                              const purposeData = await purposeRes.json();
-                              if (purposeData.success) {
+                              const purposeData = await api.get(`/api/customers/${encodeURIComponent(selectedCustomer)}/plants/${encodeURIComponent(selectedPlant)}/simulation-purpose`);
+                              if (purposeData && purposeData.success) {
                                 setSimPurpose(purposeData.data);
                                 setSimPurposeForm({
                                   country: purposeData.data.plant?.country || '',
@@ -2501,7 +2390,7 @@ export default function App() {
                               setSelectedTemplate('');
                               setCustomerError('');
                             } else {
-                              setCustomerError(data.error || 'Failed to copy template');
+                              setCustomerError(data?.error || 'Failed to copy template');
                             }
                           } catch (error) {
                             setCustomerError('Failed to copy template');
