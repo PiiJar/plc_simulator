@@ -48,6 +48,8 @@ Current migration status:
 - PostgreSQL init schema migrated to `services/db/init.sql`
 - clean stack compose added at `infra/docker-compose.yml`
 - baseline setup and migration docs added under `docs/`
+- phase 9 stack validation executed from the new repo
+- remaining blocker: gateway OPC UA session is denied by the runtime (`BadUserAccessDenied`)
 
 ## Quick start
 
@@ -70,4 +72,5 @@ Build PLCopenXML locally:
 
 - setup: `docs/setup/SETUP.md`
 - troubleshooting: `docs/troubleshooting/CODESYS_CONNECTIVITY.md`
+- phase 9 validation snapshot: `docs/troubleshooting/PHASE9_VALIDATION_2026-03-18.md`
 - migration source mapping: `docs/migration/SOURCE_FROM_OLD_REPO.md`
