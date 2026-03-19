@@ -18,8 +18,8 @@ const {
   AttributeIds,
   DataType,
   StatusCodes,
-  TimestampsToReturn,
   UserTokenType,
+  VariantArrayType,
 } = require('node-opcua');
 
 const http = require('http');
@@ -49,23 +49,35 @@ class OpcuaAdapter extends PlcAdapter {
   // ── Connection lifecycle ──────────────────────────────────────
 
   async connect() {
-    this.client = OPCUAClient.create({
-      applicationName: 'NodeOPCUA-Client',
-      connectionStrategy: {
-        initialDelay: 1000,
-        maxDelay: 10000,
-        maxRetry: 100,
-      },
-      securityMode: MessageSecurityMode.SignAndEncrypt,
-      securityPolicy: SecurityPolicy.Basic256Sha256,
-      endpointMustExist: false,
-    });
-
-    this.client.on('backoff', (retry, delay) => {
-      console.log(`[OPC-UA] Reconnect attempt ${retry}, next in ${delay}ms`);
-    });
+    // Prevent concurrent connection attempts
+    if (this._connecting) return;
+    this._connecting = true;
 
     try {
+      // Clean up previous client if any
+      if (this.client) {
+        try { await this.client.disconnect(); } catch (_) {}
+        this.client = null;
+      }
+      this.session = null;
+      this.connected = false;
+
+      this.client = OPCUAClient.create({
+        applicationName: 'NodeOPCUA-Client',
+        connectionStrategy: {
+          initialDelay: 2000,
+          maxDelay: 10000,
+          maxRetry: 5,
+        },
+        securityMode: MessageSecurityMode.SignAndEncrypt,
+        securityPolicy: SecurityPolicy.Basic256Sha256,
+        endpointMustExist: false,
+      });
+
+      this.client.on('backoff', (retry, delay) => {
+        console.log(`[OPC-UA] Reconnect attempt ${retry}, next in ${delay}ms`);
+      });
+
       await this.client.connect(OPCUA_ENDPOINT);
       this.session = await this.client.createSession({
         type: UserTokenType.UserName,
@@ -73,11 +85,14 @@ class OpcuaAdapter extends PlcAdapter {
         password: process.env.OPCUA_PASSWORD || '!T0s1v41k33!',
       });
       this.connected = true;
+      this._readList = null; // reset cached read list
       console.log(`[OPC-UA] Connected to ${OPCUA_ENDPOINT}`);
     } catch (err) {
       this.connected = false;
       console.error(`[OPC-UA] Connection failed: ${err.message}`);
       this._scheduleReconnect();
+    } finally {
+      this._connecting = false;
     }
   }
 
@@ -114,24 +129,68 @@ class OpcuaAdapter extends PlcAdapter {
   // ── Low-level OPC UA helpers ──────────────────────────────────
 
   /**
-   * Read multiple node values in a single OPC UA Read call.
+   * Read multiple node values, chunked to avoid BadTooManyOperations.
+   * CODESYS MaxNodesPerRead = 100 (default, V3.5 SP17+, CODESYSControl.cfg).
+   * Confirmed via OPC UA OperationLimits node i=11705.
    * @param {Array<{key: string, nodeId: string}>} readList
    * @returns {Object} key → value map
    */
   async _readNodes(readList) {
     if (!this.session) throw new Error('No OPC-UA session');
-    const nodesToRead = readList.map(item => ({
-      nodeId: item.nodeId,
-      attributeId: AttributeIds.Value,
-    }));
-    const results = await this.session.read(nodesToRead, 0, TimestampsToReturn.Neither);
+    const CHUNK = 100;  // CODESYS MaxNodesPerRead = 100
     const map = {};
-    for (let i = 0; i < readList.length; i++) {
-      const r = results[i];
-      if (r.statusCode === StatusCodes.Good) {
-        map[readList[i].key] = r.value.value;
-      } else {
-        map[readList[i].key] = null;
+    for (let offset = 0; offset < readList.length; offset += CHUNK) {
+      const chunk = readList.slice(offset, offset + CHUNK);
+      const nodesToRead = chunk.map(item => ({
+        nodeId: item.nodeId,
+        attributeId: AttributeIds.Value,
+      }));
+      const results = await this.session.read(nodesToRead, 0);
+      for (let i = 0; i < chunk.length; i++) {
+        const r = results[i];
+        if (r.statusCode === StatusCodes.Good) {
+          let val = r.value.value;
+          // Coerce Int64/UInt64 (node-opcua returns [high, low] array) to JS number
+          if (Array.isArray(val) && val.length === 2) {
+            val = val[0] * 0x100000000 + (val[1] >>> 0);
+          }
+          map[chunk[i].key] = val;
+        } else {
+          map[chunk[i].key] = null;
+        }
+      }
+    }
+    return map;
+  }
+
+  /**
+   * Read LINT/Int64 nodes individually (node-opcua v2 Variant issue workaround).
+   * node-opcua batch read throws when encountering Int64 values because it
+   * cannot auto-detect arrayType. Reading individually and catching errors.
+   * @param {Array<{key: string, nodeId: string}>} readList
+   * @returns {Object} key → number map
+   */
+  async _readLintNodes(readList) {
+    if (!this.session) return {};
+    const map = {};
+    for (const item of readList) {
+      try {
+        const result = await this.session.read({
+          nodeId: item.nodeId,
+          attributeId: AttributeIds.Value,
+        });
+        if (result.statusCode === StatusCodes.Good) {
+          const val = result.value.value;
+          if (Array.isArray(val) && val.length === 2) {
+            map[item.key] = val[0] * 0x100000000 + (val[1] >>> 0);
+          } else {
+            map[item.key] = Number(val) || 0;
+          }
+        } else {
+          map[item.key] = 0;
+        }
+      } catch (_) {
+        map[item.key] = 0;
       }
     }
     return map;
@@ -201,14 +260,26 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   // ── Sequence counters ─────────────────────────────────────────
-  _cfgSeq = 0;
-  _unitSeq = 0;
-  _batchSeq = 0;
-  _progSeq = 0;
-  _avoidSeq = 0;
+  _cmdSeq = 0;
 
   _nextSeq(current) {
     return (current % 30000) + 1;
+  }
+
+  /**
+   * Send a PLC command via g_cmd_seq/g_cmd_code/g_cmd_param protocol.
+   * Bumps g_cmd_seq so PLC detects the change and processes the command.
+   * No ack — PLC processes immediately on seq change.
+   */
+  async _sendCommand(code, param = 0) {
+    this._cmdSeq = this._nextSeq(this._cmdSeq);
+    await this._writeNodes([
+      { nodeId: nodes.CMD.cmd_code,  value: code,         dataType: DataType.Int16 },
+      { nodeId: nodes.CMD.cmd_param, value: param,        dataType: DataType.Int16 },
+      { nodeId: nodes.CMD.cmd_seq,   value: this._cmdSeq, dataType: DataType.Int16 },
+    ]);
+    // Small delay to let PLC process the command
+    await new Promise(r => setTimeout(r, 50));
   }
 
   // ── Read operations ───────────────────────────────────────────
@@ -422,9 +493,14 @@ class OpcuaAdapter extends PlcAdapter {
         eventHead,
       };
     } catch (err) {
-      console.error(`[OPC-UA] readState error: ${err.message}`);
-      this.connected = false;
-      this._scheduleReconnect();
+      const msg = err.message || String(err);
+      console.error(`[OPC-UA] readState error: ${msg}`);
+      if (err.stack) console.error(err.stack);
+      // Only disconnect on actual connection/session errors
+      if (msg.includes('session') || msg.includes('connect') || msg.includes('closed') || msg.includes('socket')) {
+        this.connected = false;
+        this._scheduleReconnect();
+      }
       return null;
     }
   }
@@ -433,18 +509,18 @@ class OpcuaAdapter extends PlcAdapter {
     if (!this.connected || !this.session) return null;
 
     try {
-      // Write request
-      await this._writeNode(nodes.CMD.schedule_req_unit, unitId, DataType.Int16);
-
-      // Wait for PLC to fill the window
-      await new Promise(r => setTimeout(r, 40));
+      // Schedule data is always available — PLC fills g_schedule[uid] continuously
+      // No request write needed (no sliding window protocol in CODESYS version)
 
       // Read schedule for the requested unit
+      // NOTE: entry_time and exit_time are LINT — skip them to avoid
+      // node-opcua Int64 Variant error; read only non-LINT fields
       const sched = nodes.schedule(unitId);
       const readList = [{ key: 'stage_count', nodeId: sched.stage_count }];
       for (let s = 1; s <= 30; s++) {
         const st = sched[`stage_${s}`];
         for (const [k, nid] of Object.entries(st)) {
+          if (k === 'entry_time' || k === 'exit_time') continue; // LINT fields
           readList.push({ key: `s${s}.${k}`, nodeId: nid });
         }
       }
@@ -452,13 +528,23 @@ class OpcuaAdapter extends PlcAdapter {
       const stageCount = Number(v.stage_count) || 0;
       if (stageCount === 0) return null;
 
+      // Read LINT fields (entry_time, exit_time) separately using
+      // individual reads with proper Int64 handling
+      const lintReadList = [];
+      for (let s = 1; s <= Math.min(stageCount, 30); s++) {
+        const st = sched[`stage_${s}`];
+        lintReadList.push({ key: `s${s}.entry_time`, nodeId: st.entry_time });
+        lintReadList.push({ key: `s${s}.exit_time`, nodeId: st.exit_time });
+      }
+      const lv = await this._readLintNodes(lintReadList);
+
       const stages = [];
       for (let s = 1; s <= Math.min(stageCount, 30); s++) {
         stages.push({
           stage: s,
           station: Number(v[`s${s}.station`]) || 0,
-          entry_time_s: Number(v[`s${s}.entry_time`]) || 0,
-          exit_time_s: Number(v[`s${s}.exit_time`]) || 0,
+          entry_time_s: lv[`s${s}.entry_time`] || 0,
+          exit_time_s: lv[`s${s}.exit_time`] || 0,
           min_time_s: (Number(v[`s${s}.min_time`]) || 0) * 0.1,
           max_time_s: (Number(v[`s${s}.max_time`]) || 0) * 0.1,
         });
@@ -466,7 +552,7 @@ class OpcuaAdapter extends PlcAdapter {
 
       return { unit_id: unitId, stage_count: stageCount, stages };
     } catch (err) {
-      console.error(`[OPC-UA] readScheduleWindow error: ${err.message}`);
+      console.error(`[OPC-UA] readScheduleWindow error: ${err.message || String(err)}`);
       return null;
     }
   }
@@ -502,120 +588,85 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   // ── Write operations ──────────────────────────────────────────
+  // Protocol: write struct data directly via OPC UA, then trigger
+  // commands via g_cmd_seq/g_cmd_code/g_cmd_param.
+  // No ack handshake — PLC processes on g_cmd_seq change.
 
   async uploadConfig(config) {
     const { stations, transporters, units, nttData, stationCount } = config;
 
     try {
       // Step 1: Clear all (cmd=3)
-      this._cfgSeq = this._nextSeq(this._cfgSeq);
-      await this._writeNodes([
-        { nodeId: nodes.CMD.cfg_param, value: 0, dataType: DataType.Int16 },
-        { nodeId: nodes.CMD.cfg_cmd, value: 3, dataType: DataType.Int16 },
-        { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
-      ]);
-      if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-        return { success: false, error: 'PLC ack timeout for clear command' };
-      }
+      await this._sendCommand(3, 0);
+      console.log('[OPC-UA] Sent CLEAR command');
 
-      // Step 2: Upload stations (cmd=1)
+      // Step 2: Write station config directly to g_station[n]
       for (const st of stations) {
         const stNum = st.number;
-        if (stNum < 101 || stNum > 125) continue;
-
-        this._cfgSeq = this._nextSeq(this._cfgSeq);
+        if (stNum < 100 || stNum > 130) continue;
+        const sw = nodes.stationWrite(stNum);
         await this._writeNodes([
-          { nodeId: nodes.CMD.cfg_d0, value: st.tank || 0, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d1, value: Math.round(st.x_position || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d2, value: Math.round(st.y_position || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d3, value: Math.round(st.z_position || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d4, value: st.operation || 0, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d5, value: Math.round((st.dropping_time || 0) * 10), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d6, value: Math.round((st.device_delay || 0) * 10), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d7, value: st.kind || 0, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_param, value: stNum, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_cmd, value: 1, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
+          { nodeId: sw.station_id,    value: stNum,                                    dataType: DataType.Int16 },
+          { nodeId: sw.tank_id,       value: st.tank || 0,                             dataType: DataType.Int16 },
+          { nodeId: sw.is_in_use,     value: true,                                     dataType: DataType.Boolean },
+          { nodeId: sw.station_type,  value: st.kind || 0,                             dataType: DataType.Int16 },
+          { nodeId: sw.x_position,    value: Math.round(st.x_position || 0),           dataType: DataType.Int32 },
+          { nodeId: sw.y_position,    value: Math.round(st.y_position || 0),           dataType: DataType.Int32 },
+          { nodeId: sw.z_position,    value: Math.round(st.z_position || 0),           dataType: DataType.Int32 },
+          { nodeId: sw.dripping_time, value: Math.round((st.dropping_time || 0) * 10), dataType: DataType.Int16 },
+          { nodeId: sw.device_delay,  value: Math.round((st.device_delay || 0) * 10),  dataType: DataType.Int16 },
+          { nodeId: sw.dry_wet,       value: st.dry_wet || 0,                          dataType: DataType.Int16 },
         ]);
-        if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-          return { success: false, error: `PLC ack timeout for station ${stNum}` };
-        }
       }
+      console.log(`[OPC-UA] Wrote ${stations.length} stations`);
 
-      // Step 3: Upload transporter physics (cmd=4,5,6)
-      const AREA_KEYS = ['line_100', 'line_200', 'line_300', 'line_400'];
+      // Step 3: Write transporter config to g_cfg[tid]
+      const AREA_KEYS = ['line_100', 'line_200', 'line_300'];
       for (const tr of transporters) {
         const tid = tr.id;
         if (tid < 1 || tid > 3) continue;
+        const cw = nodes.cfgWrite(tid);
         const p = tr.physics_2D || {};
-
-        // cmd=4: physics page 1
-        this._cfgSeq = this._nextSeq(this._cfgSeq);
-        await this._writeNodes([
-          { nodeId: nodes.CMD.cfg_d0, value: Math.round(tr.x_min_drive_limit || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d1, value: Math.round(tr.x_max_drive_limit || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d2, value: Math.round((p.x_acceleration_time_s || 0) * 10), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d3, value: Math.round((p.x_deceleration_time_s || 0) * 10), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d4, value: Math.round(p.x_max_speed_mm_s || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d5, value: Math.round(p.z_total_distance_mm || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d6, value: Math.round(p.avoid_distance_mm || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_param, value: tid, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_cmd, value: 4, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
-        ]);
-        if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-          return { success: false, error: `PLC ack timeout for T${tid} physics page 1` };
-        }
-
-        // cmd=5: physics page 2
-        this._cfgSeq = this._nextSeq(this._cfgSeq);
-        await this._writeNodes([
-          { nodeId: nodes.CMD.cfg_d0, value: Math.round(p.z_slow_distance_dry_mm || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d1, value: Math.round(p.z_slow_distance_wet_mm || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d2, value: Math.round(p.z_slow_end_distance_mm || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d3, value: Math.round(p.z_slow_speed_mm_s || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d4, value: Math.round(p.z_fast_speed_mm_s || 0), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d5, value: Math.round((p.drip_tray_delay_s || 0) * 10), dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_d6, value: 0, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_param, value: tid, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_cmd, value: 5, dataType: DataType.Int16 },
-          { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
-        ]);
-        if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-          return { success: false, error: `PLC ack timeout for T${tid} physics page 2` };
-        }
-
-        // cmd=6: task areas
         const areas = tr.task_areas || {};
+
+        const writes = [
+          { nodeId: cw.transporter_id, value: tid,                                         dataType: DataType.Int16 },
+          { nodeId: cw.is_in_use,      value: true,                                        dataType: DataType.Boolean },
+          { nodeId: cw.drive_pos_min,  value: Math.round(tr.x_min_drive_limit || 0),       dataType: DataType.Int32 },
+          { nodeId: cw.drive_pos_max,  value: Math.round(tr.x_max_drive_limit || 0),       dataType: DataType.Int32 },
+          { nodeId: cw.drip_tray_delay, value: Math.round((p.drip_tray_delay_s || 0) * 10), dataType: DataType.Int16 },
+        ];
+
+        // Task areas (up to 3 slots)
         for (let ai = 0; ai < AREA_KEYS.length; ai++) {
           const area = areas[AREA_KEYS[ai]];
-          if (!area || !area.min_lift_station) continue;
-          const areaIdx = ai + 1;
-
-          this._cfgSeq = this._nextSeq(this._cfgSeq);
-          await this._writeNodes([
-            { nodeId: nodes.CMD.cfg_d0, value: area.min_lift_station || 0, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.cfg_d1, value: area.max_lift_station || 0, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.cfg_d2, value: area.min_sink_station || 0, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.cfg_d3, value: area.max_sink_station || 0, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.cfg_d4, value: 0, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.cfg_d5, value: 0, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.cfg_d6, value: 0, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.cfg_param, value: tid * 10 + areaIdx, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.cfg_cmd, value: 6, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
-          ]);
-          if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-            return { success: false, error: `PLC ack timeout for T${tid} area ${areaIdx}` };
+          const aIdx = ai + 1;
+          if (area && area.min_lift_station) {
+            writes.push(
+              { nodeId: cw[`ta${aIdx}_min_lift`], value: area.min_lift_station || 0, dataType: DataType.Int16 },
+              { nodeId: cw[`ta${aIdx}_max_lift`], value: area.max_lift_station || 0, dataType: DataType.Int16 },
+              { nodeId: cw[`ta${aIdx}_min_sink`], value: area.min_sink_station || 0, dataType: DataType.Int16 },
+              { nodeId: cw[`ta${aIdx}_max_sink`], value: area.max_sink_station || 0, dataType: DataType.Int16 },
+            );
+          } else {
+            writes.push(
+              { nodeId: cw[`ta${aIdx}_min_lift`], value: 0, dataType: DataType.Int16 },
+              { nodeId: cw[`ta${aIdx}_max_lift`], value: 0, dataType: DataType.Int16 },
+              { nodeId: cw[`ta${aIdx}_min_sink`], value: 0, dataType: DataType.Int16 },
+              { nodeId: cw[`ta${aIdx}_max_sink`], value: 0, dataType: DataType.Int16 },
+            );
           }
         }
-      }
 
-      // Step 3b: NTT destinations (cmd=9,10)
+        await this._writeNodes(writes);
+      }
+      console.log(`[OPC-UA] Wrote ${transporters.length} transporter configs`);
+
+      // Step 4: Write NTT destinations to g_ntt[tid]
       if (nttData) {
         const TARGET_MAP = {
-          'to_loading': 1, 'to_buffer': 2, 'to_process': 3, 'to_unload': 4, 'to_unloading': 4, 'to_avoid': 5,
-          'to_empty_buffer': 6, 'to_loaded_buffer': 7, 'to_processed_buffer': 8,
+          'to_loading': 1, 'to_buffer': 2, 'to_process': 3, 'to_unload': 4, 'to_unloading': 4,
+          'to_avoid': 5, 'to_empty_buffer': 6, 'to_loaded_buffer': 7, 'to_processed_buffer': 8,
         };
         const targets = nttData.targets || {};
         for (const [targetName, targetDef] of Object.entries(targets)) {
@@ -625,76 +676,48 @@ class OpcuaAdapter extends PlcAdapter {
           for (const [trIdStr, dest] of Object.entries(trDefs)) {
             const trId = parseInt(trIdStr, 10);
             if (trId < 1 || trId > 3) continue;
+            const nw = nodes.nttWrite(trId);
+            const tgt = nw[`tgt_${tgtCode}`];
+            if (!tgt) continue;
+
             const stns = (dest.stations || []).slice(0, 5);
             const fb = (dest.fallback_stations || []).slice(0, 5);
-
-            // cmd=9: primary
-            this._cfgSeq = this._nextSeq(this._cfgSeq);
-            const d9 = [0, 0, 0, 0, 0, 0, 0];
-            for (let si = 0; si < stns.length; si++) d9[si] = stns[si];
-            await this._writeNodes([
-              ...d9.map((val, i) => ({ nodeId: nodes.CMD[`cfg_d${i}`], value: val, dataType: DataType.Int16 })),
-              { nodeId: nodes.CMD.cfg_param, value: trId * 100 + tgtCode * 10 + stns.length, dataType: DataType.Int16 },
-              { nodeId: nodes.CMD.cfg_cmd, value: 9, dataType: DataType.Int16 },
-              { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
-            ]);
-            if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-              return { success: false, error: `PLC ack timeout for NTT cmd=9` };
+            const writes = [
+              { nodeId: tgt.station_count, value: stns.length, dataType: DataType.Int16 },
+              { nodeId: tgt.fallback_count, value: fb.length, dataType: DataType.Int16 },
+            ];
+            for (let si = 1; si <= 5; si++) {
+              writes.push({ nodeId: tgt[`s${si}`], value: stns[si - 1] || 0, dataType: DataType.Int16 });
+              writes.push({ nodeId: tgt[`fb${si}`], value: fb[si - 1] || 0, dataType: DataType.Int16 });
             }
-
-            // cmd=10: fallback
-            if (fb.length > 0) {
-              this._cfgSeq = this._nextSeq(this._cfgSeq);
-              const d10 = [0, 0, 0, 0, 0, 0, 0];
-              for (let si = 0; si < fb.length; si++) d10[si] = fb[si];
-              await this._writeNodes([
-                ...d10.map((val, i) => ({ nodeId: nodes.CMD[`cfg_d${i}`], value: val, dataType: DataType.Int16 })),
-                { nodeId: nodes.CMD.cfg_param, value: trId * 100 + tgtCode * 10 + fb.length, dataType: DataType.Int16 },
-                { nodeId: nodes.CMD.cfg_cmd, value: 10, dataType: DataType.Int16 },
-                { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
-              ]);
-              if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-                return { success: false, error: `PLC ack timeout for NTT cmd=10` };
-              }
-            }
+            await this._writeNodes(writes);
           }
         }
+        console.log('[OPC-UA] Wrote NTT destinations');
       }
 
-      // Step 4: Upload units
+      // Step 5: Write units to g_unit[uid]
       if (units && units.length > 0) {
         const STATUS_MAP = { 'not_used': 0, 'used': 1 };
         const TARGET_STR_TO_INT = { 'none': 0, 'to_loading': 1, 'to_buffer': 2, 'to_process': 3, 'to_unload': 4, 'to_avoid': 5 };
         for (const u of units) {
           const uid = u.unit_id;
           if (uid < 1 || uid > 10) continue;
+          const uw = nodes.unitWrite(uid);
           const statusInt = STATUS_MAP[u.status] ?? (typeof u.status === 'number' ? u.status : 0);
           const targetInt = TARGET_STR_TO_INT[u.target] ?? (typeof u.target === 'number' ? u.target : 0);
-
-          this._unitSeq = this._nextSeq(this._unitSeq);
           await this._writeNodes([
-            { nodeId: nodes.CMD.unit_id, value: uid, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.unit_loc, value: u.location || 0, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.unit_status, value: statusInt, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.unit_target, value: targetInt, dataType: DataType.Int16 },
-            { nodeId: nodes.CMD.unit_seq, value: this._unitSeq, dataType: DataType.Int16 },
+            { nodeId: uw.location, value: u.location || 0, dataType: DataType.Int16 },
+            { nodeId: uw.status,   value: statusInt,       dataType: DataType.Int16 },
+            { nodeId: uw.target,   value: targetInt,       dataType: DataType.Int16 },
           ]);
-          if (!await this._waitForAck(nodes.CMD.unit_ack, this._unitSeq)) {
-            return { success: false, error: `PLC ack timeout for unit ${uid}` };
-          }
         }
+        console.log(`[OPC-UA] Wrote ${units.length} units`);
       }
 
-      // Step 5: Init (cmd=2, param=station_count)
-      this._cfgSeq = this._nextSeq(this._cfgSeq);
-      await this._writeNodes([
-        { nodeId: nodes.CMD.cfg_param, value: stationCount || stations.length, dataType: DataType.Int16 },
-        { nodeId: nodes.CMD.cfg_cmd, value: 2, dataType: DataType.Int16 },
-        { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
-      ]);
-      if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-        return { success: false, error: 'PLC ack timeout for init command' };
-      }
+      // Step 6: Init command (cmd=2, param=station_count)
+      await this._sendCommand(2, stationCount || stations.length);
+      console.log(`[OPC-UA] Sent INIT command (station_count=${stationCount || stations.length})`);
 
       return { success: true };
     } catch (err) {
@@ -704,86 +727,67 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   async writeCommand(transporterId, liftStation, sinkStation) {
-    const cmd = nodes.cmdTransport(transporterId);
-    await this._writeNodes([
-      { nodeId: cmd.lift, value: liftStation, dataType: DataType.Int16 },
-      { nodeId: cmd.sink, value: sinkStation, dataType: DataType.Int16 },
-      { nodeId: cmd.start, value: 1, dataType: DataType.Int16 },
-    ]);
-    // Clear start after short delay
-    setTimeout(async () => {
-      try {
-        await this._writeNode(cmd.start, 0, DataType.Int16);
-      } catch (_) {}
-    }, 200);
-    console.log(`[OPC-UA] CMD T${transporterId}: lift=${liftStation} sink=${sinkStation}`);
+    // Manual transport is not supported via g_cmd protocol.
+    // The PLC scheduler handles all transport assignments automatically.
+    // Log the request for debugging purposes.
+    console.log(`[OPC-UA] writeCommand T${transporterId}: lift=${liftStation} sink=${sinkStation} (manual commands not supported in CODESYS version)`);
   }
 
   async writeUnit(unitId, location, status, target) {
-    this._unitSeq = this._nextSeq(this._unitSeq);
+    const uw = nodes.unitWrite(unitId);
     await this._writeNodes([
-      { nodeId: nodes.CMD.unit_id, value: unitId, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.unit_loc, value: location || 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.unit_status, value: status || 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.unit_target, value: target || 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.unit_seq, value: this._unitSeq, dataType: DataType.Int16 },
+      { nodeId: uw.location, value: location || 0, dataType: DataType.Int16 },
+      { nodeId: uw.status,   value: status || 0,   dataType: DataType.Int16 },
+      { nodeId: uw.target,   value: target || 0,   dataType: DataType.Int16 },
     ]);
-    if (!await this._waitForAck(nodes.CMD.unit_ack, this._unitSeq)) {
-      throw new Error(`PLC unit ack timeout (unit=${unitId})`);
-    }
     console.log(`[OPC-UA] Unit ${unitId}: loc=${location}, status=${status}, target=${target}`);
   }
 
   async writeBatch(unitIndex, batchCode, batchState, programId) {
-    this._batchSeq = this._nextSeq(this._batchSeq);
+    const bw = nodes.batchWrite(unitIndex);
     await this._writeNodes([
-      { nodeId: nodes.CMD.batch_unit, value: unitIndex, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.batch_code, value: batchCode, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.batch_state, value: batchState, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.batch_prog, value: programId, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.batch_seq, value: this._batchSeq, dataType: DataType.Int16 },
+      { nodeId: bw.batch_code, value: batchCode || 0,  dataType: DataType.Int16 },
+      { nodeId: bw.state,      value: batchState || 0, dataType: DataType.Int16 },
+      { nodeId: bw.prog_id,    value: programId || 0,  dataType: DataType.Int16 },
+      { nodeId: bw.cur_stage,  value: 0,               dataType: DataType.Int16 },
     ]);
-    if (!await this._waitForAck(nodes.CMD.batch_ack, this._batchSeq)) {
-      throw new Error(`PLC batch ack timeout (unit=${unitIndex})`);
-    }
     console.log(`[OPC-UA] Batch unit=${unitIndex}: code=${batchCode}, state=${batchState}, prog=${programId}`);
   }
 
   async writeProgramStage(unitIndex, stageIndex, stations, minTime, maxTime, calTime) {
-    const s = [0, 0, 0, 0, 0];
+    const pw = nodes.programWrite(unitIndex);
+    const step = pw[`step_${stageIndex}`];
+    if (!step) throw new Error(`Invalid stage index ${stageIndex} for unit ${unitIndex}`);
+
+    const stns = [0, 0, 0, 0, 0];
     for (let i = 0; i < Math.min(stations.length, 5); i++) {
-      s[i] = stations[i] || 0;
+      stns[i] = stations[i] || 0;
     }
 
-    this._progSeq = this._nextSeq(this._progSeq);
     await this._writeNodes([
-      { nodeId: nodes.CMD.prog_unit, value: unitIndex, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_stage, value: stageIndex, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_s1, value: s[0], dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_s2, value: s[1], dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_s3, value: s[2], dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_s4, value: s[3], dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_s5, value: s[4], dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_min, value: minTime, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_max, value: maxTime, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_cal, value: calTime, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.prog_seq, value: this._progSeq, dataType: DataType.Int16 },
+      { nodeId: step.min_time,      value: minTime || 0,          dataType: DataType.Int32 },
+      { nodeId: step.max_time,      value: maxTime || 0,          dataType: DataType.Int32 },
+      { nodeId: step.cal_time,      value: calTime || 0,          dataType: DataType.Int32 },
+      { nodeId: step.station_count, value: stations.length,       dataType: DataType.Int16 },
+      { nodeId: step.s0,            value: stns[0],               dataType: DataType.Int16 },
+      { nodeId: step.s1,            value: stns[1],               dataType: DataType.Int16 },
+      { nodeId: step.s2,            value: stns[2],               dataType: DataType.Int16 },
+      { nodeId: step.s3,            value: stns[3],               dataType: DataType.Int16 },
+      { nodeId: step.s4,            value: stns[4],               dataType: DataType.Int16 },
     ]);
-    if (!await this._waitForAck(nodes.CMD.prog_ack, this._progSeq)) {
-      throw new Error(`PLC prog ack timeout (unit=${unitIndex}, stage=${stageIndex})`);
+
+    // Update step count if this stage extends it
+    const scReadList = [{ key: 'sc', nodeId: pw.step_count }];
+    const scv = await this._readNodes(scReadList);
+    const currentCount = Number(scv.sc) || 0;
+    if (stageIndex > currentCount) {
+      await this._writeNode(pw.step_count, stageIndex, DataType.Int16);
     }
   }
 
-  async writeAvoidStatus(stationNumber, avoidStatus) {
-    this._avoidSeq = this._nextSeq(this._avoidSeq);
-    await this._writeNodes([
-      { nodeId: nodes.CMD.avoid_stn, value: stationNumber, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.avoid_val, value: avoidStatus, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.avoid_seq, value: this._avoidSeq, dataType: DataType.Int16 },
-    ]);
-    if (!await this._waitForAck(nodes.CMD.avoid_ack, this._avoidSeq)) {
-      throw new Error(`PLC avoid ack timeout (station=${stationNumber})`);
-    }
+  async writeAvoidStatus(stationNumber, avoidStatusVal) {
+    const nid = nodes.avoidStatus(stationNumber);
+    await this._writeNode(nid, avoidStatusVal, DataType.Int16);
   }
 
   async ackEvent(seq) {
@@ -791,12 +795,25 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   async writeTime(unixSeconds) {
-    const hi = (unixSeconds >>> 16) & 0xFFFF;
-    const lo = unixSeconds & 0xFFFF;
-    await this._writeNodes([
-      { nodeId: nodes.CMD.time_hi, value: hi, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.time_lo, value: lo, dataType: DataType.Int16 },
-    ]);
+    // g_time_s is LINT (64-bit signed integer)
+    // node-opcua requires arrayType: Scalar when writing Int64 with [high, low]
+    if (!this.session) throw new Error('No OPC-UA session');
+    const high = Math.floor(unixSeconds / 0x100000000) & 0xFFFFFFFF;
+    const low = unixSeconds & 0xFFFFFFFF;
+    const statusCode = await this.session.write({
+      nodeId: nodes.CMD.time_s,
+      attributeId: AttributeIds.Value,
+      value: {
+        value: {
+          dataType: DataType.Int64,
+          arrayType: VariantArrayType.Scalar,
+          value: [high, low],
+        },
+      },
+    });
+    if (statusCode !== StatusCodes.Good) {
+      throw new Error(`OPC-UA write g_time_s failed: ${statusCode.toString()}`);
+    }
   }
 
   async writeProductionQueue(value) {
@@ -804,87 +821,44 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   async writeScheduleRequest(unitId) {
-    await this._writeNode(nodes.CMD.schedule_req_unit, unitId, DataType.Int16);
+    // No schedule request needed — PLC fills g_schedule[] continuously
+    // This is a no-op in the CODESYS OPC UA version
   }
 
   async writeCalibrationPlan(tid, wetStation, dryStation) {
-    this._cfgSeq = this._nextSeq(this._cfgSeq);
+    const cw = nodes.calWrite(tid);
     await this._writeNodes([
-      { nodeId: nodes.CMD.cfg_d0, value: wetStation || 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d1, value: dryStation || 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d2, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d3, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d4, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d5, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d6, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_param, value: tid, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_cmd, value: 7, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
+      { nodeId: cw.wet_station, value: wetStation || 0, dataType: DataType.Int16 },
+      { nodeId: cw.dry_station, value: dryStation || 0, dataType: DataType.Int16 },
     ]);
-    if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-      throw new Error(`PLC ack timeout for calibration plan T${tid}`);
-    }
+    console.log(`[OPC-UA] Cal plan T${tid}: wet=${wetStation}, dry=${dryStation}`);
   }
 
   async writeCalibrationControl(action) {
     const paramMap = { 'start': 1, 'calculate': 2, 'abort': 3 };
     const param = paramMap[action];
     if (!param) throw new Error(`Unknown calibration action: ${action}`);
-
-    this._cfgSeq = this._nextSeq(this._cfgSeq);
-    await this._writeNodes([
-      { nodeId: nodes.CMD.cfg_d0, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d1, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d2, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d3, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d4, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d5, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d6, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_param, value: param, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_cmd, value: 8, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
-    ]);
-    if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-      throw new Error(`PLC ack timeout for calibration ${action}`);
-    }
+    await this._sendCommand(8, param);
+    console.log(`[OPC-UA] Cal control: ${action} (param=${param})`);
   }
 
   async writeCalibrationParams(tid, params) {
-    this._cfgSeq = this._nextSeq(this._cfgSeq);
+    const cw = nodes.calWrite(tid);
     await this._writeNodes([
-      { nodeId: nodes.CMD.cfg_d0, value: Math.round((params.lift_wet_s || 0) * 100), dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d1, value: Math.round((params.sink_wet_s || 0) * 100), dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d2, value: Math.round((params.lift_dry_s || 0) * 100), dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d3, value: Math.round((params.sink_dry_s || 0) * 100), dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d4, value: Math.round((params.x_accel_s || 0) * 100), dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d5, value: Math.round((params.x_decel_s || 0) * 100), dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d6, value: Math.round(params.x_max_mm_s || 0), dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_param, value: tid, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_cmd, value: 11, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
+      { nodeId: cw.lift_wet_time, value: Math.round((params.lift_wet_s || 0) * 10), dataType: DataType.Int16 },
+      { nodeId: cw.sink_wet_time, value: Math.round((params.sink_wet_s || 0) * 10), dataType: DataType.Int16 },
+      { nodeId: cw.lift_dry_time, value: Math.round((params.lift_dry_s || 0) * 10), dataType: DataType.Int16 },
+      { nodeId: cw.sink_dry_time, value: Math.round((params.sink_dry_s || 0) * 10), dataType: DataType.Int16 },
+      { nodeId: cw.x_accel_time,  value: Math.round((params.x_accel_s || 0) * 10),  dataType: DataType.Int16 },
+      { nodeId: cw.x_decel_time,  value: Math.round((params.x_decel_s || 0) * 10),  dataType: DataType.Int16 },
+      { nodeId: cw.x_max_speed,   value: Math.round(params.x_max_mm_s || 0),        dataType: DataType.Int32 },
     ]);
-    if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-      throw new Error(`PLC ack timeout for calibration params T${tid}`);
-    }
+    console.log(`[OPC-UA] Cal params T${tid} written`);
   }
 
   async triggerMoveComputation() {
-    this._cfgSeq = this._nextSeq(this._cfgSeq);
-    await this._writeNodes([
-      { nodeId: nodes.CMD.cfg_d0, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d1, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d2, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d3, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d4, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d5, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_d6, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_param, value: 0, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_cmd, value: 12, dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cfg_seq, value: this._cfgSeq, dataType: DataType.Int16 },
-    ]);
-    if (!await this._waitForAck(nodes.CMD.cfg_ack, this._cfgSeq)) {
-      throw new Error('PLC ack timeout for g_move computation');
-    }
+    await this._sendCommand(12, 0);
+    console.log('[OPC-UA] Triggered g_move computation');
   }
 
   // ── PLC Runtime control via Docker Engine API ─────────────────

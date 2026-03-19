@@ -15,6 +15,7 @@ services:
     build:
       context: ../services/gateway
     container_name: gateway
+    hostname: plc-gateway
     ports:
       - "3001:3001"
     environment:
@@ -39,6 +40,7 @@ services:
       - ../data/runtime:/data/runtime
       - ../services/ui/public:/app/public:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - gateway_pki:/root/.config/node-opcua-default-nodejs
     depends_on:
       - codesys
       - database
@@ -72,3 +74,4 @@ services:
 volumes:
   database_data:
   codesys_data:
+  gateway_pki:
