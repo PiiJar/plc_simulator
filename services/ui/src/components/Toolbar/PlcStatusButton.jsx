@@ -2,22 +2,25 @@ import React from 'react';
 
 export default function PlcStatusButton({ status, toggling, onToggle }) {
   const isRunning = status === 'running';
+  const isContainerDown = status === 'container_stopped' || status === 'not_found';
+  const statusColor = isRunning ? '#4caf50' : isContainerDown ? '#9e9e9e' : '#f44336';
+  const statusLabel = isRunning ? 'PLC RUN' : isContainerDown ? 'Container stopped' : 'PLC STOP';
   
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <span
-        title={isRunning ? 'PLC Running' : 'PLC Stopped'}
+        title={statusLabel}
         style={{
           width: 12, height: 12, borderRadius: '50%',
-          background: isRunning ? '#4caf50' : '#f44336',
-          boxShadow: `0 0 6px ${isRunning ? '#4caf50' : '#f44336'}`,
+          background: statusColor,
+          boxShadow: `0 0 6px ${statusColor}`,
           flexShrink: 0
         }}
       />
       <button
-        disabled={toggling}
+        disabled={toggling || isContainerDown}
         onClick={onToggle}
-        title={isRunning ? "Stop PLC" : "Start PLC"}
+        title={isContainerDown ? 'Container not running' : isRunning ? "PLC → STOP" : "PLC → RUN"}
         style={{
           width: 34, height: 34,
           border: `2px solid ${isRunning ? '#c62828' : '#2e7d32'}`,

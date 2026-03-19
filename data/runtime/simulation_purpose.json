@@ -15,12 +15,10 @@
   "treatment_program_batches": [
     {
       "treatment_program": 1,
-      "batches": 10,
-      "start_station": 101,
-      "end_station": 101
+      "batches": 42
     }
   ],
-  "simulation_duration": 1,
+  "simulation_duration": 12,
   "available_containers": 50,
   "_metadata": {
     "description": "Simulation configuration for customer and treatment programs",
@@ -33,5 +31,5 @@
       "available_containers": "Number of available containers for batches"
     }
   },
-  "updated_at": "2026-03-16T06:09:50.594Z"
+  "updated_at": "2026-03-19T11:59:18.239Z"
 }

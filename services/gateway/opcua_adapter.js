@@ -861,16 +861,22 @@ class OpcuaAdapter extends PlcAdapter {
     console.log('[OPC-UA] Triggered g_move computation');
   }
 
-  // ── PLC Runtime control via Docker Engine API ─────────────────
+  // ── PLC Runtime control ─────────────────────────────────────
+  //
+  // Uses Docker exec to run /etc/init.d/codesyscontrol start|stop|status
+  // inside the running container.  The Docker container itself stays alive —
+  // only the CODESYS runtime process (codesyscontrol.bin) is started/stopped.
+  // This is the equivalent of PLC RUN / STOP in the CODESYS IDE.
 
   /**
    * Docker Engine API helper — calls Unix socket.
    * @param {string} method - HTTP method
-   * @param {string} apiPath - e.g. '/containers/codesys_plc/restart'
+   * @param {string} apiPath - e.g. '/containers/codesys/json'
+   * @param {object|null} body - JSON body to send (optional)
    * @param {number} timeoutMs
    * @returns {Promise<{status: number, data: string}>}
    */
-  _dockerRequest(method, apiPath, timeoutMs = 30000) {
+  _dockerRequest(method, apiPath, body = null, timeoutMs = 30000) {
     return new Promise((resolve, reject) => {
       const options = {
         socketPath: DOCKER_SOCKET,
@@ -891,73 +897,118 @@ class OpcuaAdapter extends PlcAdapter {
         }
       });
       req.setTimeout(timeoutMs, () => { req.destroy(); reject(new Error('Docker API timeout')); });
+      if (body) req.write(JSON.stringify(body));
       req.end();
     });
   }
 
+  /**
+   * Execute a command inside the running container via Docker exec API.
+   * @param {string[]} cmd - Command array, e.g. ['/etc/init.d/codesyscontrol', 'stop']
+   * @returns {Promise<{output: string, exitCode: number}>}
+   */
+  async _dockerExec(cmd) {
+    // 1. Create exec instance
+    const createRes = await this._dockerRequest(
+      'POST',
+      `/containers/${PLC_CONTAINER}/exec`,
+      { AttachStdout: true, AttachStderr: true, Tty: true, Cmd: cmd }
+    );
+    if (createRes.status !== 201) {
+      throw new Error(`Docker exec create failed: HTTP ${createRes.status} ${createRes.data}`);
+    }
+    const execId = JSON.parse(createRes.data).Id;
+
+    // 2. Start exec and capture output (Tty=true → plain text, no multiplex headers)
+    const startRes = await this._dockerRequest(
+      'POST',
+      `/exec/${execId}/start`,
+      { Detach: false, Tty: true }
+    );
+
+    // 3. Get exit code
+    let exitCode = -1;
+    try {
+      const inspectRes = await this._dockerRequest('GET', `/exec/${execId}/json`);
+      if (inspectRes.status === 200) {
+        exitCode = JSON.parse(inspectRes.data).ExitCode ?? -1;
+      }
+    } catch (_) {}
+
+    return { output: startRes.data || '', exitCode };
+  }
+
+  /**
+   * PLC RUN — start the CODESYS runtime process inside the container.
+   * Container stays running; only codesyscontrol.bin is started.
+   */
   async startPlc() {
     try {
-      // First try restart (works whether running or stopped)
-      const res = await this._dockerRequest('POST', `/containers/${PLC_CONTAINER}/restart?t=5`);
-      if (res.status === 204 || res.status === 200) {
-        console.log(`[DOCKER] CODESYS container restarted`);
-        // After restart, OPC UA connection will be lost — reconnect
-        this.connected = false;
-        setTimeout(() => this.connect(), 3000);
-        return { success: true, message: 'CODESYS PLC restarted' };
-      }
-      // Container might not exist or might be in a weird state
-      console.error(`[DOCKER] Restart failed: ${res.status} ${res.data}`);
-      return { success: false, error: `Docker restart failed: HTTP ${res.status}` };
+      const result = await this._dockerExec(['/etc/init.d/codesyscontrol', 'start']);
+      const msg = result.output.trim() || 'codesyscontrol started';
+      console.log(`[PLC] RUN: ${msg} (exit: ${result.exitCode})`);
+
+      // OPC UA server comes up with the runtime — reconnect
+      this.connected = false;
+      setTimeout(() => this.connect(), 2000);
+      return { success: true, message: msg };
     } catch (err) {
-      console.error(`[DOCKER] Start error: ${err.message}`);
+      console.error(`[PLC] RUN error: ${err.message}`);
       return { success: false, error: err.message };
     }
   }
 
+  /**
+   * PLC STOP — stop the CODESYS runtime process inside the container.
+   * Container stays running; codesyscontrol.bin is terminated gracefully.
+   */
   async stopPlc() {
     try {
-      const res = await this._dockerRequest('POST', `/containers/${PLC_CONTAINER}/stop?t=10`);
-      if (res.status === 204 || res.status === 200) {
-        console.log(`[DOCKER] CODESYS container stopped`);
-        this.connected = false;
-        return { success: true, message: 'CODESYS PLC stopped' };
-      }
-      if (res.status === 304) {
-        return { success: true, message: 'CODESYS PLC already stopped' };
-      }
-      return { success: false, error: `Docker stop failed: HTTP ${res.status}` };
+      const result = await this._dockerExec(['/etc/init.d/codesyscontrol', 'stop']);
+      const msg = result.output.trim() || 'codesyscontrol stopped';
+      console.log(`[PLC] STOP: ${msg} (exit: ${result.exitCode})`);
+      this.connected = false;
+      return { success: true, message: msg };
     } catch (err) {
-      console.error(`[DOCKER] Stop error: ${err.message}`);
+      console.error(`[PLC] STOP error: ${err.message}`);
       return { success: false, error: err.message };
     }
   }
 
+  /**
+   * Get PLC status — checks both container state and CODESYS runtime process.
+   * Returns 'running' only when container is up AND codesyscontrol is active.
+   */
   async getPlcStatus() {
     try {
-      const res = await this._dockerRequest('GET', `/containers/${PLC_CONTAINER}/json`, 5000);
-      if (res.status === 200) {
-        const info = JSON.parse(res.data);
-        const state = info.State || {};
-        let status = 'unknown';
-        if (state.Running) status = 'running';
-        else if (state.Status === 'exited') status = 'stopped';
-        else status = state.Status || 'unknown';
-        return {
-          status,
-          detail: {
-            container_state: state.Status,
-            started_at: state.StartedAt,
-            finished_at: state.FinishedAt,
-            exit_code: state.ExitCode,
-            pid: state.Pid,
-          },
-        };
-      }
-      if (res.status === 404) {
+      // 1. Check Docker container is running
+      const containerRes = await this._dockerRequest('GET', `/containers/${PLC_CONTAINER}/json`, null, 5000);
+      if (containerRes.status === 404) {
         return { status: 'not_found', detail: 'Container does not exist' };
       }
-      return { status: 'unknown' };
+      if (containerRes.status !== 200) {
+        return { status: 'unknown' };
+      }
+      const info = JSON.parse(containerRes.data);
+      if (!info.State?.Running) {
+        return {
+          status: 'container_stopped',
+          detail: { container_state: info.State?.Status || 'exited' },
+        };
+      }
+
+      // 2. Container is running — check CODESYS runtime process
+      const result = await this._dockerExec(['/etc/init.d/codesyscontrol', 'status']);
+      const output = result.output.trim();
+      const isRunning = output.includes('running');
+
+      return {
+        status: isRunning ? 'running' : 'stopped',
+        detail: {
+          container_state: 'running',
+          runtime_output: output,
+        },
+      };
     } catch (err) {
       return { status: 'unknown', detail: err.message };
     }
@@ -968,6 +1019,7 @@ class OpcuaAdapter extends PlcAdapter {
       const res = await this._dockerRequest(
         'GET',
         `/containers/${PLC_CONTAINER}/logs?stdout=true&stderr=true&tail=${lines}&timestamps=true`,
+        null,
         10000
       );
       if (res.status === 200) {

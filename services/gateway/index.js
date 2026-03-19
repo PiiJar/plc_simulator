@@ -754,14 +754,17 @@ app.get('/api/calibrate/file', (req, res) => {
 // PLC info endpoint
 app.get('/api/plc/status', async (req, res) => {
   let runtimeStatus = 'unknown';
+  let runtimeDetail = null;
   try {
-    const dockerStatus = await adapter.getPlcStatus();
-    runtimeStatus = dockerStatus.status;
+    const plcState = await adapter.getPlcStatus();
+    runtimeStatus = plcState.status;
+    runtimeDetail = plcState.detail || null;
   } catch (_) {}
   res.json({
     connected: adapter.isConnected(),
     plc_alive: plcAlive,
     runtime_status: runtimeStatus,
+    runtime_detail: runtimeDetail,
     init_done: plcMeta.init_done,
     station_count: plcMeta.station_count,
     cycle_count: plcMeta.cycle_count,
@@ -810,7 +813,7 @@ app.get('/api/production-queue/status', (req, res) => {
   res.json(dispatcher.getStatus());
 });
 
-// PLC Runtime control — via Docker Engine API
+// PLC Runtime control — RUN/STOP via docker exec (codesyscontrol service)
 app.post('/api/plc/start', async (req, res) => {
   try {
     const result = await adapter.startPlc();

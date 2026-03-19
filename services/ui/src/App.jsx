@@ -16,6 +16,8 @@ import { formatTime } from './utils/formatTime';
 // Load color palette at startup (runtime, no rebuild needed)
 import { loadPalette } from './hooks/useColorPalette';
 import { api, request } from './api/client';
+import { usePlant } from './context/PlantContext';
+import { useUiPanels } from './context/UiPanelsContext';
 
 // MiniPieChart moved to ./components/StationLayout/helpers/MiniPieChart.jsx
 // DraggablePanel moved to ./components/StationLayout/helpers/DraggablePanel.jsx
@@ -1115,6 +1117,60 @@ export default function App() {
       start_time: u.batch_start_time || 0 // unix seconds (same as currentTimeSec)
     }));
   }, [units]);
+
+  // Debug transporter panel computed values
+  const debugTransporter = useMemo(() => {
+    if (!debugTransporterId) return null;
+    return transporters.find(t => t.id === debugTransporterId) || null;
+  }, [debugTransporterId, transporters]);
+
+  const debugTransporterState = useMemo(() => {
+    if (!debugTransporterId) return null;
+    return transporterStates.find(ts => ts.id === debugTransporterId) || null;
+  }, [debugTransporterId, transporterStates]);
+
+  const debugBatchAtStation = useMemo(() => {
+    if (!debugTransporterState) return null;
+    const st = debugTransporterState.state?.current_station;
+    if (!st) return null;
+    return batches.find(b => b.station === st) || null;
+  }, [debugTransporterState, batches]);
+
+  const debugBatchOnTransporter = useMemo(() => {
+    if (!debugTransporterId) return null;
+    return batches.find(b => b.transporter_id === debugTransporterId) || null;
+  }, [debugTransporterId, batches]);
+
+  const deviceDelay = useMemo(() => {
+    if (!debugTransporterState) return 0;
+    return debugTransporterState.state?.device_delay || 0;
+  }, [debugTransporterState]);
+
+  const elapsedSec = useMemo(() => {
+    if (!debugTransporterState) return 0;
+    return Number(debugTransporterState.state?.elapsed_at_station || 0);
+  }, [debugTransporterState]);
+
+  const minRequired = useMemo(() => {
+    if (!debugTransporterState) return 0;
+    return Number(debugTransporterState.state?.min_required || 0);
+  }, [debugTransporterState]);
+
+  const extraWait = useMemo(() => {
+    if (!debugTransporterState) return 0;
+    return Number(debugTransporterState.state?.extra_wait || 0);
+  }, [debugTransporterState]);
+
+  const initialDelay = useMemo(() => {
+    if (!debugTransporterState) return 0;
+    return Number(debugTransporterState.state?.initial_delay || 0);
+  }, [debugTransporterState]);
+
+  const delayRemaining = useMemo(() => {
+    if (!debugTransporterState) return 0;
+    return Number(debugTransporterState.state?.delay_remaining || 0);
+  }, [debugTransporterState]);
+
   return <div className="app">
       <Toolbar config={config} plcStatus={plcStatus} plcToggling={plcToggling} onTogglePlc={handleTogglePlc} selectedCustomer={selectedCustomer} selectedPlant={selectedPlant} plantStatus={plantStatus} showCustomer={showCustomer} setShowCustomer={setShowCustomer} showConfig={showConfig} setShowConfig={setShowConfig} showProduction={showProduction} setShowProduction={setShowProduction} showBatches={showBatches} setShowBatches={setShowBatches} showTasks={showTasks} setShowTasks={setShowTasks} elapsedMs={elapsedMs} speed={speed} onSpeedChange={handleSpeedChange} productionStartTime={productionStartTime} isResetting={isResetting} onStart={handleStart} onReset={handleReset} />
       <main className="app-content">
