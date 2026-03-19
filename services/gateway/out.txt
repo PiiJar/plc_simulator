@@ -1,3 +1,0 @@
-Connecting to opc.tcp://host.docker.internal:4840
-11:56:03.844Z :verify_pcks1                  :57    [NODE-OPCUA-W27] node version v20.20.0
-11:56:03.844Z :verify_pcks1                  :58      you need to use node flag --security-revert=CVE-2023-46809 if you have issue with RSA PKCS#1 v1.5

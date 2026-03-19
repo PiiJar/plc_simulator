@@ -19,7 +19,8 @@ const {
   DataType,
   StatusCodes,
   TimestampsToReturn,
-, UserTokenType} = require('node-opcua');
+  UserTokenType,
+} = require('node-opcua');
 
 const http = require('http');
 
@@ -49,14 +50,14 @@ class OpcuaAdapter extends PlcAdapter {
 
   async connect() {
     this.client = OPCUAClient.create({
-      applicationName: 'PLCGateway',
+      applicationName: 'NodeOPCUA-Client',
       connectionStrategy: {
         initialDelay: 1000,
         maxDelay: 10000,
         maxRetry: 100,
       },
-      securityMode: MessageSecurityMode.None,
-      securityPolicy: SecurityPolicy.None,
+      securityMode: MessageSecurityMode.SignAndEncrypt,
+      securityPolicy: SecurityPolicy.Basic256Sha256,
       endpointMustExist: false,
     });
 
@@ -66,7 +67,11 @@ class OpcuaAdapter extends PlcAdapter {
 
     try {
       await this.client.connect(OPCUA_ENDPOINT);
-      this.session = await this.client.createSession();
+      this.session = await this.client.createSession({
+        type: UserTokenType.UserName,
+        userName: process.env.OPCUA_USER || 'PiiJar',
+        password: process.env.OPCUA_PASSWORD || '!T0s1v41k33!',
+      });
       this.connected = true;
       console.log(`[OPC-UA] Connected to ${OPCUA_ENDPOINT}`);
     } catch (err) {
