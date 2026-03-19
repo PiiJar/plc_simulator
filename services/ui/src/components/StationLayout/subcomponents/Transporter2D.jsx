@@ -443,6 +443,4 @@ function Transporter2D({
   );
 }
 
-
-
 export default Transporter2D;
