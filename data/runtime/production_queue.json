@@ -9,16 +9,8 @@
       "csv_file": "Batch_001_treatment_program_001.csv"
     }
   ],
-  "pointer": 1,
+  "pointer": 0,
   "active": false,
-  "dispatched": [
-    {
-      "batch_number": 1,
-      "program_id": 1,
-      "unit_id": 1,
-      "stages_count": 12,
-      "dispatched_at": "2026-03-19T13:08:20.332Z"
-    }
-  ],
+  "dispatched": [],
   "created_at": "2026-03-19T13:08:17.948Z"
 }
