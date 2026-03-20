@@ -151,7 +151,7 @@ FOR ti := 1 TO MAX_Transporters DO
            AND t_unit >= 1 AND t_unit <= MAX_Units THEN
           (* Treatment task — look in g_program for parallel stations *)
           FOR si := 0 TO MAX_STATIONS_PER_STEP - 1 DO
-            cand_stn := g_program[t_unit].Steps[prog_stage - 1].Stations[si];
+            cand_stn := g_program[t_unit].Steps[prog_stage].Stations[si];
             IF cand_stn > 0 AND cand_stn <> t_sink THEN
               IF cand_stn >= MIN_StationIndex AND cand_stn <= MAX_StationIndex THEN
                 cand_free := TRUE;

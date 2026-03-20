@@ -454,6 +454,12 @@ app.post('/api/reset', async (req, res) => {
 
     console.log(`[RESET] Uploaded ${stations.length} stations + ${transporters.length} transporters + ${units.length} units`);
 
+    // Sync PLC clock immediately
+    const unixSec = Math.floor(Date.now() / 1000);
+    await adapter.writeTime(unixSec);
+    lastTimeSyncMs = Date.now();
+    console.log(`[RESET] Synced PLC time: ${unixSec}`);
+
     // Update current selection
     currentCustomer = customer;
     currentPlant = plant;

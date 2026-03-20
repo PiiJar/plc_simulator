@@ -10,6 +10,9 @@ VAR_GLOBAL
   (* ===== Precomputed Movement Times ===== *)
   g_move                        : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;  (* precomputed movement times per transporter *)
 
+  (* ===== Actual (Measured) Move Times ===== *)
+  g_actual_move                 : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;  (* phase timestamps updated after each completed task *)
+
   (* ===== Unit Schedule ===== *)
   g_schedule                    : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;  (* calculated schedule per unit *)
 

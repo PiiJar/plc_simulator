@@ -34,6 +34,7 @@ VAR_EXTERNAL
   g_sim_trans    : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
   g_station     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;    g_station_loc  : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;  g_cfg          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_move         : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_actual_move  : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
   g_unit         : ARRAY[1..MAX_Units] OF UDT_UnitType;
   g_batch        : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_program      : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
@@ -76,6 +77,8 @@ VAR
   tm1          : STC_FB_MeasureMoveTimes;
   tm2          : STC_FB_MeasureMoveTimes;
   tm3          : STC_FB_MeasureMoveTimes;
+  (* Actual move time tracker *)
+  track_move   : STC_FB_TrackMoveTimes;
   (* Unit location update instances *)
   upd_loc1     : STC_FB_UpdateUnitLocation;
   upd_loc2     : STC_FB_UpdateUnitLocation;
@@ -116,6 +119,7 @@ FOR i := 1 TO MAX_Transporters DO
     lookup(station_number := g_transporter[i].LiftStationTarget);
     g_transporter[i].XFinalTarget := lookup.x_mm;
     g_transporter[i].Phase := 1;
+    track_move(i_trans := i, i_prev := 0, i_new := 1);
     g_transporter[i].Status := 4;  (* auto_run *)
     g_sim_trans[i].ZStage := 0;
     g_sim_trans[i].ZTimer := 0.0;
@@ -196,7 +200,7 @@ FOR i := 1 TO MAX_Transporters DO
         IF g_batch[lift_uid].State = IN_PROCESS
            AND g_batch[lift_uid].CurStage >= 1
            AND g_batch[lift_uid].CurStage <= MAX_STEPS_PER_PROGRAM THEN
-          treat_cal := g_program[lift_uid].Steps[g_batch[lift_uid].CurStage - 1].CalTime;
+          treat_cal := g_program[lift_uid].Steps[g_batch[lift_uid].CurStage].CalTime;
           IF treat_cal > 0 THEN
             treat_elapsed := g_time_s - g_station_loc[g_transporter[i].LiftStationTarget].ChangeTime;
             IF treat_elapsed < DINT_TO_LINT(treat_cal) THEN
@@ -224,6 +228,7 @@ FOR i := 1 TO MAX_Transporters DO
       g_sim_trans[i].ZTimer := 0.0;
       g_sim_trans[i].ZStage := 2;
       g_transporter[i].Phase := 2;
+      track_move(i_trans := i, i_prev := 1, i_new := 2);
 
       (* ── Calculate transfer time (used by event + batch times) ── *)
       xfer_total := STC_CalcTransferTime(
@@ -266,9 +271,9 @@ FOR i := 1 TO MAX_Transporters DO
            from the treatment program originals. Read directly from g_program
            using the batch's current stage (CurStage=1-based program index). *)
         IF g_batch[evt_unit].CurStage >= 1 AND g_batch[evt_unit].CurStage <= 30 THEN
-          g_event_pending.Payload[9]  := DINT_TO_INT(g_program[evt_unit].Steps[g_batch[evt_unit].CurStage - 1].CalTime);
-          g_event_pending.Payload[10] := DINT_TO_INT(g_program[evt_unit].Steps[g_batch[evt_unit].CurStage - 1].MinTime);
-          g_event_pending.Payload[11] := DINT_TO_INT(g_program[evt_unit].Steps[g_batch[evt_unit].CurStage - 1].MaxTime);
+          g_event_pending.Payload[9]  := DINT_TO_INT(g_program[evt_unit].Steps[g_batch[evt_unit].CurStage].CalTime);
+          g_event_pending.Payload[10] := DINT_TO_INT(g_program[evt_unit].Steps[g_batch[evt_unit].CurStage].MinTime);
+          g_event_pending.Payload[11] := DINT_TO_INT(g_program[evt_unit].Steps[g_batch[evt_unit].CurStage].MaxTime);
         ELSE
           (* Stage 0 (pickup) — no program step *)
           g_event_pending.Payload[9]  := 0;
@@ -371,6 +376,7 @@ FOR i := 1 TO MAX_Transporters DO
       lookup(station_number := g_transporter[i].SinkStationTarget);
       g_transporter[i].XFinalTarget := lookup.x_mm;
       g_transporter[i].Phase := 3;
+      track_move(i_trans := i, i_prev := 2, i_new := 3);
     END_IF;
 
   (* ── Phase 3: Drive X towards sink station ─────────────── *)
@@ -432,6 +438,7 @@ FOR i := 1 TO MAX_Transporters DO
       g_sim_trans[i].ZTimer := device_delay + INT_TO_REAL(g_cfg[i].DripTrayDelay) / 10.0;
       g_sim_trans[i].ZStage := 6;
       g_transporter[i].Phase := 4;
+      track_move(i_trans := i, i_prev := 3, i_new := 4);
     END_IF;
     (* If arrived_x but not at_station → at drive limit, wait for clearance *)
 
@@ -551,6 +558,7 @@ FOR i := 1 TO MAX_Transporters DO
       END_IF;
 
       g_transporter[i].Phase := 0;
+      track_move(i_trans := i, i_prev := 4, i_new := 0);
       g_transporter[i].Status := 3;  (* auto_idle *)
 
     END_IF;

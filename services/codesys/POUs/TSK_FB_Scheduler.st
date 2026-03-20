@@ -314,15 +314,15 @@ ELSIF phase = 2205 THEN
        AND stretches[si].Stage >= 1
        AND stretches[si].Stage <= g_program[stretches[si].Unit].StepCount THEN
       (* Clamp new CalTime between MinTime and MaxTime *)
-      new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage - 1].CalTime
+      new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage].CalTime
                + stretches[si].DelayS;
-      IF new_cal < g_program[stretches[si].Unit].Steps[stretches[si].Stage - 1].MinTime THEN
-        new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage - 1].MinTime;
+      IF new_cal < g_program[stretches[si].Unit].Steps[stretches[si].Stage].MinTime THEN
+        new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage].MinTime;
       END_IF;
-      IF new_cal > g_program[stretches[si].Unit].Steps[stretches[si].Stage - 1].MaxTime THEN
-        new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage - 1].MaxTime;
+      IF new_cal > g_program[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime THEN
+        new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime;
       END_IF;
-      g_program[stretches[si].Unit].Steps[stretches[si].Stage - 1].CalTime := new_cal;
+      g_program[stretches[si].Unit].Steps[stretches[si].Stage].CalTime := new_cal;
 
       (* If batch is currently on this stage, also update runtime batch.CalTime *)
       IF g_batch[stretches[si].Unit].CurStage = stretches[si].Stage THEN

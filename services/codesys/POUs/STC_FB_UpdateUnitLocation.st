@@ -80,9 +80,9 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
          AND (g_program[i_unit].ProgramId > 0) THEN
         new_stg := g_batch[i_unit].CurStage;
         IF (new_stg >= 1) AND (new_stg <= MAX_STEPS_PER_PROGRAM) THEN
-          g_batch[i_unit].MinTime := g_program[i_unit].Steps[new_stg - 1].MinTime;
-          g_batch[i_unit].MaxTime := g_program[i_unit].Steps[new_stg - 1].MaxTime;
-          g_batch[i_unit].CalTime := g_program[i_unit].Steps[new_stg - 1].CalTime;
+          g_batch[i_unit].MinTime := g_program[i_unit].Steps[new_stg].MinTime;
+          g_batch[i_unit].MaxTime := g_program[i_unit].Steps[new_stg].MaxTime;
+          g_batch[i_unit].CalTime := g_program[i_unit].Steps[new_stg].CalTime;
         END_IF;
       END_IF;
     END_IF;

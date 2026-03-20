@@ -149,6 +149,7 @@ VAR
   stage0_delay  : REAL;
   stage0_ovlp   : REAL;     (* G10: stage 0 overlap delay *)
   stage0_pending_delay : REAL;  (* G04: deferred stage 0 delay *)
+  stage0_wait_time : REAL;      (* JS: stage0CalcTime = pickupTime - now, for ACTIVATE batch times *)
   ovlp_delay_s  : REAL;
   total_delay_s : REAL;
   prog_idx      : INT;
@@ -297,6 +298,7 @@ ELSIF phase = 1000 THEN
     o_fit_round := 0;
     sched_base_time := i_time_s;
     stage0_pending_delay := 0.0;
+    stage0_wait_time := 0.0;
     next_phase := 1010;
   END_IF;
 
@@ -576,7 +578,11 @@ ELSIF phase = 2000 THEN
             g_dep_idle_slot[sched_trans].Slots[s0_slot_si].StartTime :=
               s0_earliest + s0_task_dur;
 
-            (* Record stage 0 delay — shift sched_base_time for stage 1+ *)
+            (* Always record actual wait time for ACTIVATE batch times
+               JS: stage0CalcTime = waitTime = pickupTime - now *)
+            stage0_wait_time := stage0_delay;
+
+            (* Shift sched_base_time only for significant delays (recalc trigger) *)
             IF stage0_delay > MARGIN_S THEN
               stage0_pending_delay := stage0_pending_delay + stage0_delay;
               sched_base_time := sched_base_time + REAL_TO_LINT(stage0_delay);
@@ -718,13 +724,13 @@ ELSIF phase = 2001 THEN
               ELSIF chain_delays[ci].Target = 1 THEN
                 prog_idx := chain_delays[ci].Stage - prepend_offset;
                 IF prog_idx >= 1 AND prog_idx <= 30 THEN
-                  old_cal := g_program[cur_wait_unit].Steps[prog_idx - 1].CalTime;
-                  max_cal := g_program[cur_wait_unit].Steps[prog_idx - 1].MaxTime;
+                  old_cal := g_program[cur_wait_unit].Steps[prog_idx].CalTime;
+                  max_cal := g_program[cur_wait_unit].Steps[prog_idx].MaxTime;
                   new_cal := old_cal + chain_delays[ci].DelayTime;
                   IF new_cal > max_cal AND max_cal > 0 THEN
                     new_cal := max_cal;
                   END_IF;
-                  g_program[cur_wait_unit].Steps[prog_idx - 1].CalTime := new_cal;
+                  g_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
                 END_IF;
               END_IF;
             END_IF;
@@ -735,13 +741,13 @@ ELSIF phase = 2001 THEN
           IF total_delay_s > MARGIN_S THEN
             prog_idx := si - prepend_offset;
             IF prog_idx >= 1 AND prog_idx <= 30 THEN
-              old_cal := g_program[cur_wait_unit].Steps[prog_idx - 1].CalTime;
-              max_cal := g_program[cur_wait_unit].Steps[prog_idx - 1].MaxTime;
+              old_cal := g_program[cur_wait_unit].Steps[prog_idx].CalTime;
+              max_cal := g_program[cur_wait_unit].Steps[prog_idx].MaxTime;
               new_cal := old_cal + REAL_TO_DINT(total_delay_s);
               IF new_cal > max_cal AND max_cal > 0 THEN
                 new_cal := max_cal;
               END_IF;
-              g_program[cur_wait_unit].Steps[prog_idx - 1].CalTime := new_cal;
+              g_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
             END_IF;
           END_IF;
 
@@ -775,13 +781,13 @@ ELSIF phase = 3000 THEN
          includes the prepended loading station. *)
       prog_idx := delay_stage - prepend_offset;
       IF prog_idx >= 1 AND prog_idx <= 30 THEN
-        old_cal := g_program[cur_wait_unit].Steps[prog_idx - 1].CalTime;
-        max_cal := g_program[cur_wait_unit].Steps[prog_idx - 1].MaxTime;
+        old_cal := g_program[cur_wait_unit].Steps[prog_idx].CalTime;
+        max_cal := g_program[cur_wait_unit].Steps[prog_idx].MaxTime;
         new_cal := old_cal + REAL_TO_DINT(delay_amount);
         IF new_cal > max_cal AND max_cal > 0 THEN
           new_cal := max_cal;
         END_IF;
-        g_program[cur_wait_unit].Steps[prog_idx - 1].CalTime := new_cal;
+        g_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
       END_IF;
     END_IF;
     (* Recalculate: schedule → tasks → idle → fit *)
@@ -800,26 +806,27 @@ ELSIF phase = 8000 THEN
   g_dep_pending.BatchUnit  := cur_wait_unit;
   g_dep_pending.BatchStage := 0;    (* cur_stage = 0, JS: batch.Stage = 0 *)
   g_dep_pending.BatchState := 1;    (* NOT_PROCESSED → IN_PROCESS *)
-  (* ── Stage 0 batch times — matches JS ACTIVATE logic ──────────
-     JS: sandboxBatch.calc_time_s = stage0Sched.treatment_time_s
-         sandboxBatch.calc_time_s += action.delay   (if idle-slot delay)
-         sandboxBatch.min_time_s  = sandboxBatch.calc_time_s
-         sandboxBatch.max_time_s  = max(calc, 2*calc)
-     PLC: program Steps[0] = first treatment station (= JS stage0Sched)
-          stage0_pending_delay = idle-slot delay (= JS action.delay)
+  (* ── Stage 0 batch times — exact match to JS ACTIVATE ─────────
+     JS calculateWaitingBatchSchedule (CHECK_START):
+       pickupTime = max(slot.start, now) + travelToPickup
+       stage0CalcTime = pickupTime - now
+       batch.calc_time_s = stage0CalcTime
+       batch.min_time_s  = stage0CalcTime
+       batch.max_time_s  = 2 * stage0CalcTime
+
+     JS ACTIVATE:
+       batch.calc_time_s = sandboxBatch.calc_time_s  (= stage0CalcTime + viiveet)
+       batch.min_time_s  = sandboxBatch.min_time_s
+       batch.max_time_s  = sandboxBatch.max_time_s
+
+     PLC: phase 2000 FIT_STAGE0 laskee stage0_delay =
+       s0_earliest - sched_base_time = pickupTime - now 
+     ja lisää sen stage0_pending_delay:hin.
+     stage0_pending_delay on suoraan JS:n stage0CalcTime.
      ──────────────────────────────────────────────────────────── *)
-  IF stage0_pending_delay > MARGIN_S THEN
-    (* Delay case: calc = treatment + delay, min = calc, max = 2*calc *)
-    g_dep_pending.BatchCalTime := g_program[cur_wait_unit].Steps[0].CalTime
-                                  + REAL_TO_DINT(stage0_pending_delay);
-    g_dep_pending.BatchMinTime := g_dep_pending.BatchCalTime;
-    g_dep_pending.BatchMaxTime := 2 * g_dep_pending.BatchCalTime;
-  ELSE
-    (* No delay: use first treatment step times directly *)
-    g_dep_pending.BatchCalTime := g_program[cur_wait_unit].Steps[0].CalTime;
-    g_dep_pending.BatchMinTime := g_program[cur_wait_unit].Steps[0].MinTime;
-    g_dep_pending.BatchMaxTime := g_program[cur_wait_unit].Steps[0].MaxTime;
-  END_IF;
+  g_dep_pending.BatchCalTime := REAL_TO_DINT(stage0_wait_time);
+  g_dep_pending.BatchMinTime := g_dep_pending.BatchCalTime;
+  g_dep_pending.BatchMaxTime := 2 * g_dep_pending.BatchCalTime;
   IF g_dep_pending.BatchMaxTime < g_dep_pending.BatchCalTime THEN
     g_dep_pending.BatchMaxTime := g_dep_pending.BatchCalTime;
   END_IF;

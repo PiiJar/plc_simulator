@@ -118,7 +118,7 @@ IF is_on_stn THEN
   prev_stn := location;
 ELSIF cur_stage >= 1 AND cur_stage <= 30 THEN
   (* On transporter: use previous stage station *)
-  prev_stn := g_program[i_unit].Steps[cur_stage - 1].Stations[0];
+  prev_stn := g_program[i_unit].Steps[cur_stage].Stations[0];
 ELSE
   prev_stn := 0;
 END_IF;
@@ -142,7 +142,7 @@ is_first := TRUE;
 IF is_on_stn AND start_st >= 1 THEN
   stn_num := 0;
   FOR p := 0 TO 4 DO
-    IF g_program[i_unit].Steps[start_st - 1].Stations[p] = location THEN
+    IF g_program[i_unit].Steps[start_st].Stations[p] = location THEN
       stn_num := location;  (* flag: already on first treatment station *)
     END_IF;
   END_FOR;
@@ -168,9 +168,9 @@ FOR stg := start_st TO g_program[i_unit].StepCount DO
   (* Check if stage has valid stations — parallel selection *)
   cand_cnt := 0;
   FOR p := 0 TO 4 DO
-    IF g_program[i_unit].Steps[stg - 1].Stations[p] > 0 THEN
+    IF g_program[i_unit].Steps[stg].Stations[p] > 0 THEN
       cand_cnt := cand_cnt + 1;
-      cand_arr[cand_cnt] := g_program[i_unit].Steps[stg - 1].Stations[p];
+      cand_arr[cand_cnt] := g_program[i_unit].Steps[stg].Stations[p];
       sched_occupied[cand_cnt] := FALSE;
       phys_occupied[cand_cnt] := FALSE;
     END_IF;
@@ -185,7 +185,7 @@ FOR stg := start_st TO g_program[i_unit].StepCount DO
     chosen_stn := cand_arr[1];
   ELSE
     (* Read treatment times early — needed for time window estimate *)
-    calc_s := DINT_TO_REAL(g_program[i_unit].Steps[stg - 1].CalTime);
+    calc_s := DINT_TO_REAL(g_program[i_unit].Steps[stg].CalTime);
 
     (* Estimate this stage's time window *)
     tmp_move := g_move[i_trans];
@@ -262,39 +262,45 @@ FOR stg := start_st TO g_program[i_unit].StepCount DO
   stn_num := chosen_stn;
 
   (* Read treatment times from program *)
-  calc_s := DINT_TO_REAL(g_program[i_unit].Steps[stg - 1].CalTime);
-  min_s  := DINT_TO_REAL(g_program[i_unit].Steps[stg - 1].MinTime);
-  max_s  := DINT_TO_REAL(g_program[i_unit].Steps[stg - 1].MaxTime);
+  calc_s := DINT_TO_REAL(g_program[i_unit].Steps[stg].CalTime);
+  min_s  := DINT_TO_REAL(g_program[i_unit].Steps[stg].MinTime);
+  max_s  := DINT_TO_REAL(g_program[i_unit].Steps[stg].MaxTime);
 
   (* -- Calculate transfer time from prev_stn to stn_num -- *)
   (* Cross-transfer check: if prev_stn has Crosstransport and different Y line
      → use ChangeStation as effective source for transfer time calc
      JS: calculateTransferTimeWithCrossCheck *)
   tmp_move := g_move[i_trans];
+  (* ST does NOT short-circuit AND — bounds must be checked in separate IF
+     before any g_station[prev_stn] or g_station[stn_num] access *)
   IF prev_stn >= MIN_StationIndex AND prev_stn <= MAX_StationIndex
-     AND stn_num >= MIN_StationIndex AND stn_num <= MAX_StationIndex
-     AND g_station[prev_stn].Crosstransport > 0
-     AND g_station[prev_stn].ChangeStation > 0
-     AND g_station[prev_stn].YPosition <> g_station[stn_num].YPosition THEN
-    (* Cross-transfer: belt time + transfer from ChangeStation to sink *)
-    xfer_t := INT_TO_REAL(g_station[prev_stn].CrossTransportTime)
-            + STC_CalcTransferTime(
-                i_from_stn            := g_station[prev_stn].ChangeStation,
-                i_to_stn              := stn_num,
-                i_move                := tmp_move,
-                i_from_dropping_x10   := g_station[g_station[prev_stn].ChangeStation].DrippingTime,
-                i_to_device_delay_x10 := g_station[stn_num].DeviceDelay,
-                i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
-              );
+     AND stn_num >= MIN_StationIndex AND stn_num <= MAX_StationIndex THEN
+    IF g_station[prev_stn].Crosstransport > 0
+       AND g_station[prev_stn].ChangeStation > 0
+       AND g_station[prev_stn].YPosition <> g_station[stn_num].YPosition THEN
+      (* Cross-transfer: belt time + transfer from ChangeStation to sink *)
+      xfer_t := INT_TO_REAL(g_station[prev_stn].CrossTransportTime)
+              + STC_CalcTransferTime(
+                  i_from_stn            := g_station[prev_stn].ChangeStation,
+                  i_to_stn              := stn_num,
+                  i_move                := tmp_move,
+                  i_from_dropping_x10   := g_station[g_station[prev_stn].ChangeStation].DrippingTime,
+                  i_to_device_delay_x10 := g_station[stn_num].DeviceDelay,
+                  i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
+                );
+    ELSE
+      xfer_t := STC_CalcTransferTime(
+        i_from_stn            := prev_stn,
+        i_to_stn              := stn_num,
+        i_move                := tmp_move,
+        i_from_dropping_x10   := g_station[prev_stn].DrippingTime,
+        i_to_device_delay_x10 := g_station[stn_num].DeviceDelay,
+        i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
+      );
+    END_IF;
   ELSE
-    xfer_t := STC_CalcTransferTime(
-      i_from_stn            := prev_stn,
-      i_to_stn              := stn_num,
-      i_move                := tmp_move,
-      i_from_dropping_x10   := g_station[prev_stn].DrippingTime,
-      i_to_device_delay_x10 := g_station[stn_num].DeviceDelay,
-      i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
-    );
+    (* Out-of-range station index — use safe fallback *)
+    xfer_t := 60.0;
   END_IF;
 
   (* -- Calculate entry and exit times -- *)

@@ -65,8 +65,11 @@ FOR ti := 1 TO MAX_Transporters DO
         can_lift := (i_lift_stn >= area.MinLift) AND (i_lift_stn <= area.MaxLift);
         IF i_sink_stn = 0 THEN
           IF can_lift THEN
-            (* Check not already added *)
-            IF cap_count = 0 OR (capable[cap_count] <> ti) THEN
+            (* Check not already added — nested IF to avoid array bounds on capable[0] *)
+            IF cap_count = 0 THEN
+              cap_count := cap_count + 1;
+              capable[cap_count] := ti;
+            ELSIF capable[cap_count] <> ti THEN
               cap_count := cap_count + 1;
               capable[cap_count] := ti;
             END_IF;
@@ -74,7 +77,10 @@ FOR ti := 1 TO MAX_Transporters DO
         ELSE
           can_sink := (i_sink_stn >= area.MinSink) AND (i_sink_stn <= area.MaxSink);
           IF can_lift AND can_sink THEN
-            IF cap_count = 0 OR (capable[cap_count] <> ti) THEN
+            IF cap_count = 0 THEN
+              cap_count := cap_count + 1;
+              capable[cap_count] := ti;
+            ELSIF capable[cap_count] <> ti THEN
               cap_count := cap_count + 1;
               capable[cap_count] := ti;
             END_IF;

@@ -392,9 +392,9 @@ class OpcuaAdapter extends PlcAdapter {
             sink_station: toNum(v[`tq.${t}.${q}.sink_station`]),
             start_time: toNum(v[`tq.${t}.${q}.start_time`]),
             finish_time: toNum(v[`tq.${t}.${q}.finish_time`]),
-            calc_time: toNum(v[`tq.${t}.${q}.calc_time`]) * 0.1,
-            min_time: toNum(v[`tq.${t}.${q}.min_time`]) * 0.1,
-            max_time: toNum(v[`tq.${t}.${q}.max_time`]) * 0.1,
+            calc_time: toNum(v[`tq.${t}.${q}.calc_time`]),
+            min_time: toNum(v[`tq.${t}.${q}.min_time`]),
+            max_time: toNum(v[`tq.${t}.${q}.max_time`]),
           });
         }
         taskQueues[t] = { count, tasks };
@@ -505,8 +505,8 @@ class OpcuaAdapter extends PlcAdapter {
           station: Number(v[`s${s}.station`]) || 0,
           entry_time_s: lv[`s${s}.entry_time`] || 0,
           exit_time_s: lv[`s${s}.exit_time`] || 0,
-          min_time_s: (Number(v[`s${s}.min_time`]) || 0) * 0.1,
-          max_time_s: (Number(v[`s${s}.max_time`]) || 0) * 0.1,
+          min_time_s: Number(v[`s${s}.min_time`]) || 0,
+          max_time_s: Number(v[`s${s}.max_time`]) || 0,
         });
       }
 
@@ -724,6 +724,7 @@ class OpcuaAdapter extends PlcAdapter {
 
   async writeBatch(unitIndex, batchCode, batchState, programId) {
     const bw = nodes.batchWrite(unitIndex);
+    const pw = nodes.programWrite(unitIndex);
     const nowS = Math.floor(Date.now() / 1000);
     const MAX_TIME_DEFAULT = 1800; // 30 min
 
@@ -736,6 +737,9 @@ class OpcuaAdapter extends PlcAdapter {
       { nodeId: bw.max_time,   value: MAX_TIME_DEFAULT, dataType: DataType.Int32 },
       { nodeId: bw.cal_time,   value: 0,               dataType: DataType.Int32 },
     ]);
+
+    // Write g_program[uid].ProgramId so PLC can match batch → program
+    await this._writeNode(pw.program_id, programId || 0, DataType.Int16);
 
     // StartTime is LINT (Int64) — requires [high, low] format
     const high = Math.floor(nowS / 0x100000000) & 0xFFFFFFFF;

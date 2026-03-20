@@ -291,7 +291,7 @@ class ProductionDispatcher {
         const st = stages[i];
         await this._writeStage(
           candidate.unit_id,
-          i + 1,                  // stageIndex (1-based)
+          i + 1,                  // stageIndex (1-based, matches PLC Steps[stageNum])
           st.stations,
           st.minTime,
           st.maxTime,

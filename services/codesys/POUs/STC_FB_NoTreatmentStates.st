@@ -85,7 +85,11 @@ FUNCTION_BLOCK STC_FB_NoTreatmentStates
       ELSE
         snap[u].Elapsed := 0;
       END_IF;
-      snap[u].CalTime := g_program[u].Steps[snap[u].CurStage - 1].CalTime;
+      IF snap[u].CurStage >= 1 THEN
+        snap[u].CalTime := g_program[u].Steps[snap[u].CurStage].CalTime;
+      ELSE
+        snap[u].CalTime := 0;
+      END_IF;
     ELSE
       snap[u].LocationOp    := 0;
       snap[u].InBuffer := FALSE;
