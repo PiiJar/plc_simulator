@@ -35,8 +35,14 @@ coverage/
 services/codesys/build/*
 !services/codesys/build/.gitkeep
 
-# Project runtime data overrides
+# Project runtime data (generated during simulation)
+data/runtime/production_queue.json
+data/runtime/production_setup.json
+data/runtime/simulation_purpose.json
 services/ui/.cache/
 services/ui/.next/
 services/ui/out/
 services/ui/.nuxt/
+
+# Migration leftovers
+*.migrated
