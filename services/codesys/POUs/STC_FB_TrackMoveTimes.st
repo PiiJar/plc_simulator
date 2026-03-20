@@ -8,7 +8,20 @@ VAR_INPUT
     i_prev      : INT;   (* previous phase *)
     i_new       : INT;   (* new phase *)
 END_VAR
-VAR_TEMP
+VAR_EXTERNAL CONSTANT
+    MAX_Transporters : INT;
+    MIN_StationIndex : INT;
+    MAX_StationIndex : INT;
+END_VAR
+VAR_EXTERNAL
+    g_transporter  : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+    g_station      : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+    g_cfg          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+    g_move         : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+    g_actual_move  : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
+    g_time_s       : LINT;
+END_VAR
+VAR
     t          : INT;
     lift_stn   : INT;
     sink_stn   : INT;
@@ -122,7 +135,5 @@ CASE i_prev OF
             END_IF;
         END_IF;
 END_CASE;
-
-END_FUNCTION_BLOCK
 
 END_FUNCTION_BLOCK
