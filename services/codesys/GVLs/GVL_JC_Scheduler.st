@@ -65,6 +65,7 @@ VAR_GLOBAL
        8 = cal_ctrl   (param: 1=start, 2=calculate, 3=abort)
       12 = calc_move  — compute g_move from loaded g_cal kinematic params
   *)
+  g_cmd_seq                     : INT;   (* legacy — retained for OPC UA Symbol Configuration *)
   g_cmd_code                    : INT;   (* command code, non-zero = trigger *)
   g_cmd_param                   : INT;   (* command parameter *)
 END_VAR
