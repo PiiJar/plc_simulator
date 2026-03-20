@@ -88,8 +88,8 @@ FOR ti := t_start TO t_end DO
       tmp_emerg := tmp_ratio > 1.0;
 
       (* ── Insertion sort with emergency-aware comparator ── *)
-      ins_j := ins_i - 1;
-      WHILE ins_j >= 1 DO
+      ins_j := 0;
+      FOR ins_j := ins_i - 1 TO 1 BY -1 DO
         (* Compute overtime ratio for the element at ins_j *)
         cur_ratio := 0.0;
         cur_unit  := g_task[ti].Queue[ins_j].Unit;
@@ -128,8 +128,7 @@ FOR ti := t_start TO t_end DO
         IF NOT do_shift THEN EXIT; END_IF;
 
         g_task[ti].Queue[ins_j + 1] := g_task[ti].Queue[ins_j];
-        ins_j := ins_j - 1;
-      END_WHILE;
+      END_FOR;
 
       g_task[ti].Queue[ins_j + 1] := tmp_task;
     END_FOR;

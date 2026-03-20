@@ -57,15 +57,14 @@ VAR_GLOBAL
   g_event_ack_seq               : INT;   (* Gateway writes ack_seq via OPC UA to consume head message *)
 
   (* ===== OPC UA Gateway Command Interface ===== *)
-  (* Gateway writes these via OPC UA, PLC reads and processes.
-     Change g_cmd_seq to trigger command execution.
+  (* Gateway writes g_cmd_code + g_cmd_param via OPC UA.
+     PLC processes when g_cmd_code <> 0, then clears it.
      Commands:
        2 = init       (param = station_count)  — finalize config, start runtime
        3 = clear      — zero all config, stop runtime
        8 = cal_ctrl   (param: 1=start, 2=calculate, 3=abort)
       12 = calc_move  — compute g_move from loaded g_cal kinematic params
   *)
-  g_cmd_seq                     : INT;   (* command sequence — change triggers processing *)
-  g_cmd_code                    : INT;   (* command code *)
+  g_cmd_code                    : INT;   (* command code, non-zero = trigger *)
   g_cmd_param                   : INT;   (* command parameter *)
 END_VAR

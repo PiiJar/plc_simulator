@@ -30,8 +30,7 @@ const nodes = require('./opcua_nodes');
 // ── Configuration ────────────────────────────────────────────
 const OPCUA_ENDPOINT = process.env.OPCUA_ENDPOINT || 'opc.tcp://localhost:4840';
 const RECONNECT_INTERVAL_MS = parseInt(process.env.OPCUA_RECONNECT_MS || '5000');
-const ACK_POLL_INTERVAL_MS = 20;
-const ACK_TIMEOUT_MS = 3000;
+
 
 // Docker Engine API — for PLC container lifecycle control
 const DOCKER_SOCKET = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
@@ -238,45 +237,14 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   /**
-   * Poll for ack value to match expected sequence.
-   * @param {string} ackNodeId - Node to read
-   * @param {number} expectedSeq - Expected value
-   * @param {number} timeoutMs
-   * @returns {boolean}
-   */
-  async _waitForAck(ackNodeId, expectedSeq, timeoutMs = ACK_TIMEOUT_MS) {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      const result = await this.session.read({
-        nodeId: ackNodeId,
-        attributeId: AttributeIds.Value,
-      });
-      if (result.statusCode === StatusCodes.Good && result.value.value === expectedSeq) {
-        return true;
-      }
-      await new Promise(r => setTimeout(r, ACK_POLL_INTERVAL_MS));
-    }
-    return false;
-  }
-
-  // ── Sequence counters ─────────────────────────────────────────
-  _cmdSeq = 0;
-
-  _nextSeq(current) {
-    return (current % 30000) + 1;
-  }
-
-  /**
-   * Send a PLC command via g_cmd_seq/g_cmd_code/g_cmd_param protocol.
-   * Bumps g_cmd_seq so PLC detects the change and processes the command.
-   * No ack — PLC processes immediately on seq change.
+   * Send a PLC command via OPC UA.
+   * Writes g_cmd_code + g_cmd_param atomically.
+   * PLC processes when g_cmd_code <> 0 and clears it.
    */
   async _sendCommand(code, param = 0) {
-    this._cmdSeq = this._nextSeq(this._cmdSeq);
     await this._writeNodes([
-      { nodeId: nodes.CMD.cmd_code,  value: code,         dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cmd_param, value: param,        dataType: DataType.Int16 },
-      { nodeId: nodes.CMD.cmd_seq,   value: this._cmdSeq, dataType: DataType.Int16 },
+      { nodeId: nodes.CMD.cmd_param, value: param, dataType: DataType.Int16 },
+      { nodeId: nodes.CMD.cmd_code,  value: code,  dataType: DataType.Int16 },
     ]);
     // Small delay to let PLC process the command
     await new Promise(r => setTimeout(r, 50));
@@ -589,8 +557,7 @@ class OpcuaAdapter extends PlcAdapter {
 
   // ── Write operations ──────────────────────────────────────────
   // Protocol: write struct data directly via OPC UA, then trigger
-  // commands via g_cmd_seq/g_cmd_code/g_cmd_param.
-  // No ack handshake — PLC processes on g_cmd_seq change.
+  // commands via g_cmd_code/g_cmd_param (PLC clears after processing).
 
   async uploadConfig(config) {
     const { stations, transporters, units, nttData, stationCount } = config;
@@ -609,13 +576,13 @@ class OpcuaAdapter extends PlcAdapter {
           { nodeId: sw.station_id,    value: stNum,                                    dataType: DataType.Int16 },
           { nodeId: sw.tank_id,       value: st.tank || 0,                             dataType: DataType.Int16 },
           { nodeId: sw.is_in_use,     value: true,                                     dataType: DataType.Boolean },
-          { nodeId: sw.station_type,  value: st.kind || 0,                             dataType: DataType.Int16 },
+          { nodeId: sw.station_type,  value: st.station_type || 0,                     dataType: DataType.Int16 },
           { nodeId: sw.x_position,    value: Math.round(st.x_position || 0),           dataType: DataType.Int32 },
           { nodeId: sw.y_position,    value: Math.round(st.y_position || 0),           dataType: DataType.Int32 },
           { nodeId: sw.z_position,    value: Math.round(st.z_position || 0),           dataType: DataType.Int32 },
           { nodeId: sw.dripping_time, value: Math.round((st.dropping_time || 0) * 10), dataType: DataType.Int16 },
           { nodeId: sw.device_delay,  value: Math.round((st.device_delay || 0) * 10),  dataType: DataType.Int16 },
-          { nodeId: sw.dry_wet,       value: st.dry_wet || 0,                          dataType: DataType.Int16 },
+          { nodeId: sw.dry_wet,       value: st.kind || 0,                             dataType: DataType.Int16 },
         ]);
       }
       console.log(`[OPC-UA] Wrote ${stations.length} stations`);
@@ -630,11 +597,31 @@ class OpcuaAdapter extends PlcAdapter {
         const areas = tr.task_areas || {};
 
         const writes = [
-          { nodeId: cw.transporter_id, value: tid,                                         dataType: DataType.Int16 },
-          { nodeId: cw.is_in_use,      value: true,                                        dataType: DataType.Boolean },
-          { nodeId: cw.drive_pos_min,  value: Math.round(tr.x_min_drive_limit || 0),       dataType: DataType.Int32 },
-          { nodeId: cw.drive_pos_max,  value: Math.round(tr.x_max_drive_limit || 0),       dataType: DataType.Int32 },
-          { nodeId: cw.drip_tray_delay, value: Math.round((p.drip_tray_delay_s || 0) * 10), dataType: DataType.Int16 },
+          // Identity & limits
+          { nodeId: cw.transporter_id,  value: tid,                                         dataType: DataType.Int16 },
+          { nodeId: cw.is_in_use,       value: true,                                        dataType: DataType.Boolean },
+          { nodeId: cw.drive_pos_min,   value: Math.round(tr.x_min_drive_limit || 0),       dataType: DataType.Int32 },
+          { nodeId: cw.drive_pos_max,   value: Math.round(tr.x_max_drive_limit || 0),       dataType: DataType.Int32 },
+          { nodeId: cw.y_min_drive_limit, value: Math.round(tr.y_min_drive_limit || 0),     dataType: DataType.Int32 },
+          { nodeId: cw.y_max_drive_limit, value: Math.round(tr.y_max_drive_limit || 0),     dataType: DataType.Int32 },
+          // X-axis physics
+          { nodeId: cw.speed_max_x,     value: Math.round(p.x_max_speed_mm_s || 0),         dataType: DataType.Int32 },
+          { nodeId: cw.acceleration_x,  value: Math.round((p.x_acceleration_time_s || 0) * 10), dataType: DataType.Int32 },
+          { nodeId: cw.deceleration_x,  value: Math.round((p.x_deceleration_time_s || 0) * 10), dataType: DataType.Int32 },
+          // Z-axis positions (from physics_2D z params)
+          { nodeId: cw.z_pos_down,      value: Math.round(p.z_total_distance_mm || 0),      dataType: DataType.Int32 },
+          { nodeId: cw.z_pos_slow_up,   value: Math.round(p.z_slow_distance_dry_mm || 0),   dataType: DataType.Int32 },
+          { nodeId: cw.z_pos_slow_down, value: Math.round(p.z_slow_distance_wet_mm || 0),   dataType: DataType.Int32 },
+          { nodeId: cw.z_pos_slow_end,  value: Math.round(p.z_slow_end_distance_mm || 0),   dataType: DataType.Int32 },
+          // Z-axis speeds
+          { nodeId: cw.speed_lift_slow_z, value: Math.round(p.z_slow_speed_mm_s || 0),      dataType: DataType.Int32 },
+          { nodeId: cw.speed_lift_fast_z, value: Math.round(p.z_fast_speed_mm_s || 0),      dataType: DataType.Int32 },
+          // Drip tray
+          { nodeId: cw.drip_tray_in_use, value: (p.drip_tray_delay_s || 0) > 0,             dataType: DataType.Boolean },
+          { nodeId: cw.drip_tray_delay,  value: Math.round((p.drip_tray_delay_s || 0) * 10), dataType: DataType.Int16 },
+          // Collision avoidance
+          { nodeId: cw.collision_width,  value: Math.round(p.avoid_distance_mm || 0),        dataType: DataType.Int32 },
+          { nodeId: cw.avoidance_width,  value: Math.round(p.avoid_distance_mm || 0),        dataType: DataType.Int32 },
         ];
 
         // Task areas (up to 3 slots)

@@ -248,8 +248,7 @@ function avoidStatus(stationNum) {
 // ═══════════════════════════════════════════════════════════════
 
 const CMD = {
-  // Generic command protocol — change cmd_seq triggers processing
-  cmd_seq:   S('g_cmd_seq'),
+  // OPC UA command protocol — PLC processes when cmd_code <> 0, then clears
   cmd_code:  S('g_cmd_code'),
   cmd_param: S('g_cmd_param'),
 
@@ -298,6 +297,9 @@ function cfgWrite(tid) {
     is_in_use:      P(`${b}.IsInUse`),
     drive_pos_min:  P(`${b}.DrivePosMin`),
     drive_pos_max:  P(`${b}.DrivePosMax`),
+    // Y-axis limits
+    y_min_drive_limit: P(`${b}.YMinDriveLimit`),
+    y_max_drive_limit: P(`${b}.YMaxDriveLimit`),
     // Task areas
     ta1_min_lift:   P(`${b}.TaskArea[1].MinLift`),
     ta1_max_lift:   P(`${b}.TaskArea[1].MaxLift`),
@@ -311,8 +313,24 @@ function cfgWrite(tid) {
     ta3_max_lift:   P(`${b}.TaskArea[3].MaxLift`),
     ta3_min_sink:   P(`${b}.TaskArea[3].MinSink`),
     ta3_max_sink:   P(`${b}.TaskArea[3].MaxSink`),
-    // Physics (used by simulation)
-    drip_tray_delay: P(`${b}.DripTrayDelay`),
+    // X-axis physics
+    speed_max_x:       P(`${b}.SpeedMax_X`),
+    acceleration_x:    P(`${b}.Acceleration_X`),
+    deceleration_x:    P(`${b}.Deceleration_X`),
+    // Z-axis positions
+    z_pos_down:        P(`${b}.ZPosDown`),
+    z_pos_slow_up:     P(`${b}.ZPosSlowUp`),
+    z_pos_slow_down:   P(`${b}.ZPosSlowDown`),
+    z_pos_slow_end:    P(`${b}.ZPosSlowEnd`),
+    // Z-axis speeds
+    speed_lift_slow_z: P(`${b}.SpeedLiftSlow_Z`),
+    speed_lift_fast_z: P(`${b}.SpeedLiftFast_Z`),
+    // Drip tray
+    drip_tray_in_use:  P(`${b}.DripTrayInUse`),
+    drip_tray_delay:   P(`${b}.DripTrayDelay`),
+    // Collision avoidance
+    collision_width:   P(`${b}.CollisionWidth`),
+    avoidance_width:   P(`${b}.AvoidanceWidth`),
   };
 }
 

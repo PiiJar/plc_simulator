@@ -1,8 +1,8 @@
 (* ============================================================
-   plc_prg.st — Main program (CODESYS / OPC UA version)
+   plc_prg.st — Main program (CODESYS / OPC UA)
    ============================================================
    Gateway communicates via OPC UA — reads/writes GVL variables
-   directly.
+   directly. All multi-field writes are atomic (single OPC UA call).
 
    Gateway writes:
      g_station[], g_cfg[], g_unit[], g_batch[], g_program[],
@@ -14,7 +14,9 @@
      g_move[], g_event, g_dep_wait_sched, g_sched_dbg_*,
      g_cal_active, g_cal[]
 
-   Command interface (g_cmd_seq/code/param):
+   Command interface (g_cmd_code / g_cmd_param):
+     Gateway writes g_cmd_code + g_cmd_param via OPC UA.
+     PLC processes when g_cmd_code <> 0, then clears it.
      2 = init       (param = station_count)
      3 = clear      (clear all config)
      8 = cal_ctrl   (param: 1=start, 2=calculate, 3=abort)
@@ -75,14 +77,12 @@ VAR_EXTERNAL
   g_event_pending_valid : BOOL;
   g_event_ack_seq    : INT;
   (* --- OPC UA Command Interface --- *)
-  g_cmd_seq          : INT;
   g_cmd_code         : INT;
   g_cmd_param        : INT;
 END_VAR
 
 VAR
   init_done      : BOOL := FALSE;
-  last_cmd_seq   : INT := 0;
   i              : INT;
   twa_calc       : TWA_FB_CalcLimits;
   clear_cfg      : SIM_FB_ClearConfig;
@@ -105,12 +105,11 @@ VAR
 END_VAR
 
 (* ============================================================
-   COMMAND HANDLER — OPC UA
-   Gateway writes g_cmd_seq/g_cmd_code/g_cmd_param via OPC UA.
-   Change in g_cmd_seq triggers command processing.
+   COMMAND HANDLER — OPC UA (direct, no sequence handshake)
+   Gateway writes g_cmd_code + g_cmd_param in one atomic OPC UA
+   call. PLC processes when g_cmd_code <> 0 and clears it.
    ============================================================ *)
-IF g_cmd_seq <> last_cmd_seq THEN
-  last_cmd_seq := g_cmd_seq;
+IF g_cmd_code <> 0 THEN
 
   IF g_cmd_code = 3 THEN
     (* ── Clear all config data ── *)
@@ -120,7 +119,6 @@ IF g_cmd_seq <> last_cmd_seq THEN
 
   ELSIF g_cmd_code = 8 THEN
     (* ── Calibration control ── *)
-    (* param: 1=start, 2=calculate, 3=abort *)
     cal_cmd := g_cmd_param;
 
   ELSIF g_cmd_code = 12 THEN
@@ -128,10 +126,7 @@ IF g_cmd_seq <> last_cmd_seq THEN
     cal_load_run := TRUE;
 
   ELSIF g_cmd_code = 2 THEN
-    (* ── Finish init: all config uploaded via OPC UA ── *)
-    (* Gateway writes g_station[], g_cfg[], g_unit[], g_batch[],
-       g_program[], g_ntt[], g_cal[] via OPC UA BEFORE sending cmd=2.
-       param = station_count *)
+    (* ── Finish init: all config already uploaded via OPC UA ── *)
     g_station_count := g_cmd_param;
 
     FOR i := 1 TO MAX_Transporters DO
@@ -162,6 +157,8 @@ IF g_cmd_seq <> last_cmd_seq THEN
     g_event.NextSeq := 1;
     g_event.Count := 0;
   END_IF;
+
+  g_cmd_code := 0;  (* Command processed — clear trigger *)
 END_IF;
 
 (* ============================================================

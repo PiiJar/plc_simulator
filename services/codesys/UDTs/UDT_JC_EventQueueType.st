@@ -1,5 +1,5 @@
 (* EventQueueType - Event message queue PLC → Gateway *)
-(* Handshake: PLC outputs head message via Modbus.
+(* PLC outputs head message via OPC UA readable variables.
    Gateway reads it, processes it, writes ack_seq = head.seq.
    PLC sees ack match → advances head, count--. *)
 TYPE UDT_JC_EventQueueType :

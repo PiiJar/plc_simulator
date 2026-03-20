@@ -262,15 +262,14 @@ ELSIF phase = 150 THEN
   FOR si := 2 TO waiting_cnt DO
     tmp_unit := waiting_list[si];
     tmp_key  := g_batch[tmp_unit].StartTime;
-    ji := si - 1;
-    WHILE ji >= 1 DO
+    ji := 0;
+    FOR ji := si - 1 TO 1 BY -1 DO
       IF g_batch[waiting_list[ji]].StartTime > tmp_key THEN
         waiting_list[ji + 1] := waiting_list[ji];
-        ji := ji - 1;
       ELSE
         EXIT;
       END_IF;
-    END_WHILE;
+    END_FOR;
     waiting_list[ji + 1] := tmp_unit;
   END_FOR;
   next_phase := 200;
@@ -683,7 +682,8 @@ ELSIF phase = 2001 THEN
         chain_ok := FALSE;
 
         bk := cur_task_idx - 1;
-        WHILE bk >= 1 AND remaining_need > MARGIN_S DO
+        FOR bk := cur_task_idx - 1 TO 1 BY -1 DO
+          IF remaining_need <= MARGIN_S THEN EXIT; END_IF;
           prev_flex_up := DINT_TO_REAL(w_tasks[bk].MaxTime - w_tasks[bk].CalcTime);
           IF prev_flex_up < 0.0 THEN prev_flex_up := 0.0; END_IF;
           prev_capped := prev_flex_up * FLEX_FACTOR;
@@ -704,8 +704,7 @@ ELSIF phase = 2001 THEN
             END_IF;
             remaining_need := remaining_need - use_delay;
           END_IF;
-          bk := bk - 1;
-        END_WHILE;
+        END_FOR;
 
         IF remaining_need <= MARGIN_S THEN chain_ok := TRUE; END_IF;
 
