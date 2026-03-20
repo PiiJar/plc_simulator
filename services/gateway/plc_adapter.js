@@ -27,7 +27,7 @@ class PlcAdapter {
   /**
    * Read full PLC state (transporters, units, batches, meta, etc.)
    * @returns {object|null} Parsed state object or null on error
-   *   { transporters[], units[], meta, twaLimits, taskQueues, depState, schedulerDebug, calibration }
+   *   { transporters[], units[], meta, twaLimits, taskQueues, depState, schedulerDebug }
    */
   async readState() { throw new Error('Not implemented'); }
 
@@ -123,32 +123,6 @@ class PlcAdapter {
    * @param {number} unitId - 1..10
    */
   async writeScheduleRequest(unitId) { throw new Error('Not implemented'); }
-
-  /**
-   * Upload calibration plan for a transporter.
-   * @param {number} tid - 1..3
-   * @param {number} wetStation
-   * @param {number} dryStation
-   */
-  async writeCalibrationPlan(tid, wetStation, dryStation) { throw new Error('Not implemented'); }
-
-  /**
-   * Send calibration control command.
-   * @param {string} action - 'start' | 'calculate' | 'abort'
-   */
-  async writeCalibrationControl(action) { throw new Error('Not implemented'); }
-
-  /**
-   * Load kinematic calibration params to PLC.
-   * @param {number} tid - 1..3
-   * @param {object} params - { lift_wet_s, sink_wet_s, lift_dry_s, sink_dry_s, x_accel_s, x_decel_s, x_max_mm_s }
-   */
-  async writeCalibrationParams(tid, params) { throw new Error('Not implemented'); }
-
-  /**
-   * Trigger g_move computation from loaded calibration params.
-   */
-  async triggerMoveComputation() { throw new Error('Not implemented'); }
 
   // ── PLC Runtime control ────────────────────────────────────
 

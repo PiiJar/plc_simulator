@@ -6,7 +6,7 @@ import * as d3 from "d3";
 // Import modular StationLayout component
 import StationLayout from './components/StationLayout';
 import DraggablePanel from './components/StationLayout/helpers/DraggablePanel';
-import CalibrationPanel from './components/CalibrationPanel';
+
 
 // Load color palette at startup (runtime, no rebuild needed)
 import { loadPalette } from './hooks/useColorPalette';
@@ -91,7 +91,7 @@ export default function App() {
   const [productionDuration, setProductionDuration] = useState(0);
   // Layout config editor
   const [showConfig, setShowConfig] = useState(false);
-  const [showCalibration, setShowCalibration] = useState(false);
+
   const [configForm, setConfigForm] = useState(null);
   const [configSaving, setConfigSaving] = useState(false);
   const [configError, setConfigError] = useState('');
@@ -1196,10 +1196,10 @@ export default function App() {
           plcStatus={plcStatus} plcToggling={plcToggling}
           setPlcToggling={setPlcToggling} setPlcStatus={setPlcStatus}
           selectedCustomer={selectedCustomer} selectedPlant={selectedPlant}
-          showCustomer={showCustomer} showConfig={false} showCalibration={false}
+          showCustomer={showCustomer} showConfig={false}
           showProduction={false} showBatches={false} showTasks={false}
           setShowCustomer={setShowCustomer}
-          setShowCalibration={() => {}} setShowProduction={() => {}} setShowBatches={() => {}} setShowTasks={() => {}}
+          setShowProduction={() => {}} setShowBatches={() => {}} setShowTasks={() => {}}
           onConfigClick={() => {}}
           isResetting={isResetting}
           productionStartTime={null} productionDuration={0}
@@ -1273,10 +1273,10 @@ export default function App() {
         setPlcToggling={setPlcToggling} setPlcStatus={setPlcStatus}
         selectedCustomer={selectedCustomer} selectedPlant={selectedPlant}
         plantStatus={plantStatus}
-        showCustomer={showCustomer} showConfig={showConfig} showCalibration={showCalibration}
+        showCustomer={showCustomer} showConfig={showConfig}
         showProduction={showProduction} showBatches={showBatches} showTasks={showTasks}
         setShowCustomer={setShowCustomer}
-        setShowCalibration={setShowCalibration} setShowProduction={setShowProduction}
+        setShowProduction={setShowProduction}
         setShowBatches={setShowBatches} setShowTasks={setShowTasks}
         onConfigClick={() => {
           if (config) {
@@ -1351,14 +1351,7 @@ export default function App() {
 
           {/* Config Layout Editor Panel */}
 
-          {/* Calibration Panel */}
-          {showCalibration && (
-            <CalibrationPanel
-              onClose={() => setShowCalibration(false)}
-              stations={stations}
-              transporterStates={transporterStates}
-            />
-          )}
+
 
           {showConfig && configForm && (
             <ConfigPanel

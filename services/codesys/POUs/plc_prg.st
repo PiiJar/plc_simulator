@@ -6,21 +6,18 @@
 
    Gateway writes:
      g_station[], g_cfg[], g_unit[], g_batch[], g_program[],
-     g_ntt[], g_cal[], g_avoid_status[], g_time_s,
+     g_ntt[], g_avoid_status[], g_time_s,
      g_production_queue, g_event_ack_seq
 
    Gateway reads:
      g_transporter[], g_schedule[], g_task[], g_sim_trans[],
-     g_move[], g_event, g_dep_wait_sched, g_sched_dbg_*,
-     g_cal_active, g_cal[]
+     g_move[], g_event, g_dep_wait_sched, g_sched_dbg_*
 
    Command interface (g_cmd_code / g_cmd_param):
      Gateway writes g_cmd_code + g_cmd_param via OPC UA.
      PLC processes when g_cmd_code <> 0, then clears it.
      2 = init       (param = station_count)
      3 = clear      (clear all config)
-     8 = cal_ctrl   (param: 1=start, 2=calculate, 3=abort)
-    12 = calc_move  (compute g_move from g_cal kinematics)
    ============================================================ *)
 
 PROGRAM PLC_PRG
@@ -64,11 +61,7 @@ VAR_EXTERNAL
   g_sched_dbg_turn      : INT;
   g_conflict_resolved   : BOOL;
   g_sched_dbg_batch_cnt : INT;
-  (* --- Calibration --- *)
-  g_cal              : ARRAY[1..MAX_Transporters] OF UDT_JC_CalibrationType;
-  g_cal_active       : BOOL;
   (* --- Production --- *)
-  g_production_queue : INT;
   (* --- Time --- *)
   g_time_s           : LINT;
   (* --- Event queue --- *)
@@ -89,11 +82,7 @@ VAR
   cycle_count    : INT;
   main_sched     : STC_FB_MainScheduler;
   run_tasks      : SIM_FB_RunTasks;
-  calibrate      : STC_FB_Calibrate;
-  calc_move      : STC_FB_CalcMoveTimes;
   evt_queue      : STC_FB_EventQueue;
-  cal_cmd        : INT := 0;
-  cal_load_run   : BOOL := FALSE;
   (* Time self-increment *)
   time_cycle_cnt : INT := 0;
   last_time_s    : LINT := 0;
@@ -116,14 +105,6 @@ IF g_cmd_code <> 0 THEN
     clear_cfg();
     init_done := FALSE;
     g_station_count := 0;
-
-  ELSIF g_cmd_code = 8 THEN
-    (* ── Calibration control ── *)
-    cal_cmd := g_cmd_param;
-
-  ELSIF g_cmd_code = 12 THEN
-    (* ── Compute g_move from loaded g_cal kinematic params ── *)
-    cal_load_run := TRUE;
 
   ELSIF g_cmd_code = 2 THEN
     (* ── Finish init: all config already uploaded via OPC UA ── *)
@@ -177,12 +158,6 @@ END_IF;
    ============================================================ *)
 IF init_done THEN
 
-  (* ── Compute g_move from loaded kinematic params (one-shot) ── *)
-  calc_move(i_run := cal_load_run);
-  IF cal_load_run THEN
-    cal_load_run := FALSE;
-  END_IF;
-
   (* ── Calculate transporter working areas (X-limits) every cycle ── *)
   twa_calc();
 
@@ -205,11 +180,6 @@ IF init_done THEN
 
   (* ── Execute transporter tasks (physics simulation) ── *)
   run_tasks(i_run := init_done);
-
-  (* ── Calibration FB — issues test tasks, measures parameters ── *)
-  calibrate(i_run := init_done, i_cmd := cal_cmd);
-  cal_cmd := 0;
-  g_cal_active := calibrate.o_active;
 
 END_IF;  (* init_done *)
 

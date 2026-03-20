@@ -9,7 +9,7 @@
  *   GVL_Parameters: g_transporter[1..3], g_unit[1..10], g_batch[1..10],
  *                   g_station[100..130], g_avoid_status[100..130], g_station_count
  *   GVL_JC_Scheduler: g_sim_trans[1..3], g_task[1..3], g_schedule[1..10],
- *                     g_cal[1..3], g_event, g_cmd_code, g_cmd_param, etc.
+ *                     g_move[1..3], g_event, g_cmd_code, g_cmd_param, etc.
  *
  * Environment config:
  *   OPCUA_NS       — namespace index (default: 4)
@@ -158,30 +158,10 @@ function schedule(uid) {
   return nodes;
 }
 
-/**
- * Calibration for transporter tid (1..3)
- * PLC variable: GVL_JC_Scheduler.g_cal[tid]
- */
-function calibration(tid) {
-  const b = `g_cal[${tid}]`;
-  return {
-    wet_station:   S(`${b}.WetStation`),
-    dry_station:   S(`${b}.DryStation`),
-    lift_wet_time: S(`${b}.LiftWetTime`),
-    sink_wet_time: S(`${b}.SinkWetTime`),
-    lift_dry_time: S(`${b}.LiftDryTime`),
-    sink_dry_time: S(`${b}.SinkDryTime`),
-    x_accel_time:  S(`${b}.XAccelTime`),
-    x_decel_time:  S(`${b}.XDecelTime`),
-    x_max_speed:   S(`${b}.XMaxSpeed`),
-  };
-}
-
 // ── Scalar read nodes ────────────────────────────────────────
 
 const META = {
   station_count:    P('g_station_count'),
-  cal_active:       S('g_cal_active'),
   production_queue: S('g_production_queue'),
   time_seconds:     S('g_time_s'),
 };
@@ -413,25 +393,6 @@ function nttWrite(tid) {
   return n;
 }
 
-/**
- * Calibration write targets (g_cal[tid])
- * PLC variable: GVL_JC_Scheduler.g_cal[1..3]
- */
-function calWrite(tid) {
-  const b = `g_cal[${tid}]`;
-  return {
-    wet_station:   S(`${b}.WetStation`),
-    dry_station:   S(`${b}.DryStation`),
-    lift_wet_time: S(`${b}.LiftWetTime`),
-    sink_wet_time: S(`${b}.SinkWetTime`),
-    lift_dry_time: S(`${b}.LiftDryTime`),
-    sink_dry_time: S(`${b}.SinkDryTime`),
-    x_accel_time:  S(`${b}.XAccelTime`),
-    x_decel_time:  S(`${b}.XDecelTime`),
-    x_max_speed:   S(`${b}.XMaxSpeed`),
-  };
-}
-
 // ═══════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════
@@ -499,12 +460,6 @@ function buildReadList() {
   // Scheduler debug
   for (const [k, nid] of Object.entries(SCHED_DEBUG)) add(`sched.${k}`, nid);
 
-  // Calibration (1..3)
-  for (let t = 1; t <= 3; t++) {
-    const cal = calibration(t);
-    for (const [k, nid] of Object.entries(cal)) add(`cal.${t}.${k}`, nid);
-  }
-
   // Event queue (count + head index + buffer[1..10] headers)
   add('event.count', EVENT.count);
   add('event.head_idx', EVENT.head_idx);
@@ -519,6 +474,27 @@ function buildReadList() {
   return list;
 }
 
+/**
+ * Movement times write targets (g_move[tid])
+ * PLC variable: GVL_JC_Scheduler.g_move[1..3]
+ * Station index: station_number - 100 (station 101 → index 1, max 30)
+ * Times are INT ×10 = tenths of second
+ */
+function moveTimesWrite(tid) {
+  const b = `g_move[${tid}]`;
+  const result = {};
+  for (let idx = 1; idx <= 30; idx++) {
+    result[`lift_${idx}`] = S(`${b}.LiftTime[${idx}]`);
+    result[`sink_${idx}`] = S(`${b}.SinkTime[${idx}]`);
+  }
+  for (let from = 1; from <= 30; from++) {
+    for (let to = 1; to <= 30; to++) {
+      result[`travel_${from}_${to}`] = S(`${b}.Travel[${from}].ToTime[${to}]`);
+    }
+  }
+  return result;
+}
+
 module.exports = {
   nodeId,
   NS,
@@ -528,7 +504,6 @@ module.exports = {
   batch,
   taskQueue,
   schedule,
-  calibration,
   META,
   DEP,
   depWaiting,
@@ -546,5 +521,5 @@ module.exports = {
   batchWrite,
   programWrite,
   nttWrite,
-  calWrite,
+  moveTimesWrite,
 };

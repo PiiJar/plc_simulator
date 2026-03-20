@@ -40,10 +40,6 @@ VAR_GLOBAL
   g_sched_dbg_dep_wait_cnt      : INT;  (* DEP waiting batch count *)
   g_sched_dbg_batch_cnt         : INT;  (* TSK active batch count *)
 
-  (* ===== Calibration State ===== *)
-  g_cal                         : ARRAY[1..MAX_Transporters] OF UDT_JC_CalibrationType;  (* calibration plan + results per transporter *)
-  g_cal_active                  : BOOL;  (* TRUE during calibration — inhibits schedulers *)
-
   (* ===== Production Queue ===== *)
   g_production_queue            : INT;  (* 1=batches in queue, 0=queue empty *)
 
@@ -62,10 +58,7 @@ VAR_GLOBAL
      Commands:
        2 = init       (param = station_count)  — finalize config, start runtime
        3 = clear      — zero all config, stop runtime
-       8 = cal_ctrl   (param: 1=start, 2=calculate, 3=abort)
-      12 = calc_move  — compute g_move from loaded g_cal kinematic params
   *)
-  g_cmd_seq                     : INT;   (* legacy — retained for OPC UA Symbol Configuration *)
   g_cmd_code                    : INT;   (* command code, non-zero = trigger *)
   g_cmd_param                   : INT;   (* command parameter *)
 END_VAR

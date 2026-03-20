@@ -10,8 +10,8 @@ import { api } from '../api/client';
 export default function Toolbar({
   plcStatus, plcToggling, setPlcToggling, setPlcStatus,
   selectedCustomer, selectedPlant, plantStatus,
-  showCustomer, showConfig, showCalibration, showProduction, showBatches, showTasks,
-  setShowCustomer, setShowCalibration, setShowProduction, setShowBatches, setShowTasks,
+  showCustomer, showConfig, showProduction, showBatches, showTasks,
+  setShowCustomer, setShowProduction, setShowBatches, setShowTasks,
   onConfigClick,
   isResetting, productionStartTime, productionDuration,
   handleStart, handleReset,
@@ -152,7 +152,6 @@ export default function Toolbar({
       <div style={{ display: 'flex', gap: 8 }}>
         {panelBtn('👤', 'Customer', showCustomer, () => setShowCustomer(v => !v))}
         {panelBtn('⚙️', 'Config', showConfig, onConfigClick, guard)}
-        {panelBtn('🎯', 'Calibrate', showCalibration, () => setShowCalibration(v => !v), guard)}
         {panelBtn('🏭', 'Production', showProduction, () => setShowProduction(v => !v), guard)}
         {panelBtn('📦', 'Units', showBatches, () => setShowBatches(v => !v), guard)}
         {panelBtn('📋', 'Tasks', showTasks, () => setShowTasks(v => !v), guard)}

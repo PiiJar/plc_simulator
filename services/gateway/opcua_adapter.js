@@ -231,7 +231,7 @@ class OpcuaAdapter extends PlcAdapter {
     const results = await this.session.write(nodesToWrite);
     for (let i = 0; i < results.length; i++) {
       if (results[i] !== StatusCodes.Good) {
-        throw new Error(`OPC-UA write failed at index ${i}: ${results[i].toString()}`);
+        throw new Error(`OPC-UA write failed at index ${i} (nodeId: ${writes[i].nodeId}): ${results[i].toString()}`);
       }
     }
   }
@@ -262,6 +262,18 @@ class OpcuaAdapter extends PlcAdapter {
       }
 
       const v = await this._readNodes(this._readList);
+
+      // Read LINT batch.start_time fields separately (Int64 workaround)
+      if (!this._batchLintList) {
+        this._batchLintList = [];
+        for (let u = 1; u <= 10; u++) {
+          const bn = nodes.batch(u);
+          this._batchLintList.push({ key: `batch.${u}.start_time`, nodeId: bn.start_time });
+        }
+      }
+      const batchLint = await this._readLintNodes(this._batchLintList);
+      Object.assign(v, batchLint);
+
       const toNum = (val) => (val != null ? Number(val) : 0);
 
       // ── Parse transporters ────────────────────────────────
@@ -411,25 +423,6 @@ class OpcuaAdapter extends PlcAdapter {
         schedulerDebug[k] = toNum(v[`sched.${k}`]);
       }
 
-      // ── Parse calibration ─────────────────────────────────
-      const calibrationState = {
-        step: 0,
-        tid: 0,
-        results: [],
-      };
-      for (let t = 1; t <= 3; t++) {
-        calibrationState.results.push({
-          id: t,
-          lift_wet: toNum(v[`cal.${t}.lift_wet_time`]) / 10.0,
-          sink_wet: toNum(v[`cal.${t}.sink_wet_time`]) / 10.0,
-          lift_dry: toNum(v[`cal.${t}.lift_dry_time`]) / 10.0,
-          sink_dry: toNum(v[`cal.${t}.sink_dry_time`]) / 10.0,
-          x_acc: toNum(v[`cal.${t}.x_accel_time`]) / 10.0,
-          x_dec: toNum(v[`cal.${t}.x_decel_time`]) / 10.0,
-          x_max: toNum(v[`cal.${t}.x_max_speed`]),
-        });
-      }
-
       // ── Parse events (for event consumer) ─────────────────
       const eventHead = {
         count: toNum(v['event.count']),
@@ -457,7 +450,6 @@ class OpcuaAdapter extends PlcAdapter {
         taskQueues,
         depState,
         schedulerDebug,
-        calibration: calibrationState,
         eventHead,
       };
     } catch (err) {
@@ -732,13 +724,86 @@ class OpcuaAdapter extends PlcAdapter {
 
   async writeBatch(unitIndex, batchCode, batchState, programId) {
     const bw = nodes.batchWrite(unitIndex);
+    const nowS = Math.floor(Date.now() / 1000);
+    const MAX_TIME_DEFAULT = 1800; // 30 min
+
     await this._writeNodes([
       { nodeId: bw.batch_code, value: batchCode || 0,  dataType: DataType.Int16 },
       { nodeId: bw.state,      value: batchState || 0, dataType: DataType.Int16 },
       { nodeId: bw.prog_id,    value: programId || 0,  dataType: DataType.Int16 },
       { nodeId: bw.cur_stage,  value: 0,               dataType: DataType.Int16 },
+      { nodeId: bw.min_time,   value: 0,               dataType: DataType.Int32 },
+      { nodeId: bw.max_time,   value: MAX_TIME_DEFAULT, dataType: DataType.Int32 },
+      { nodeId: bw.cal_time,   value: 0,               dataType: DataType.Int32 },
     ]);
-    console.log(`[OPC-UA] Batch unit=${unitIndex}: code=${batchCode}, state=${batchState}, prog=${programId}`);
+
+    // StartTime is LINT (Int64) — requires [high, low] format
+    const high = Math.floor(nowS / 0x100000000) & 0xFFFFFFFF;
+    const low  = nowS & 0xFFFFFFFF;
+    const sc = await this.session.write({
+      nodeId: bw.start_time,
+      attributeId: AttributeIds.Value,
+      value: {
+        value: {
+          dataType: DataType.Int64,
+          arrayType: VariantArrayType.Scalar,
+          value: [high, low],
+        },
+      },
+    });
+    if (sc !== StatusCodes.Good) {
+      throw new Error(`OPC-UA write StartTime failed: ${sc.toString()}`);
+    }
+
+    console.log(`[OPC-UA] Batch unit=${unitIndex}: code=${batchCode}, state=${batchState}, prog=${programId}, startTime=${nowS}, maxTime=${MAX_TIME_DEFAULT}`);
+  }
+
+  /**
+   * Write movement times for one transporter to g_move[tid].
+   * @param {number} tid - transporter id (1..3)
+   * @param {object} data - { lift_s: {stn: seconds}, sink_s: {stn: seconds}, travel: {from: {to: seconds}} }
+   */
+  async writeMovementTimes(tid, data) {
+    const mw = nodes.moveTimesWrite(tid);
+
+    // Write lift + sink times (×10 → tenths of second)
+    const liftSink = [];
+    for (const [stnStr, secs] of Object.entries(data.lift_s || {})) {
+      const idx = parseInt(stnStr) - 100;
+      if (idx >= 1 && idx <= 30 && mw[`lift_${idx}`]) {
+        liftSink.push({ nodeId: mw[`lift_${idx}`], value: Math.round(secs * 10), dataType: DataType.Int16 });
+      }
+    }
+    for (const [stnStr, secs] of Object.entries(data.sink_s || {})) {
+      const idx = parseInt(stnStr) - 100;
+      if (idx >= 1 && idx <= 30 && mw[`sink_${idx}`]) {
+        liftSink.push({ nodeId: mw[`sink_${idx}`], value: Math.round(secs * 10), dataType: DataType.Int16 });
+      }
+    }
+    if (liftSink.length > 0) {
+      await this._writeNodes(liftSink);
+    }
+
+    // Write travel times (×10 → tenths of second), chunked to avoid huge single writes
+    const travel = data.travel || {};
+    for (const [fromStr, toMap] of Object.entries(travel)) {
+      const fromIdx = parseInt(fromStr) - 100;
+      if (fromIdx < 1 || fromIdx > 30) continue;
+      const writes = [];
+      for (const [toStr, secs] of Object.entries(toMap)) {
+        const toIdx = parseInt(toStr) - 100;
+        if (toIdx < 1 || toIdx > 30) continue;
+        const key = `travel_${fromIdx}_${toIdx}`;
+        if (mw[key]) {
+          writes.push({ nodeId: mw[key], value: Math.round(secs * 10), dataType: DataType.Int16 });
+        }
+      }
+      if (writes.length > 0) {
+        await this._writeNodes(writes);
+      }
+    }
+
+    console.log(`[OPC-UA] Movement times written for transporter ${tid}`);
   }
 
   async writeProgramStage(unitIndex, stageIndex, stations, minTime, maxTime, calTime) {
@@ -810,42 +875,6 @@ class OpcuaAdapter extends PlcAdapter {
   async writeScheduleRequest(unitId) {
     // No schedule request needed — PLC fills g_schedule[] continuously
     // This is a no-op in the CODESYS OPC UA version
-  }
-
-  async writeCalibrationPlan(tid, wetStation, dryStation) {
-    const cw = nodes.calWrite(tid);
-    await this._writeNodes([
-      { nodeId: cw.wet_station, value: wetStation || 0, dataType: DataType.Int16 },
-      { nodeId: cw.dry_station, value: dryStation || 0, dataType: DataType.Int16 },
-    ]);
-    console.log(`[OPC-UA] Cal plan T${tid}: wet=${wetStation}, dry=${dryStation}`);
-  }
-
-  async writeCalibrationControl(action) {
-    const paramMap = { 'start': 1, 'calculate': 2, 'abort': 3 };
-    const param = paramMap[action];
-    if (!param) throw new Error(`Unknown calibration action: ${action}`);
-    await this._sendCommand(8, param);
-    console.log(`[OPC-UA] Cal control: ${action} (param=${param})`);
-  }
-
-  async writeCalibrationParams(tid, params) {
-    const cw = nodes.calWrite(tid);
-    await this._writeNodes([
-      { nodeId: cw.lift_wet_time, value: Math.round((params.lift_wet_s || 0) * 10), dataType: DataType.Int16 },
-      { nodeId: cw.sink_wet_time, value: Math.round((params.sink_wet_s || 0) * 10), dataType: DataType.Int16 },
-      { nodeId: cw.lift_dry_time, value: Math.round((params.lift_dry_s || 0) * 10), dataType: DataType.Int16 },
-      { nodeId: cw.sink_dry_time, value: Math.round((params.sink_dry_s || 0) * 10), dataType: DataType.Int16 },
-      { nodeId: cw.x_accel_time,  value: Math.round((params.x_accel_s || 0) * 10),  dataType: DataType.Int16 },
-      { nodeId: cw.x_decel_time,  value: Math.round((params.x_decel_s || 0) * 10),  dataType: DataType.Int16 },
-      { nodeId: cw.x_max_speed,   value: Math.round(params.x_max_mm_s || 0),        dataType: DataType.Int32 },
-    ]);
-    console.log(`[OPC-UA] Cal params T${tid} written`);
-  }
-
-  async triggerMoveComputation() {
-    await this._sendCommand(12, 0);
-    console.log('[OPC-UA] Triggered g_move computation');
   }
 
   // ── PLC Runtime control ─────────────────────────────────────

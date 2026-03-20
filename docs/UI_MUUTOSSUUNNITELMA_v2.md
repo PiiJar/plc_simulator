@@ -1,46 +1,50 @@
 # UI Muutossuunnitelma v2 — Korjattu vaiheistus
 
-**Päivämäärä:** 19.3.2026  
+**Päivämäärä:** 19.3.2026 (päivitetty 20.3.2026)  
 **Edellinen versio:** UI_MUUTOSSUUNNITELMA.md (18.3.2026)  
 **Tavoite:** Sama kuin v1 — säilyttää kaikki nykyiset ominaisuudet, parantaa ylläpidettävyyttä ja suorituskykyä  
 **Miksi v2:** Edellinen suunnitelma toteutettiin kaikki 9 vaihetta kerralla ilman välitestejä. Lopputulos: rikkinäinen UI. Tämä versio korjaa prosessin.
 
+**Tilanne 20.3.2026:** Vaiheet Esityö–V3 toteutettu ja testattu. V3.5: Calibration poistettu kokonaan (UI, gateway, PLC). Seuraava: V4 (CSS-erottelu).
+
 ---
 
-## 0. Nykytilan kuvaus (19.3.2026)
+## 0. Nykytilan kuvaus
 
-### Legacy (toimiva, lähde)
+### Legacy (toimiva, lähde — käytetty V0:ssa)
 ```
 OpenPLC_Simulator/PLC Simulator/visualization/src/
 ├── App.jsx                           3 126 riviä (monoliitti, TOIMII)
 ├── main.jsx                              10 riviä (suora <App />)
 ├── colorPalette.js                      605 riviä
 ├── hooks/useColorPalette.js             164 riviä
-├── components/CalibrationPanel.jsx      399 riviä
+├── components/CalibrationPanel.jsx      399 riviä  (POISTETTU V3.5:ssä)
 ├── components/index.js                   19 riviä
 └── components/StationLayout/            (7 tiedostoa, ~1 600 riviä, TOIMIVAT)
 ```
 **Yhteensä:** ~6 100 riviä, 15 tiedostoa
 
-### Uusi repo (rikki, refaktoroitu puolitiehen)
+### Uusi repo — nykytila V3.5 jälkeen (20.3.2026, TOIMII ✅)
 ```
 plc_simulator/services/ui/src/
-├── App.jsx                         1 243 riviä (puuttuvia viittauksia)
-├── main.jsx                            17 riviä (PlantProvider + UiPanelsProvider wrap)
-├── api/client.js                       40 riviä (uusi)
-├── context/PlantContext.jsx             38 riviä (uusi)
-├── context/UiPanelsContext.jsx          27 riviä (uusi)
-├── utils/formatTime.js                   8 riviä (uusi)
-├── styles/*.css                        112 riviä (uusi)
-├── components/Toolbar/              6 tiedostoa, ~332 riviä (uusi)
-├── components/panels/               5 tiedostoa, ~1 580 riviä (uusi)
-└── components/StationLayout/        (7 tiedostoa, ~1 600 riviä, pieniä muutoksia)
+├── App.jsx                         1 450 riviä (refaktoroitu, TOIMII)
+├── main.jsx                            10 riviä (suora <App />)
+├── api/client.js                       24 riviä (V1: fetch-wrapper)
+├── colorPalette.js                    605 riviä
+├── hooks/useColorPalette.js           164 riviä
+├── components/Toolbar.jsx             222 riviä (V2: yhtenäinen toolbar)
+├── components/index.js                 19 riviä
+├── components/panels/
+│   ├── ConfigPanel.jsx                301 riviä (V3e)
+│   ├── CustomerPanel.jsx              347 riviä (V3a)
+│   ├── ProductionPanel.jsx            167 riviä (V3b)
+│   ├── TasksPanel.jsx                 277 riviä (V3d)
+│   └── UnitsPanel.jsx                 136 riviä (V3c)
+└── components/StationLayout/          (7 tiedostoa, ~1 600 riviä)
 ```
-**Ongelmat:**
-- `App.jsx` viittaa `usePlant()`, `useUiPanels()` — kontekstit luotu mutta kaikki tilat eivät siirtyneet
-- Paneeleihin irrotettu logiikkaa mutta propsit eivät täsmää
-- Ei yhtään välitestausta tehty
-- Git seuraa vain 2 tiedostoa (`infra/`), palautuspistettä ei ole
+**Yhteensä V3.5 jälkeen:** ~5 300 riviä, 20 tiedostoa  
+**App.jsx:** 3 126 → 1 450 riviä (−54 %)  
+**V3.5:** CalibrationPanel.jsx poistettu (−399 riviä), Calibrate-nappi poistettu Toolbarista
 
 ### Uusi repo — backend (TOIMII, ei kosketa)
 - `services/gateway/` — OPC UA adapter, REST API ✅
@@ -58,124 +62,141 @@ plc_simulator/services/ui/src/
 
 ---
 
-## 2. Esityö: Git-seuranta kuntoon (ENNEN MITÄÄN MUUTA)
+## 2. Esityö: Git-seuranta kuntoon ✅ VALMIS
 
-**Miksi:** Ilman gitiä ei ole palautuspistettä. Edellinen epäonnistuminen johtui osittain tästä.
+**Commit:** `64d8425` — checkpoint: broken UI state + PLC RUN/STOP backend + entrypoint.sh
 
 **Tehtävät:**
-1. Lisää kaikki `services/` gitin seurantaan
-2. Tee `.gitignore` joka jättää pois `node_modules/`, `dist/`, `__pycache__/`
-3. Commit: `"checkpoint: current state before UI restoration"`
-4. Tämän jälkeen jokainen vaihe = yksi commit
+1. ✅ Lisätty kaikki `services/` gitin seurantaan
+2. ✅ `.gitignore` luotu (node_modules, dist, __pycache__)
+3. ✅ Checkpoint-commit tehty
+4. ✅ Jokainen vaihe = yksi commit
 
 ---
 
-## 3. Vaihe 0 — Palautetaan toimiva UI
+## 3. Vaihe 0 — Palautetaan toimiva UI ✅ VALMIS
 
-**Tavoite:** Uudessa repossa pyörii täsmälleen sama UI kuin legacyssä. Kaikki refaktoroidut tiedostot poistetaan.
+**Commit:** `92903af` — V0: restore working legacy UI to new repo
 
 **Tehtävät:**
-1. Kopioi legacy `src/` → new repo `services/ui/src/` (korvaa koko kansio)
-2. Palauta `main.jsx` yksinkertaiseksi (ei context-wrappejä)
-3. Varmista `package.json`, `vite.config.mjs`, `public/` ovat kunnossa
-4. Build & deploy: `docker compose build ui && docker compose up -d --force-recreate ui`
+1. ✅ Kopioitu legacy `src/` → `services/ui/src/` (15 tiedostoa, App.jsx 3126 riviä)
+2. ✅ `main.jsx` palautettu yksinkertaiseksi (ei context-wrappejä)
+3. ✅ `package.json`, `vite.config.mjs` tarkistettu (identtiset)
+4. ✅ Build & deploy onnistui
 
 **Hyväksymistesti:**
-- [ ] Sivu aukeaa selaimessa (`http://172.19.31.7:5173`)
-- [ ] Customer-paneeli aukeaa ja customer/plant valinta toimii
-- [ ] Config latautuu valinnan jälkeen
-- [ ] Asemat näkyvät layoutissa
-- [ ] PLC status näkyy (vihreä/punainen pallo)
-- [ ] Start-nappi käynnistää tuotannon
-- [ ] Reset toimii
-- [ ] Transporterit liikkuvat
-- [ ] Batch/Unit paneeli näyttää dataa
-- [ ] Tasks-paneeli näyttää dataa
-- [ ] Calibration-paneeli toimii
-- [ ] Debug-paneeli aukeaa klikkaamalla transporteria
-
-**Commit:** `"V0: restore working legacy UI to new repo"`
+- [x] Sivu aukeaa selaimessa
+- [x] Customer-paneeli aukeaa ja valinta toimii
+- [x] Config latautuu
+- [x] Asemat näkyvät layoutissa
+- [x] PLC status näkyy
+- [x] Start/Reset toimii
+- [x] Transporterit liikkuvat
+- [x] Batch/Unit ja Tasks-paneelit näyttävät dataa
 
 ---
 
-## 4. Vaihe 1 — API-kerros (api/client.js)
+## 4. Vaihe 1 — API-kerros (api/client.js) ✅ VALMIS
 
-**Tavoite:** Keskitetty fetch-wrapper, App.jsx edelleen monoliitti.
+**Commit:** `976f048` — V1: centralized API layer (fetch→api.get/post/put/delete)
 
 **Tehtävät:**
-1. Luo `src/api/client.js` (request-wrapper, error handling)
-2. Korvaa App.jsx:n `fetch()`-kutsut `api.get()` / `api.post()` -kutsuilla
-3. **Ei muuta mitään rakennetta** — vain fetch→api.get/post
+1. ✅ Luotu `src/api/client.js` (24 riviä: request-wrapper, JSON-serialisointi)
+2. ✅ Korvattu 53 fetch()-kutsua → `api.get/post/put/delete`
+3. ✅ Ei rakennemuutoksia — vain fetch→api
+
+**Huomiot:**
+- Automaattinen Node.js-skripti korvasi 51/53 kutsua, 2 korjattiin käsin
+- Löydettiin ja korjattiin swap-bugi (manual-tasks GET oli vahingossa api.post, sim/start POST oli api.get)
 
 **Hyväksymistesti:**
-- [ ] Kaikki V0:n testit edelleen läpi
-- [ ] Selaimen Network-välilehti: samat kutsut, samat vastaukset
-- [ ] Ei console-erroreita
-
-**Commit:** `"V1: centralized API layer, no structural changes"`
+- [x] Kaikki V0:n testit läpi
+- [x] Network-välilehti: samat kutsut
+- [x] Ei console-erroreita
 
 ---
 
-## 5. Vaihe 2 — Toolbar omaksi komponentiksi
+## 5. Vaihe 2 — Toolbar omaksi komponentiksi ✅ VALMIS
 
-**Tavoite:** Erota toolbar App.jsx:stä omaksi tiedostoksi. App.jsx pienenee ~300 riviä.
+**Commit:** `b280dd7` — V2: extract Toolbar component (App.jsx 3068→2573 lines)
 
 **Tehtävät:**
-1. Luo `src/components/Toolbar.jsx` (yksi tiedosto, ei pilkota vielä)
-2. Siirrä toolbar-JSX ja sen suorat handler-kutsut
-3. Välitä kaikki propsina App.jsx:stä (prop drilling OK tässä vaiheessa)
-4. Poista duplikaatti guard-render (configia odottava näkymä vs päänäkymä → yksi toolbar disabled-tilalla)
+1. ✅ Luotu `src/components/Toolbar.jsx` (222 riviä)
+2. ✅ Siirretty toolbar-JSX ja handler-kutsut
+3. ✅ Prop drilling App.jsx:stä
+4. ✅ Poistettu duplikaatti guard-render → yksi `<Toolbar isConfigLoaded={...}>` (disabled-tila)
+5. ✅ CODESYS-logo suurennettu 36px → 56px (toolbar-nappien korkuinen)
 
 **Hyväksymistesti:**
-- [ ] Kaikki V0:n testit edelleen läpi
-- [ ] Toolbar näyttää identtiseltä
-- [ ] Napit toimivat: Customer, Config, Production, Batches, Tasks
-- [ ] PLC status toimii
-- [ ] Start/Reset toimii
-- [ ] Kello ja nopeus toimivat
-
-**Commit:** `"V2: extract Toolbar component"`
+- [x] Kaikki V0:n testit läpi
+- [x] Toolbar identtinen, napit toimivat
+- [x] PLC status, Start/Reset, kello ja nopeus toimivat
 
 ---
 
-## 6. Vaihe 3 — Paneelit omiksi komponenteiksi
+## 6. Vaihe 3 — Paneelit omiksi komponenteiksi ✅ VALMIS
 
-**Tavoite:** Erota 5 paneelia App.jsx:stä. App.jsx pienenee ~1500 riviä.
+**Commit:** `a6ac83b` — V3: extract panel components (Config, Customer, Production, Units, Tasks) — App.jsx 3068→1450 lines
 
-**Tehtävät (yksi kerrallaan, testi välissä):**
+**Tehtävät (kaikki toteutettu):**
 
-### 3a: CustomerPanel
-1. Erota customer-hallinta JSX + handlerit
-2. Props App.jsx:stä
-3. **Testi:** customer-paneeli aukeaa, customer/plant luonti toimii
+### 3a: CustomerPanel ✅
+- 347 riviä, customer/plant CRUD, guard + main käyttävät samaa komponenttia
+- Guard: yksinkertaistettu 22 riviä → sama komponentti kuin main
 
-### 3b: ProductionPanel  
-1. Erota tuotannon luonti JSX + handlerit
-2. **Testi:** production create toimii, batch-rivien lisäys/poisto
+### 3b: ProductionPanel ✅
+- 167 riviä, tuotannon setup, batch-rivit, ohjelman valinta
 
-### 3c: UnitsPanel
-1. Erota batch/unit-taulukko
-2. **Testi:** unit edit/save, batch location näkyy
+### 3c: UnitsPanel ✅
+- 136 riviä, unit-taulukko PLC:ltä, yksittäisen unitin muokkaus
 
-### 3d: TasksPanel
-1. Erota tehtäväjono + manual tasks
-2. **Testi:** tasks näkyvät, manual task add/cancel
+### 3d: TasksPanel ✅ 
+- 277 riviä, manuaaliset tehtävät, suorituksessa olevat, tehtävälistat nostimittain, jakamattomat
 
-### 3e: ConfigPanel
-1. Erota config-lomake
-2. **Testi:** config-paneeli aukeaa, tallennus toimii
+### 3e: ConfigPanel ✅
+- 301 riviä, layout-konfiguraatio (grid, stations, transporters, margins)
+- Huom: käyttää `import { api }` (named export), ei default
 
-**Hyväksymistesti (kaikki 3a–3e jälkeen):**
-- [ ] Kaikki V0:n testit edelleen läpi
-- [ ] App.jsx < 1500 riviä
-- [ ] Jokainen paneeli avautuu ja sulkeutuu
-- [ ] Ei console-erroreita
-
-**Commit:** `"V3: extract panel components (prop drilling)"`
+**Hyväksymistesti:**
+- [x] Kaikki V0:n testit läpi
+- [x] App.jsx = 1 450 riviä (< 1500 tavoite ✅)
+- [x] Jokainen paneeli avautuu ja sulkeutuu
+- [x] Build onnistuu ilman erroreita
 
 ---
 
-## 7. Vaihe 4 — CSS erottelu
+## 7. Vaihe 3.5 — Calibroinnin poisto ✅ VALMIS
+
+**Syy:** Siirtoajat luetaan nyt suoraan `movement_times.json`-tiedostosta RESET-vaiheessa. Erillistä calibrointisekvenssiä ei tarvita — kaikki siirtoaikadata on valmiiksi laskettu tiedostossa.
+
+**Poistettu (UI):**
+- `CalibrationPanel.jsx` — koko tiedosto (399 riviä)
+- `App.jsx` — import, `showCalibration` state, CalibrationPanel-renderointi
+- `Toolbar.jsx` — Calibrate-nappi, `showCalibration`/`setShowCalibration` props
+
+**Poistettu (Gateway):**
+- 7 `/api/calibrate/*` endpointia (status, plan, start, calculate, abort, save, load)
+- `loadCalibrationToPLC()` funktio
+- `calibrationState` muuttuja ja poll-loop päivitys
+- `opcua_adapter.js`: `writeCalibrationPlan`, `writeCalibrationControl`, `writeCalibrationParams`, `triggerMoveComputation`, calibration-parsinta `readState`:stä
+- `opcua_nodes.js`: `calibration()` read-funktio, `calWrite()` write-funktio, `cal_active` META:sta, calibration `buildReadList`-silmukka
+- `plc_adapter.js`: 4 abstraktia calibration-metodia
+
+**Poistettu (PLC/CODESYS):**
+- `STC_FB_Calibrate.st` — koko tiedosto (teaching-sekvenssi)
+- `STC_FB_CalcMoveTimes.st` — koko tiedosto (g_cal → g_move lasku)
+- `UDT_JC_CalibrationType.st` — koko tiedosto (calibration UDT)
+- `GVL_JC_Scheduler.st`: `g_cal[]`, `g_cal_active`, cmd 8/12 dokumentaatio
+- `plc_prg.st`: g_cal VAR_EXTERNAL, calibrate/calc_move FB-instanssit, cmd 8/12 handlerit, calibrate() kutsu
+- `STC_FB_MainScheduler.st`: `g_cal_active` guard (esti scheduleria calibroinnin aikana)
+
+**Korvaava mekanismi:**
+- RESET kirjoittaa `movement_times.json` → `g_move[]` suoraan (`writeMovementTimes`)
+- Ei välivaihetta g_cal:in kautta — siirtoajat menevät suoraan LiftTime/SinkTime/Travel-taulukoihin
+
+---
+
+## 8. Vaihe 4 — CSS erottelu ⬅️ SEURAAVA
 
 **Tavoite:** Inline-tyylit → CSS-luokat toolbarissa ja paneeleissa.
 
@@ -194,7 +215,7 @@ plc_simulator/services/ui/src/
 
 ---
 
-## 8. Vaihe 5 — StationLayout lookup-optimointi
+## 9. Vaihe 5 — StationLayout lookup-optimointi
 
 **Tavoite:** Korvaa renderin sisäiset `find()`-haut `useMemo`-lookupeilla.
 
@@ -213,7 +234,7 @@ plc_simulator/services/ui/src/
 
 ---
 
-## 9. Vaihe 6 — Polling-siivous
+## 10. Vaihe 6 — Polling-siivous
 
 **Tavoite:** Yhdistä hajautettu pollauslogiikka ilman muutoksia päivitysrytmiin.
 
@@ -234,7 +255,7 @@ plc_simulator/services/ui/src/
 
 ---
 
-## 10. Vaihe 7 — Context-kerros (valinnainen)
+## 11. Vaihe 7 — Context-kerros (valinnainen)
 
 **HUOM:** Tämä vaihe tehdään **VASTA** kun V0–V6 toimivat moitteettomasti. Jos prop drilling toimii hyvin, tätä ei tarvitse tehdä lainkaan.
 
@@ -256,7 +277,7 @@ plc_simulator/services/ui/src/
 
 ---
 
-## 11. Vaihe 8 — React.memo + useMemo (valinnainen)
+## 12. Vaihe 8 — React.memo + useMemo (valinnainen)
 
 **Tehtävät:**
 1. `React.memo` StationLayout-subkomponenteille
@@ -272,7 +293,7 @@ plc_simulator/services/ui/src/
 
 ---
 
-## 12. Vaihe 9 — rAF-polun yksinkertaistus (valinnainen)
+## 13. Vaihe 9 — rAF-polun yksinkertaistus (valinnainen)
 
 **Tehtävät:**
 1. Kapseloi rAF-loop omaan hookiin
@@ -286,7 +307,7 @@ plc_simulator/services/ui/src/
 
 ---
 
-## 13. Ehdoton sääntö
+## 14. Ehdoton sääntö
 
 ```
 JOKAISEN VAIHEEN JÄLKEEN:
@@ -300,21 +321,24 @@ JOKAISEN VAIHEEN JÄLKEEN:
 
 ---
 
-## 14. Yhteenveto vaiheista
+## 15. Yhteenveto vaiheista
 
-| Vaihe | Sisältö | Pakollinen | Riski |
-|-------|---------|------------|-------|
-| Esityö | Git-seuranta kuntoon | ✅ | Ei riskiä |
-| V0 | Palauta toimiva legacy UI | ✅ | Ei riskiä |
-| V1 | API-kerros (fetch→api.get) | ✅ | Matala |
-| V2 | Toolbar-erottelu | ✅ | Matala |
-| V3 | Paneelit omiksi (prop drilling) | ✅ | Keskitaso |
-| V4 | CSS-erottelu | ✅ | Matala |
-| V5 | StationLayout lookup-optimointi | ✅ | Matala |
-| V6 | Polling-siivous | ✅ | Keskitaso |
-| V7 | Context-kerros | Valinnainen | Keskitaso |
-| V8 | Memoointi | Valinnainen | Matala |
-| V9 | rAF-yksinkertaistus | Valinnainen | Keskitaso |
+| Vaihe | Sisältö | Tila | Commit | App.jsx |
+|-------|---------|------|--------|--------|
+| Esityö | Git-seuranta kuntoon | ✅ VALMIS | `64d8425` | — |
+| V0 | Palauta toimiva legacy UI | ✅ VALMIS | `92903af` | 3 126 |
+| V1 | API-kerros (fetch→api.get) | ✅ VALMIS | `976f048` | 3 126 |
+| V2 | Toolbar-erottelu | ✅ VALMIS | `b280dd7` | 2 573 |
+| V3 | Paneelit omiksi (prop drilling) | ✅ VALMIS | `a6ac83b` | 1 450 |
+| V3.5 | Calibroinnin poisto (UI+GW+PLC) | ✅ VALMIS | — | 1 450 |
+| V4 | CSS-erottelu | ⬅️ SEURAAVA | — | — |
+| V5 | StationLayout lookup-optimointi | ⬜ | — | — |
+| V6 | Polling-siivous | ⬜ | — | — |
+| V7 | Context-kerros | Valinnainen | — | — |
+| V8 | Memoointi | Valinnainen | — | — |
+| V9 | rAF-yksinkertaistus | Valinnainen | — | — |
 
-**V0–V6 jälkeen App.jsx on ~800–1000 riviä, rakenne selkeä, kaikki toimii.**  
+**V0–V3 toteutettu:** App.jsx 3 126 → 1 450 riviä (−54 %).  
+**V3.5:** Calibrointi poistettu kokonaan — UI −399 riviä, gateway ~250 riviä, PLC 3 tiedostoa.  
+**V4–V6 jälkeen App.jsx tavoite ~800–1000 riviä.**  
 **V7–V9 tehdään vain jos hyöty on mitattavissa.**

@@ -92,14 +92,6 @@ let schedulerDebug = {};
 let twaLimits = { 1: { x_min: 0, x_max: 0 }, 2: { x_min: 0, x_max: 0 }, 3: { x_min: 0, x_max: 0 } };
 let plcTaskQueues = { 1: { count: 0, tasks: [] }, 2: { count: 0, tasks: [] }, 3: { count: 0, tasks: [] } };
 let plcSchedules = [];
-let calibrationState = {
-  step: 0, tid: 0,
-  results: [
-    { id: 1, lift_wet: 0, sink_wet: 0, lift_dry: 0, sink_dry: 0, x_acc: 0, x_dec: 0, x_max: 0 },
-    { id: 2, lift_wet: 0, sink_wet: 0, lift_dry: 0, sink_dry: 0, x_acc: 0, x_dec: 0, x_max: 0 },
-    { id: 3, lift_wet: 0, sink_wet: 0, lift_dry: 0, sink_dry: 0, x_acc: 0, x_dec: 0, x_max: 0 },
-  ],
-};
 
 // Schedule sliding window
 let scheduleTickCounter = 0;
@@ -165,7 +157,6 @@ function startPolling() {
       plcTaskQueues = state.taskQueues;
       depState = state.depState;
       schedulerDebug = state.schedulerDebug;
-      calibrationState = state.calibration;
       plcAlive = true;
 
       if (plcMeta.init_done && !simRunning) {
@@ -488,14 +479,22 @@ app.post('/api/reset', async (req, res) => {
       console.warn(`[RESET] Could not copy plant files to runtime: ${cpErr.message}`);
     }
 
-    // Auto-load saved calibration
+    // Load movement times from JSON (overrides calculated values)
     try {
-      const calResult = await loadCalibrationToPLC(plantPath);
-      if (calResult.ok) {
-        console.log(`[RESET] Calibration loaded for ${calResult.transporters} transporters`);
+      const mtFile = path.join(plantPath, 'movement_times.json');
+      if (fs.existsSync(mtFile)) {
+        const mtData = JSON.parse(fs.readFileSync(mtFile, 'utf8'));
+        for (const key of Object.keys(mtData)) {
+          const tr = mtData[key];
+          const tid = tr.id;
+          if (tid >= 1 && tid <= 3) {
+            await adapter.writeMovementTimes(tid, tr);
+          }
+        }
+        console.log(`[RESET] Movement times loaded`);
       }
-    } catch (calErr) {
-      console.warn(`[RESET] Calibration load failed: ${calErr.message}`);
+    } catch (mtErr) {
+      console.warn(`[RESET] Movement times load failed: ${mtErr.message}`);
     }
 
     // Reset simulation timer and production queue
@@ -581,174 +580,6 @@ app.post('/api/batch', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
-
-// ============================================================
-// Calibration
-// ============================================================
-app.get('/api/calibrate/status', (req, res) => {
-  res.json(calibrationState);
-});
-
-app.post('/api/calibrate/plan', async (req, res) => {
-  try {
-    if (!adapter.isConnected()) return res.status(503).json({ error: 'PLC not connected' });
-    const { transporters: plans } = req.body;
-    if (!Array.isArray(plans) || plans.length === 0) {
-      return res.status(400).json({ error: 'transporters array required' });
-    }
-    for (const plan of plans) {
-      const tid = plan.id;
-      if (tid < 1 || tid > 3) continue;
-
-      // Validate stations within drive limits
-      const tCfg = transporterConfig.transporters.find(t => t.id === tid);
-      const xMin = tCfg?.x_min_drive_limit || 0;
-      const xMax = tCfg?.x_max_drive_limit || 0;
-      if (xMin > 0 || xMax > 0) {
-        const allStations = stationsConfig.stations || [];
-        for (const [label, stnNum] of [['wet', plan.wet_station], ['dry', plan.dry_station]]) {
-          const stn = allStations.find(s => s.number === stnNum);
-          if (stn && (stn.x_position < xMin || stn.x_position > xMax)) {
-            return res.status(400).json({
-              error: `T${tid} ${label} station ${stn.number} (x=${stn.x_position}) outside limits [${xMin}, ${xMax}]`,
-            });
-          }
-        }
-      }
-
-      await adapter.writeCalibrationPlan(tid, plan.wet_station || 0, plan.dry_station || 0);
-    }
-    res.json({ ok: true, plansWritten: plans.length });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/calibrate/start', async (req, res) => {
-  try {
-    if (!adapter.isConnected()) return res.status(503).json({ error: 'PLC not connected' });
-    await adapter.writeCalibrationControl('start');
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/calibrate/calculate', async (req, res) => {
-  try {
-    if (!adapter.isConnected()) return res.status(503).json({ error: 'PLC not connected' });
-    await adapter.writeCalibrationControl('calculate');
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/calibrate/abort', async (req, res) => {
-  try {
-    if (!adapter.isConnected()) return res.status(503).json({ error: 'PLC not connected' });
-    await adapter.writeCalibrationControl('abort');
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/calibrate/save', async (req, res) => {
-  try {
-    if (!currentCustomer || !currentPlant) {
-      return res.status(400).json({ error: 'No customer/plant selected' });
-    }
-    const plantPath = getCurrentCustomerPath();
-    const stations = stationsConfig.stations || [];
-    const transporters = transporterConfig.transporters || [];
-    const movementTimes = {};
-
-    for (const cal of calibrationState.results) {
-      const tid = cal.id;
-      const tr = transporters.find(t => t.id === tid);
-      if (!tr || cal.x_max <= 0) continue;
-
-      const vm = cal.x_max, ta = cal.x_acc, td = cal.x_dec;
-      const dAcc = 0.5 * vm * ta, dDec = 0.5 * vm * td;
-      const liftS = {}, sinkS = {};
-      for (const st of stations) {
-        const idx = st.number - 100;
-        if (idx < 1 || idx > 25) continue;
-        liftS[st.number] = Math.round((st.kind === 1 ? cal.lift_wet : cal.lift_dry) * 100) / 100;
-        sinkS[st.number] = Math.round((st.kind === 1 ? cal.sink_wet : cal.sink_dry) * 100) / 100;
-      }
-      const travel = {};
-      for (const fromSt of stations) {
-        travel[fromSt.number] = {};
-        for (const toSt of stations) {
-          if (fromSt.number === toSt.number) { travel[fromSt.number][toSt.number] = 0; continue; }
-          const dist = Math.abs(fromSt.x_position - toSt.x_position);
-          let tt;
-          if (dist < 1) { tt = 0; }
-          else if (dist >= dAcc + dDec) { tt = ta + (dist - dAcc - dDec) / vm + td; }
-          else { const vp = (ta + td > 0) ? Math.sqrt(2 * dist * vm / (ta + td)) : 0; tt = vp * (ta + td) / vm; }
-          travel[fromSt.number][toSt.number] = Math.round(tt * 100) / 100;
-        }
-      }
-      movementTimes[`transporter_${tid}`] = {
-        id: tid,
-        kinematic_params: { x_max_mm_s: vm, x_accel_s: ta, x_decel_s: td, lift_wet_s: cal.lift_wet, sink_wet_s: cal.sink_wet, lift_dry_s: cal.lift_dry, sink_dry_s: cal.sink_dry },
-        lift_s: liftS, sink_s: sinkS, travel,
-      };
-    }
-    const outPath = path.join(plantPath, 'movement_times.json');
-    fs.writeFileSync(outPath, JSON.stringify(movementTimes, null, 2));
-    res.json({ ok: true, path: outPath, transporters: Object.keys(movementTimes).length });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-async function loadCalibrationToPLC(plantPath) {
-  const mtFile = path.join(plantPath, 'movement_times.json');
-  if (!fs.existsSync(mtFile)) return { ok: false, reason: 'no_file' };
-
-  const mtData = JSON.parse(fs.readFileSync(mtFile, 'utf8'));
-  let loadedCount = 0;
-  for (const [key, tData] of Object.entries(mtData)) {
-    const tid = tData.id || parseInt(key.replace('transporter_', ''), 10);
-    if (!tid || tid < 1 || tid > 3) continue;
-    const kp = tData.kinematic_params;
-    if (!kp || !kp.x_max_mm_s || kp.x_max_mm_s < 1) continue;
-
-    await adapter.writeCalibrationParams(tid, kp);
-    loadedCount++;
-  }
-  if (loadedCount === 0) return { ok: false, reason: 'no_valid_transporters' };
-
-  await adapter.triggerMoveComputation();
-  return { ok: true, transporters: loadedCount };
-}
-
-app.post('/api/calibrate/load', async (req, res) => {
-  try {
-    if (!adapter.isConnected()) return res.status(503).json({ error: 'PLC not connected' });
-    if (!currentCustomer || !currentPlant) return res.status(400).json({ error: 'No customer/plant selected' });
-    if (!plcMeta.init_done) return res.status(409).json({ error: 'PLC not initialized — run RESET first' });
-
-    const result = await loadCalibrationToPLC(getCurrentCustomerPath());
-    if (!result.ok) {
-      if (result.reason === 'no_file') return res.status(404).json({ error: 'No movement_times.json found' });
-      return res.status(400).json({ error: result.reason });
-    }
-    res.json({ ok: true, transporters: result.transporters });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/calibrate/file', (req, res) => {
-  if (!currentCustomer || !currentPlant) return res.status(400).json({ error: 'No customer/plant selected' });
-  const filePath = path.join(getCurrentCustomerPath(), 'movement_times.json');
-  if (fs.existsSync(filePath)) res.json(JSON.parse(fs.readFileSync(filePath, 'utf8')));
-  else res.status(404).json({ error: 'No movement_times.json found' });
 });
 
 // PLC info endpoint

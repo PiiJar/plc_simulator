@@ -38,7 +38,6 @@ VAR_EXTERNAL
   g_dep_stable  : BOOL;
   g_conflict_resolved : BOOL;
   g_dep_pending : UDT_JC_DepPendingWriteType;
-  g_cal_active  : BOOL;
   (* Scheduler debug globals — written here, read by Gateway via OPC UA *)
   g_sched_dbg_tsk_phase        : INT;
   g_sched_dbg_dep_phase        : INT;
@@ -74,14 +73,6 @@ IF NOT i_run THEN
   o_tsk_phase := 0;
   o_dep_phase := 0;
   o_turn := 0;
-  RETURN;
-END_IF;
-
-(* ── Inhibit during calibration ── *)
-IF g_cal_active THEN
-  tsk_sched(i_run := FALSE, i_time_s := 0);
-  dep_sched(i_run := FALSE, i_time_s := 0, i_tsk_phase := 0);
-  turn := 0;
   RETURN;
 END_IF;
 
