@@ -115,6 +115,11 @@ FOR ti := 1 TO MAX_Transporters DO
       END_IF;
     END_IF;
 
+    (* ── 1b. Lift station unit check — unit must be AT the lift station ── *)
+    (* Don't dispatch if unit is not present at the pickup station *)
+    IF t_unit >= 1 AND t_unit <= MAX_Units
+       AND g_unit[t_unit].location = t_lift THEN
+
     (* ── 2. Time check ── *)
     travel_s := 0.0;
     IF g_transporter[ti].CurrentStation > 0 AND t_lift > 0
@@ -362,6 +367,8 @@ FOR ti := 1 TO MAX_Transporters DO
       END_IF;  (* sink_free *)
 
     END_IF;  (* time check *)
+
+    END_IF;  (* unit at lift station *)
 
     END_FOR;  (* qi — try next queue position *)
 

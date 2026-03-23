@@ -85,6 +85,11 @@ VAR
   suffix_amount  : REAL;   (* amount from SUFFIX_ADVANCE *)
   (* Shared shift FB *)
   fb_shift : STC_FB_ShiftSchedule;
+  (* Schedule index lookup — map ProgramStage to schedule array index *)
+  sched_blocked    : INT;    (* schedule array index for i_blocked_stage *)
+  sched_conf       : INT;    (* schedule array index for i_conf_stage *)
+  sched_prev_conf  : INT;    (* schedule array index for prev_conf_stage *)
+  tmp_si           : INT;    (* lookup loop variable *)
 END_VAR
 
 o_solved      := FALSE;
@@ -120,6 +125,29 @@ END_FOR;
 can_advance := NOT is_locked_adv;
 can_delay   := NOT is_locked_del;
 
+(* ══════ Map ProgramStage → schedule array index ══════ *)
+(* i_blocked_stage and i_conf_stage are ProgramStage values (direct g_program index).
+   We need the corresponding g_schedule[] array index for schedule access. *)
+sched_blocked := 0;
+IF i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
+  FOR tmp_si := 1 TO g_schedule[i_blocked_unit].StageCount DO
+    IF g_schedule[i_blocked_unit].Stages[tmp_si].ProgramStage = i_blocked_stage THEN
+      sched_blocked := tmp_si;
+      EXIT;
+    END_IF;
+  END_FOR;
+END_IF;
+
+sched_conf := 0;
+IF i_conf_unit >= 1 AND i_conf_unit <= MAX_Units THEN
+  FOR tmp_si := 1 TO g_schedule[i_conf_unit].StageCount DO
+    IF g_schedule[i_conf_unit].Stages[tmp_si].ProgramStage = i_conf_stage THEN
+      sched_conf := tmp_si;
+      EXIT;
+    END_IF;
+  END_FOR;
+END_IF;
+
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 1: ADVANCE — advance blocked batch (JS Vaihe 1)       *)
 (* Chain bottleneck: walk backward through earlier stages to    *)
@@ -130,17 +158,17 @@ can_delay   := NOT is_locked_del;
 IF can_advance
    AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units
    AND i_blocked_stage >= 1 THEN
-IF i_blocked_stage <= g_schedule[i_blocked_unit].StageCount THEN
+IF sched_blocked >= 1 AND sched_blocked <= g_schedule[i_blocked_unit].StageCount THEN
 
   (* Conflict stage's own flex_down *)
   stage_flex := DINT_TO_REAL(
-    g_schedule[i_blocked_unit].Stages[i_blocked_stage].CalcTime
-    - g_schedule[i_blocked_unit].Stages[i_blocked_stage].MinTime);
+    g_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime
+    - g_schedule[i_blocked_unit].Stages[sched_blocked].MinTime);
   IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
 
   IF stage_flex > 0.1 THEN
     (* Cap: 90% if batch is on this stage, 50% otherwise *)
-    IF g_batch[i_blocked_unit].CurStage = g_schedule[i_blocked_unit].Stages[i_blocked_stage].ProgramStage THEN
+    IF g_batch[i_blocked_unit].CurStage = i_blocked_stage THEN
       cap := 0.9;
     ELSE
       cap := 0.5;
@@ -150,7 +178,7 @@ IF i_blocked_stage <= g_schedule[i_blocked_unit].StageCount THEN
     (* JS: walk backward through prevBatchTasks (stages < conflictStage) *)
     (* Find smallest flex_down among earlier stages that is < conflictFlexDown *)
     chain_flex := stage_flex;  (* init to conflict stage flex = no bottleneck *)
-    FOR earlier_stg := 1 TO i_blocked_stage - 1 DO
+    FOR earlier_stg := 1 TO sched_blocked - 1 DO
       earlier_flex := DINT_TO_REAL(
         g_schedule[i_blocked_unit].Stages[earlier_stg].CalcTime
         - g_schedule[i_blocked_unit].Stages[earlier_stg].MinTime);
@@ -167,10 +195,10 @@ IF i_blocked_stage <= g_schedule[i_blocked_unit].StageCount THEN
     IF chain_amount > remain THEN chain_amount := remain; END_IF;
 
     IF chain_amount > 0.1 THEN
-      g_schedule[i_blocked_unit].Stages[i_blocked_stage].CalcTime :=
-        g_schedule[i_blocked_unit].Stages[i_blocked_stage].CalcTime - REAL_TO_DINT(chain_amount);
-      g_schedule[i_blocked_unit].Stages[i_blocked_stage].ExitTime :=
-        g_schedule[i_blocked_unit].Stages[i_blocked_stage].ExitTime - REAL_TO_LINT(chain_amount);
+      g_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime :=
+        g_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime - REAL_TO_DINT(chain_amount);
+      g_schedule[i_blocked_unit].Stages[sched_blocked].ExitTime :=
+        g_schedule[i_blocked_unit].Stages[sched_blocked].ExitTime - REAL_TO_LINT(chain_amount);
 
       fb_shift(i_unit := i_blocked_unit, i_from_stage := i_blocked_stage + 1, i_amount := -chain_amount);
 
@@ -192,10 +220,10 @@ IF i_blocked_stage <= g_schedule[i_blocked_unit].StageCount THEN
       IF suffix_amount > remain THEN suffix_amount := remain; END_IF;
 
       IF suffix_amount > 0.1 THEN
-        g_schedule[i_blocked_unit].Stages[i_blocked_stage].CalcTime :=
-          g_schedule[i_blocked_unit].Stages[i_blocked_stage].CalcTime - REAL_TO_DINT(suffix_amount);
-        g_schedule[i_blocked_unit].Stages[i_blocked_stage].ExitTime :=
-          g_schedule[i_blocked_unit].Stages[i_blocked_stage].ExitTime - REAL_TO_LINT(suffix_amount);
+        g_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime :=
+          g_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime - REAL_TO_DINT(suffix_amount);
+        g_schedule[i_blocked_unit].Stages[sched_blocked].ExitTime :=
+          g_schedule[i_blocked_unit].Stages[sched_blocked].ExitTime - REAL_TO_LINT(suffix_amount);
 
         fb_shift(i_unit := i_blocked_unit, i_from_stage := i_blocked_stage + 1, i_amount := -suffix_amount);
 
@@ -235,15 +263,15 @@ END_IF;
 IF can_delay AND remain > 0.1
    AND i_conf_unit >= 1 AND i_conf_unit <= MAX_Units
    AND i_conf_stage >= 1 THEN
-IF i_conf_stage <= g_schedule[i_conf_unit].StageCount THEN
+IF sched_conf >= 1 AND sched_conf <= g_schedule[i_conf_unit].StageCount THEN
 
   stage_flex := DINT_TO_REAL(
-    g_schedule[i_conf_unit].Stages[i_conf_stage].MaxTime
-    - g_schedule[i_conf_unit].Stages[i_conf_stage].CalcTime);
+    g_schedule[i_conf_unit].Stages[sched_conf].MaxTime
+    - g_schedule[i_conf_unit].Stages[sched_conf].CalcTime);
   IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
 
   IF stage_flex > 0.1 THEN
-    IF g_batch[i_conf_unit].CurStage = g_schedule[i_conf_unit].Stages[i_conf_stage].ProgramStage THEN
+    IF g_batch[i_conf_unit].CurStage = i_conf_stage THEN
       cap := 0.9;
     ELSE
       cap := 0.5;
@@ -252,15 +280,15 @@ IF i_conf_stage <= g_schedule[i_conf_unit].StageCount THEN
     IF amount > remain THEN amount := remain; END_IF;
 
     (* Apply: increase CalcTime of conf_stage *)
-    g_schedule[i_conf_unit].Stages[i_conf_stage].CalcTime :=
-      g_schedule[i_conf_unit].Stages[i_conf_stage].CalcTime + REAL_TO_DINT(amount);
-    g_schedule[i_conf_unit].Stages[i_conf_stage].ExitTime :=
-      g_schedule[i_conf_unit].Stages[i_conf_stage].ExitTime + REAL_TO_LINT(amount);
+    g_schedule[i_conf_unit].Stages[sched_conf].CalcTime :=
+      g_schedule[i_conf_unit].Stages[sched_conf].CalcTime + REAL_TO_DINT(amount);
+    g_schedule[i_conf_unit].Stages[sched_conf].ExitTime :=
+      g_schedule[i_conf_unit].Stages[sched_conf].ExitTime + REAL_TO_LINT(amount);
 
     fb_shift(i_unit := i_conf_unit, i_from_stage := i_conf_stage + 1, i_amount := amount);
 
     (* JS: propagateDelayToBatch updates batch.calc_time_s ONLY if batch is on this stage *)
-    IF g_batch[i_conf_unit].CurStage = g_schedule[i_conf_unit].Stages[i_conf_stage].ProgramStage THEN
+    IF g_batch[i_conf_unit].CurStage = i_conf_stage THEN
       g_batch[i_conf_unit].CalTime :=
         g_batch[i_conf_unit].CalTime + REAL_TO_DINT(amount);
       IF g_batch[i_conf_unit].CalTime > g_batch[i_conf_unit].MaxTime THEN
@@ -293,7 +321,20 @@ END_IF;
 (* Delay the conf batch's PREVIOUS stage to push everything     *)
 (* ══════════════════════════════════════════════════════════════ *)
 prev_conf_stage := i_conf_stage - 1;
-IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <= MAX_Units THEN
+
+(* Look up schedule index for prev_conf_stage *)
+sched_prev_conf := 0;
+IF i_conf_unit >= 1 AND i_conf_unit <= MAX_Units AND prev_conf_stage >= 1 THEN
+  FOR tmp_si := 1 TO g_schedule[i_conf_unit].StageCount DO
+    IF g_schedule[i_conf_unit].Stages[tmp_si].ProgramStage = prev_conf_stage THEN
+      sched_prev_conf := tmp_si;
+      EXIT;
+    END_IF;
+  END_FOR;
+END_IF;
+
+IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <= MAX_Units
+   AND sched_prev_conf >= 1 THEN
   (* Check lock: is prev_conf_stage locked ADVANCE? → cannot DELAY *)
   is_pcs_locked := FALSE;
   FOR lock_i := 1 TO io_lock_cnt DO
@@ -305,12 +346,12 @@ IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <=
   END_FOR;
 
   IF NOT is_pcs_locked THEN
-    stage_flex := DINT_TO_REAL(g_schedule[i_conf_unit].Stages[prev_conf_stage].MaxTime
-                - g_schedule[i_conf_unit].Stages[prev_conf_stage].CalcTime);
+    stage_flex := DINT_TO_REAL(g_schedule[i_conf_unit].Stages[sched_prev_conf].MaxTime
+                - g_schedule[i_conf_unit].Stages[sched_prev_conf].CalcTime);
     IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
 
     IF stage_flex > 0.1 THEN
-      IF g_batch[i_conf_unit].CurStage = g_schedule[i_conf_unit].Stages[prev_conf_stage].ProgramStage THEN
+      IF g_batch[i_conf_unit].CurStage = prev_conf_stage THEN
         cap := 0.9;
       ELSE
         cap := 0.5;
@@ -318,15 +359,15 @@ IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <=
       amount := stage_flex * cap;
       IF amount > remain THEN amount := remain; END_IF;
 
-      g_schedule[i_conf_unit].Stages[prev_conf_stage].CalcTime :=
-        g_schedule[i_conf_unit].Stages[prev_conf_stage].CalcTime + REAL_TO_DINT(amount);
-      g_schedule[i_conf_unit].Stages[prev_conf_stage].ExitTime :=
-        g_schedule[i_conf_unit].Stages[prev_conf_stage].ExitTime + REAL_TO_LINT(amount);
+      g_schedule[i_conf_unit].Stages[sched_prev_conf].CalcTime :=
+        g_schedule[i_conf_unit].Stages[sched_prev_conf].CalcTime + REAL_TO_DINT(amount);
+      g_schedule[i_conf_unit].Stages[sched_prev_conf].ExitTime :=
+        g_schedule[i_conf_unit].Stages[sched_prev_conf].ExitTime + REAL_TO_LINT(amount);
       fb_shift(i_unit := i_conf_unit, i_from_stage := prev_conf_stage + 1, i_amount := amount);
 
       (* JS: propagateDelayToBatch with propagateFromStage=conf_stage
          updates batch.calc_time_s ONLY if batch is on conf_stage *)
-      IF g_batch[i_conf_unit].CurStage = g_schedule[i_conf_unit].Stages[i_conf_stage].ProgramStage THEN
+      IF g_batch[i_conf_unit].CurStage = i_conf_stage THEN
         g_batch[i_conf_unit].CalTime :=
           g_batch[i_conf_unit].CalTime + REAL_TO_DINT(amount);
         IF g_batch[i_conf_unit].CalTime > g_batch[i_conf_unit].MaxTime THEN
@@ -388,12 +429,12 @@ IF remain > 0.1 AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
     END_FOR;
 
     IF NOT is_blk_adv_locked THEN
-      stage_flex := DINT_TO_REAL(g_schedule[i_blocked_unit].Stages[i_blocked_stage].MaxTime
-                  - g_schedule[i_blocked_unit].Stages[i_blocked_stage].CalcTime);
+      stage_flex := DINT_TO_REAL(g_schedule[i_blocked_unit].Stages[sched_blocked].MaxTime
+                  - g_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime);
       IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
 
       IF stage_flex > 0.1 THEN
-        IF g_batch[i_blocked_unit].CurStage = g_schedule[i_blocked_unit].Stages[i_blocked_stage].ProgramStage THEN
+        IF g_batch[i_blocked_unit].CurStage = i_blocked_stage THEN
           cap := 0.9;
         ELSE
           cap := 0.5;
@@ -401,14 +442,14 @@ IF remain > 0.1 AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
         amount := stage_flex * cap;
         IF amount > remain THEN amount := remain; END_IF;
 
-        g_schedule[i_blocked_unit].Stages[i_blocked_stage].CalcTime :=
-          g_schedule[i_blocked_unit].Stages[i_blocked_stage].CalcTime + REAL_TO_DINT(amount);
-        g_schedule[i_blocked_unit].Stages[i_blocked_stage].ExitTime :=
-          g_schedule[i_blocked_unit].Stages[i_blocked_stage].ExitTime + REAL_TO_LINT(amount);
+        g_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime :=
+          g_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime + REAL_TO_DINT(amount);
+        g_schedule[i_blocked_unit].Stages[sched_blocked].ExitTime :=
+          g_schedule[i_blocked_unit].Stages[sched_blocked].ExitTime + REAL_TO_LINT(amount);
         fb_shift(i_unit := i_blocked_unit, i_from_stage := i_blocked_stage + 1, i_amount := amount);
 
         (* JS: propagateDelayToBatch updates batch.calc_time_s ONLY if batch is on this stage *)
-        IF g_batch[i_blocked_unit].CurStage = g_schedule[i_blocked_unit].Stages[i_blocked_stage].ProgramStage THEN
+        IF g_batch[i_blocked_unit].CurStage = i_blocked_stage THEN
           g_batch[i_blocked_unit].CalTime :=
             g_batch[i_blocked_unit].CalTime + REAL_TO_DINT(amount);
           IF g_batch[i_blocked_unit].CalTime > g_batch[i_blocked_unit].MaxTime THEN

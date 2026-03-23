@@ -403,7 +403,7 @@ ELSIF phase = 1030 THEN
   FOR ti := 1 TO MAX_Transporters DO
     IF g_transporter[ti].Phase >= 1 AND g_transporter[ti].Phase <= 4 THEN
       est_finish := i_time_s + DINT_TO_LINT(g_transporter[ti].TaskRemainingTime);
-      IF est_finish > i_time_s AND g_task[ti].Count < 10 THEN
+      IF est_finish > i_time_s AND g_task[ti].Count < 30 THEN
         (* ★ FIX: Remove schedule-derived task matching in-flight transfer
            to avoid duplicate (JS: inFlightTasks replace schedule tasks) *)
         FOR qi := 1 TO g_task[ti].Count DO
@@ -600,12 +600,10 @@ ELSIF phase = 2000 THEN
     ELSE
       (* JS: stage 0 delay NEVER triggers RECALC alone.
          continue → proceed to stage 1+ tasks.
-         Skip pickup task if CalcSchedule prepended the loading station:
-         it was already fitted inline above. *)
-      IF prepend_offset = 1 THEN
+         Skip pickup task (Stage=0, prepend) — already fitted inline above. *)
+      cur_task_idx := 1;
+      IF w_task_cnt >= 1 AND w_tasks[1].Stage = 0 THEN
         cur_task_idx := 2;   (* skip prepended pickup task *)
-      ELSE
-        cur_task_idx := 1;
       END_IF;
 
       IF cur_task_idx > w_task_cnt THEN
@@ -722,7 +720,7 @@ ELSIF phase = 2001 THEN
                 (* Stage 0 / batch delay: shift base time *)
                 sched_base_time := sched_base_time + DINT_TO_LINT(chain_delays[ci].DelayTime);
               ELSIF chain_delays[ci].Target = 1 THEN
-                prog_idx := chain_delays[ci].Stage - prepend_offset;
+                prog_idx := chain_delays[ci].Stage;  (* Stage = ProgramStage = direct g_program index *)
                 IF prog_idx >= 1 AND prog_idx <= 30 THEN
                   old_cal := g_program[cur_wait_unit].Steps[prog_idx].CalTime;
                   max_cal := g_program[cur_wait_unit].Steps[prog_idx].MaxTime;
@@ -739,7 +737,7 @@ ELSIF phase = 2001 THEN
           (* ★ FIX: Also apply the current task's delay to the program
              (JS: pendingDelays includes both chain + current task delays) *)
           IF total_delay_s > MARGIN_S THEN
-            prog_idx := si - prepend_offset;
+            prog_idx := si;  (* si = task.Stage = ProgramStage = direct g_program index *)
             IF prog_idx >= 1 AND prog_idx <= 30 THEN
               old_cal := g_program[cur_wait_unit].Steps[prog_idx].CalTime;
               max_cal := g_program[cur_wait_unit].Steps[prog_idx].MaxTime;
@@ -777,9 +775,8 @@ ELSIF phase = 3000 THEN
   ELSE
     IF delay_target = 1 THEN
       (* Program stage delay: increase cal_time.
-         Subtract prepend_offset: task.Stage is schedule index which
-         includes the prepended loading station. *)
-      prog_idx := delay_stage - prepend_offset;
+         Stage = ProgramStage = direct g_program.Steps[] index. *)
+      prog_idx := delay_stage;
       IF prog_idx >= 1 AND prog_idx <= 30 THEN
         old_cal := g_program[cur_wait_unit].Steps[prog_idx].CalTime;
         max_cal := g_program[cur_wait_unit].Steps[prog_idx].MaxTime;

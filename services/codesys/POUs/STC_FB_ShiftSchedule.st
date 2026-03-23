@@ -39,8 +39,9 @@ IF ABS(i_amount) < 0.001 THEN RETURN; END_IF;
 
 (* ── Shift schedule stages entry/exit times ── *)
 sc := g_schedule[i_unit].StageCount;
-FOR si := i_from_stage TO sc DO
-  IF si >= 1 AND si <= 30 THEN
+FOR si := 1 TO sc DO
+  IF si >= 1 AND si <= 30
+     AND g_schedule[i_unit].Stages[si].ProgramStage >= i_from_stage THEN
     g_schedule[i_unit].Stages[si].EntryTime :=
       g_schedule[i_unit].Stages[si].EntryTime + REAL_TO_LINT(i_amount);
     g_schedule[i_unit].Stages[si].ExitTime :=

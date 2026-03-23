@@ -75,9 +75,8 @@ FOR ti := t_start TO t_end DO
       tmp_unit  := tmp_task.Unit;
       IF tmp_unit >= 1 AND tmp_unit <= MAX_Units THEN
         IF g_batch[tmp_unit].State = 1                                   (* IN_PROCESS *)
-           AND tmp_task.Stage >= 1
-           AND tmp_task.Stage <= g_schedule[tmp_unit].StageCount THEN
-          IF g_batch[tmp_unit].CurStage = g_schedule[tmp_unit].Stages[tmp_task.Stage].ProgramStage
+           AND tmp_task.Stage >= 1 THEN
+          IF g_batch[tmp_unit].CurStage = tmp_task.Stage
              AND g_unit[tmp_unit].location = tmp_task.LiftStationTarget
              AND g_batch[tmp_unit].StartTime > LINT#0
              AND g_batch[tmp_unit].MaxTime > 0 THEN
@@ -96,9 +95,8 @@ FOR ti := t_start TO t_end DO
         cur_unit  := g_task[ti].Queue[ins_j].Unit;
         IF cur_unit >= 1 AND cur_unit <= MAX_Units THEN
           IF g_batch[cur_unit].State = 1
-             AND g_task[ti].Queue[ins_j].Stage >= 1
-             AND g_task[ti].Queue[ins_j].Stage <= g_schedule[cur_unit].StageCount THEN
-            IF g_batch[cur_unit].CurStage = g_schedule[cur_unit].Stages[g_task[ti].Queue[ins_j].Stage].ProgramStage
+             AND g_task[ti].Queue[ins_j].Stage >= 1 THEN
+            IF g_batch[cur_unit].CurStage = g_task[ti].Queue[ins_j].Stage
                AND g_unit[cur_unit].location = g_task[ti].Queue[ins_j].LiftStationTarget
                AND g_batch[cur_unit].StartTime > LINT#0
                AND g_batch[cur_unit].MaxTime > 0 THEN

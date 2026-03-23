@@ -120,8 +120,8 @@ function batch(uid) {
 function taskQueue(tid) {
   const b = `g_task[${tid}]`;
   const nodes = { count: S(`${b}.Count`) };
-  // 10 task slots
-  for (let q = 1; q <= 10; q++) {
+  // 30 task slots
+  for (let q = 1; q <= 30; q++) {
     const qb = `${b}.Queue[${q}]`;
     nodes[`task_${q}`] = {
       unit_id:      S(`${qb}.Unit`),
@@ -440,11 +440,11 @@ function buildReadList() {
     }
   }
 
-  // Task queues (1..3, count + 10 slots × fields)
+  // Task queues (1..3, count + 30 slots × fields)
   // NOTE: start_time, finish_time are LINT — skip them
   for (let t = 1; t <= 3; t++) {
     add(`tq.${t}.count`, taskQueue(t).count);
-    for (let q = 1; q <= 10; q++) {
+    for (let q = 1; q <= 30; q++) {
       const tq = taskQueue(t)[`task_${q}`];
       for (const [k, nid] of Object.entries(tq)) {
         if (k === 'start_time' || k === 'finish_time') continue; // LINT fields

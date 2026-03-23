@@ -389,7 +389,7 @@ class OpcuaAdapter extends PlcAdapter {
       for (let t = 1; t <= 3; t++) {
         const count = toNum(v[`tq.${t}.count`]);
         const tasks = [];
-        for (let q = 1; q <= Math.min(count, 10); q++) {
+        for (let q = 1; q <= Math.min(count, 30); q++) {
           const unitId = toNum(v[`tq.${t}.${q}.unit_id`]);
           if (unitId === 0) continue;
           tasks.push({
