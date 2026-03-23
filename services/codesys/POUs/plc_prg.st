@@ -48,7 +48,7 @@ VAR_EXTERNAL
   g_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
   (* --- Departure Scheduler state --- *)
   g_dep_activated    : BOOL;
-  g_dep_stable       : BOOL;
+  g_tsk_stable       : BOOL;
   g_dep_waiting_count : INT;
   g_dep_overlap      : UDT_JC_DepOverlapType;
   g_dep_pending      : UDT_JC_DepPendingWriteType;
@@ -64,6 +64,7 @@ VAR_EXTERNAL
   (* --- Production --- *)
   (* --- Time --- *)
   g_time_s           : LINT;
+  g_time_100ms       : LINT;
   (* --- Event queue --- *)
   g_event            : UDT_JC_EventQueueType;
   g_event_pending    : UDT_JC_EventMsgType;
@@ -83,9 +84,8 @@ VAR
   main_sched     : STC_FB_MainScheduler;
   run_tasks      : SIM_FB_RunTasks;
   evt_queue      : STC_FB_EventQueue;
-  (* Time self-increment *)
-  time_cycle_cnt : INT := 0;
-  last_time_s    : LINT := 0;
+  (* Time from SysTime library *)
+  now_ms        : LINT := 0;
   (* Waiting batch at station 114 *)
   fb_wait_calc       : TSK_FB_CalcSchedule;
   dep_wait_114_unit  : INT := 0;
@@ -161,22 +161,10 @@ IF init_done THEN
   (* ── Calculate transporter working areas (X-limits) every cycle ── *)
   twa_calc();
 
-  (* ── Unix time self-increment ──
-     Gateway writes g_time_s directly via OPC UA for sync.
-     PLC self-increments +1 second every 50 cycles (50 × 20 ms = 1 s)
-     when gateway hasn't updated. *)
-  IF g_time_s <> last_time_s THEN
-    (* Gateway wrote new time — accept and reset counter *)
-    last_time_s := g_time_s;
-    time_cycle_cnt := 0;
-  ELSE
-    time_cycle_cnt := time_cycle_cnt + 1;
-    IF time_cycle_cnt >= 50 THEN
-      g_time_s := g_time_s + LINT#1;
-      last_time_s := g_time_s;
-      time_cycle_cnt := 0;
-    END_IF;
-  END_IF;
+  (* ── System time from runtime clock (SysTime library) ── *)
+  now_ms := UDINT_TO_LINT(SysTimeGetMs());
+  g_time_s := now_ms / 1000;      (* seconds *)
+  g_time_100ms := now_ms / 100;   (* 0.1s ticks *)
 
   (* ── Execute transporter tasks (physics simulation) ── *)
   run_tasks(i_run := init_done);

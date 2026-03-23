@@ -168,7 +168,7 @@ const META = {
 
 const DEP = {
   activated:     S('g_dep_activated'),
-  stable:        S('g_dep_stable'),
+  stable:        S('g_tsk_stable'),
   waiting_count: S('g_dep_waiting_count'),
   overlap_count: S('g_dep_overlap.Count'),
   pending_valid: S('g_dep_pending.Valid'),

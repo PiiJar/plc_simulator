@@ -274,6 +274,13 @@ class OpcuaAdapter extends PlcAdapter {
       const batchLint = await this._readLintNodes(this._batchLintList);
       Object.assign(v, batchLint);
 
+      // Read g_time_s (LINT) separately
+      if (!this._metaLintList) {
+        this._metaLintList = [{ key: 'meta.time_seconds', nodeId: nodes.META.time_seconds }];
+      }
+      const metaLint = await this._readLintNodes(this._metaLintList);
+      Object.assign(v, metaLint);
+
       const toNum = (val) => (val != null ? Number(val) : 0);
 
       // ── Parse transporters ────────────────────────────────
@@ -365,6 +372,7 @@ class OpcuaAdapter extends PlcAdapter {
         init_done: toNum(v['meta.station_count']) > 0,  // inferred from station_count
         cycle_count: 0,  // Not needed with OPC UA (use subscription heartbeat)
         production_queue: toNum(v['meta.production_queue']),
+        time_s: toNum(v['meta.time_seconds']),  // PLC system time (seconds)
       };
 
       // ── Parse TWA limits ──────────────────────────────────

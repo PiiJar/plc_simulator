@@ -63,7 +63,7 @@ VAR_EXTERNAL
   g_dep_overlap      : UDT_JC_DepOverlapType;
   g_dep_pending      : UDT_JC_DepPendingWriteType;
   g_dep_activated    : BOOL;
-  g_dep_stable       : BOOL;
+  g_tsk_stable       : BOOL;  (* tasksStableFlag from TSK *)
   g_move              : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   g_dep_waiting      : ARRAY[1..DEP_MAX_WAITING] OF INT;
   g_dep_waiting_count : INT;
@@ -204,7 +204,7 @@ o_activated := FALSE;
 (* ════════════════════════════════════════════════════════════ *)
 (* PHASE 0: STOPPED                                           *)
 (* ════════════════════════════════════════════════════════════ *)
-IF phase = 0 THEN
+  IF phase = 0 THEN
   next_phase := 1;
 
 (* ════════════════════════════════════════════════════════════ *)
@@ -212,7 +212,7 @@ IF phase = 0 THEN
 (* Wait for TSK to be ready (phase >= 10000)                   *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1 THEN
-  IF i_tsk_phase >= 10000 AND g_dep_stable THEN
+  IF i_tsk_phase >= 10000 AND g_tsk_stable THEN
     next_phase := 100;
   END_IF;
 

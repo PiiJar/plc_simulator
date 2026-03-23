@@ -129,8 +129,8 @@ can_delay   := NOT is_locked_del;
 (* ══════════════════════════════════════════════════════════════ *)
 IF can_advance
    AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units
-   AND i_blocked_stage >= 1
-   AND i_blocked_stage <= g_schedule[i_blocked_unit].StageCount THEN
+   AND i_blocked_stage >= 1 THEN
+IF i_blocked_stage <= g_schedule[i_blocked_unit].StageCount THEN
 
   (* Conflict stage's own flex_down *)
   stage_flex := DINT_TO_REAL(
@@ -224,6 +224,7 @@ IF can_advance
     END_IF;
   END_IF;
 END_IF;
+END_IF;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2: DELAY — delay conflict batch (JS Vaihe 2)          *)
@@ -233,8 +234,8 @@ END_IF;
 (* ══════════════════════════════════════════════════════════════ *)
 IF can_delay AND remain > 0.1
    AND i_conf_unit >= 1 AND i_conf_unit <= MAX_Units
-   AND i_conf_stage >= 1
-   AND i_conf_stage <= g_schedule[i_conf_unit].StageCount THEN
+   AND i_conf_stage >= 1 THEN
+IF i_conf_stage <= g_schedule[i_conf_unit].StageCount THEN
 
   stage_flex := DINT_TO_REAL(
     g_schedule[i_conf_unit].Stages[i_conf_stage].MaxTime
@@ -283,6 +284,7 @@ IF can_delay AND remain > 0.1
       RETURN;
     END_IF;
   END_IF;
+END_IF;
 END_IF;
 
 (* ══════════════════════════════════════════════════════════════ *)

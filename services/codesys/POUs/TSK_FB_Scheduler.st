@@ -46,6 +46,7 @@ VAR_EXTERNAL
   (* DEP handshake *)
   g_dep_pending : UDT_JC_DepPendingWriteType;
   g_conflict_resolved : BOOL;
+  g_tsk_stable       : BOOL;  (* tasksStableFlag: FALSE on DEP activation, TRUE when READY+conflict_free *)
 END_VAR
 VAR_OUTPUT
   o_phase      : INT;     (* current phase *)
@@ -135,7 +136,7 @@ ELSIF phase = 1 THEN
     next_phase := 2204;
   ELSE
     (* Defensively reset — situation may have changed since last cycle.
-       Safe because g_dep_stable also requires tsk_phase >= 10000,
+         Safe because g_tsk_stable also requires tsk_phase >= 10000,
        which is FALSE during all computation phases (1..2205).
        g_conflict_resolved will be set TRUE/FALSE in Phase 2202 ANALYZE. *)
     g_conflict_resolved := FALSE;
@@ -310,9 +311,9 @@ ELSIF phase = 2204 THEN
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2205 THEN
   FOR si := 1 TO stretch_cnt DO
-    IF stretches[si].Unit >= 1 AND stretches[si].Unit <= MAX_Units
-       AND stretches[si].Stage >= 1
-       AND stretches[si].Stage <= g_program[stretches[si].Unit].StepCount THEN
+    IF stretches[si].Unit >= 1 AND stretches[si].Unit <= MAX_Units THEN
+     IF stretches[si].Stage >= 1
+        AND stretches[si].Stage <= g_program[stretches[si].Unit].StepCount THEN
       (* Clamp new CalTime between MinTime and MaxTime *)
       new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage].CalTime
                + stretches[si].DelayS;
@@ -328,6 +329,7 @@ ELSIF phase = 2205 THEN
       IF g_batch[stretches[si].Unit].CurStage = stretches[si].Stage THEN
         g_batch[stretches[si].Unit].CalTime := new_cal;
       END_IF;
+     END_IF;
     END_IF;
   END_FOR;
   stretch_cnt := 0;
@@ -376,6 +378,7 @@ ELSIF phase = 10100 THEN
     END_IF;
     g_dep_pending.Valid := FALSE;
     g_conflict_resolved := FALSE;  (* Force TSK to re-stabilize after DEP activation — JS: tasksConflictResolved = false *)
+    g_tsk_stable := FALSE;         (* Mirror JS tasksStableFlag: DEPARTURE activation invalidates stability *)
     (* Full recalculation with new data *)
     next_phase := 1;
   ELSE

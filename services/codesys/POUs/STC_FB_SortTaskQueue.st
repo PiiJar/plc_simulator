@@ -76,13 +76,14 @@ FOR ti := t_start TO t_end DO
       IF tmp_unit >= 1 AND tmp_unit <= MAX_Units THEN
         IF g_batch[tmp_unit].State = 1                                   (* IN_PROCESS *)
            AND tmp_task.Stage >= 1
-           AND tmp_task.Stage <= g_schedule[tmp_unit].StageCount
-           AND g_batch[tmp_unit].CurStage = g_schedule[tmp_unit].Stages[tmp_task.Stage].ProgramStage
-           AND g_unit[tmp_unit].location = tmp_task.LiftStationTarget
-           AND g_batch[tmp_unit].StartTime > LINT#0
-           AND g_batch[tmp_unit].MaxTime > 0 THEN
-          tmp_ratio := LINT_TO_REAL(g_time_s - g_batch[tmp_unit].StartTime)
-                       / DINT_TO_REAL(g_batch[tmp_unit].MaxTime);
+           AND tmp_task.Stage <= g_schedule[tmp_unit].StageCount THEN
+          IF g_batch[tmp_unit].CurStage = g_schedule[tmp_unit].Stages[tmp_task.Stage].ProgramStage
+             AND g_unit[tmp_unit].location = tmp_task.LiftStationTarget
+             AND g_batch[tmp_unit].StartTime > LINT#0
+             AND g_batch[tmp_unit].MaxTime > 0 THEN
+            tmp_ratio := LINT_TO_REAL(g_time_s - g_batch[tmp_unit].StartTime)
+                         / DINT_TO_REAL(g_batch[tmp_unit].MaxTime);
+          END_IF;
         END_IF;
       END_IF;
       tmp_emerg := tmp_ratio > 1.0;
@@ -96,13 +97,14 @@ FOR ti := t_start TO t_end DO
         IF cur_unit >= 1 AND cur_unit <= MAX_Units THEN
           IF g_batch[cur_unit].State = 1
              AND g_task[ti].Queue[ins_j].Stage >= 1
-             AND g_task[ti].Queue[ins_j].Stage <= g_schedule[cur_unit].StageCount
-             AND g_batch[cur_unit].CurStage = g_schedule[cur_unit].Stages[g_task[ti].Queue[ins_j].Stage].ProgramStage
-             AND g_unit[cur_unit].location = g_task[ti].Queue[ins_j].LiftStationTarget
-             AND g_batch[cur_unit].StartTime > LINT#0
-             AND g_batch[cur_unit].MaxTime > 0 THEN
-            cur_ratio := LINT_TO_REAL(g_time_s - g_batch[cur_unit].StartTime)
-                         / DINT_TO_REAL(g_batch[cur_unit].MaxTime);
+             AND g_task[ti].Queue[ins_j].Stage <= g_schedule[cur_unit].StageCount THEN
+            IF g_batch[cur_unit].CurStage = g_schedule[cur_unit].Stages[g_task[ti].Queue[ins_j].Stage].ProgramStage
+               AND g_unit[cur_unit].location = g_task[ti].Queue[ins_j].LiftStationTarget
+               AND g_batch[cur_unit].StartTime > LINT#0
+               AND g_batch[cur_unit].MaxTime > 0 THEN
+              cur_ratio := LINT_TO_REAL(g_time_s - g_batch[cur_unit].StartTime)
+                           / DINT_TO_REAL(g_batch[cur_unit].MaxTime);
+            END_IF;
           END_IF;
         END_IF;
         cur_emerg := cur_ratio > 1.0;

@@ -27,7 +27,7 @@ VAR_GLOBAL
   g_dep_overlap                 : UDT_JC_DepOverlapType;  (* overlap station flags *)
   g_dep_pending                 : UDT_JC_DepPendingWriteType;  (* ACTIVATE write buffer *)
   g_dep_activated               : BOOL;  (* handshake TSK ← DEP *)
-  g_dep_stable                  : BOOL;  (* handshake TSK → DEP: task list stable *)
+  g_tsk_stable                  : BOOL;  (* tasksStableFlag: TRUE when last TSK cycle reached READY+conflict_free, cleared only on DEP activation/reset *)
   g_conflict_resolved           : BOOL;  (* TRUE when TSK Analyze found no conflicts — gate for DEP *)
   g_dep_wait_sched              : UDT_JC_TskScheduleType;  (* last DEP-calculated waiting batch schedule for UI *)
   g_dep_wait_unit               : INT;  (* unit index of waiting schedule (0=none) *)
@@ -48,6 +48,7 @@ VAR_GLOBAL
 
   (* ===== Unix Time ===== *)
   g_time_s                      : LINT;  (* absolute time in unix seconds *)
+  g_time_100ms                  : LINT;  (* absolute time in 0.1s ticks *)
 
   (* ===== Event Queue ===== *)
   g_event                       : UDT_JC_EventQueueType;  (* circular event buffer *)

@@ -19,9 +19,9 @@ function init({ getSimTime }) {
 }
 
 router.get('/sim/time', (req, res) => {
-  const { running } = _getSimTime();
+  const { running, plcTime } = _getSimTime();
   res.json({
-    time: Math.floor(Date.now() / 1000),
+    time: plcTime || 0,
     running,
     speed: 1,
     timestamp: new Date().toISOString()

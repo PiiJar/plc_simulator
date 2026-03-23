@@ -11,7 +11,7 @@
         → DEP would only sit in WAIT_STABLE anyway
      3. Skip DEP when g_dep_pending.Valid = TRUE
         → TSK must process the pending data first
-     4. g_dep_stable is computed internally after each TSK call
+     4. g_tsk_stable is computed internally after each TSK call
 
    Turn values:
      0 = INIT (first scan)
@@ -35,7 +35,7 @@ VAR_INPUT
   i_time_s : LINT;     (* current absolute time (s), unix seconds *)
 END_VAR
 VAR_EXTERNAL
-  g_dep_stable  : BOOL;
+  g_tsk_stable  : BOOL;
   g_conflict_resolved : BOOL;
   g_dep_pending : UDT_JC_DepPendingWriteType;
   (* Scheduler debug globals — written here, read by Gateway via OPC UA *)
@@ -112,9 +112,10 @@ IF turn = 1 THEN
   tsk_sched(i_run := TRUE, i_time_s := i_time_s);
   tsk_phase := tsk_sched.o_phase;
 
-  (* Compute stability flag after TSK call *)
-  (* JS: DEP stable requires BOTH phase >= READY AND conflictResolved *)
-  g_dep_stable := (tsk_phase >= 10000) AND g_conflict_resolved;
+  (* JS parity: set stable only when TSK reached READY and conflictResolved; do not clear here *)
+    IF (tsk_phase >= 10000) AND g_conflict_resolved THEN
+      g_tsk_stable := TRUE;
+  END_IF;
 
 ELSIF turn = 2 THEN
   (* DEP turn *)

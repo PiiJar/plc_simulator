@@ -109,9 +109,10 @@ FOR ti := 1 TO MAX_Transporters DO
 
     (* Convert schedule index → program stage number for g_program access *)
     prog_stage := 0;
-    IF t_unit >= 1 AND t_unit <= MAX_Units
-       AND t_stage >= 1 AND t_stage <= g_schedule[t_unit].StageCount THEN
-      prog_stage := g_schedule[t_unit].Stages[t_stage].ProgramStage;
+    IF t_unit >= 1 AND t_unit <= MAX_Units THEN
+      IF t_stage >= 1 AND t_stage <= g_schedule[t_unit].StageCount THEN
+        prog_stage := g_schedule[t_unit].Stages[t_stage].ProgramStage;
+      END_IF;
     END_IF;
 
     (* ── 2. Time check ── *)

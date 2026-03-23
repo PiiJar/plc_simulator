@@ -1,5 +1,5 @@
 (* ActualMoveTimeType - Phase transition timestamps for a single transfer *)
-(* Each field stores the LINT timestamp (ms) when the phase transition occurs *)
+(* Each field stores the LINT timestamp in 0.1s ticks when the phase transition occurs *)
 (* Durations: ts1-ts0 = travel to lift, ts2-ts1 = lift, ts3-ts2 = travel, ts4-ts3 = sink, ts0' = done *)
 TYPE UDT_JC_ActualMoveTimeType :
 STRUCT

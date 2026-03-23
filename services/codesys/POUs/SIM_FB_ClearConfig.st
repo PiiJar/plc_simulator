@@ -33,7 +33,7 @@ VAR_EXTERNAL
   g_dep_sandbox      : UDT_JC_DepSandboxType;
   g_dep_pending      : UDT_JC_DepPendingWriteType;
   g_dep_activated    : BOOL;
-  g_dep_stable       : BOOL;
+  g_tsk_stable       : BOOL;
   g_dep_waiting_count : INT;
   g_dep_waiting       : ARRAY[1..DEP_MAX_WAITING] OF INT;
   g_dep_wait_unit     : INT;
@@ -210,7 +210,7 @@ g_dep_pending.BatchState := 0;
 
 (* --- Clear departure scheduler state (previously missing) --- *)
 g_dep_activated     := FALSE;
-g_dep_stable        := FALSE;
+g_tsk_stable        := TRUE;   (* JS: tasksStableFlag starts true on empty line *)
 g_dep_waiting_count := 0;
 g_dep_wait_unit     := 0;
 FOR i := 1 TO 5 DO

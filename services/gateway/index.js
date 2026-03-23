@@ -82,7 +82,7 @@ const BATCH_STATE_INT_TO_STR = { 0: 'not_processed', 1: 'in_process', 2: 'proces
 
 // --- State cache (updated by polling loop) ---
 let plcState = { timestamp: new Date().toISOString(), transporters: [] };
-let plcMeta = { station_count: 0, init_done: false, cycle_count: 0 };
+let plcMeta = { station_count: 0, init_done: false, cycle_count: 0, time_s: 0 };
 let plcAlive = false;
 let simStartTime = Date.now();
 let simRunning = false;
@@ -97,9 +97,6 @@ let plcSchedules = [];
 let scheduleTickCounter = 0;
 const SCHEDULE_POLL_TICKS = 2;
 let schReqUnit = 0;
-
-// Time sync
-let lastTimeSyncMs = 0;
 
 // Transporter + station configs (loaded from customer JSON)
 let transporterConfig = { transporters: [] };
@@ -136,14 +133,7 @@ function startPolling() {
         return;
       }
 
-      // Periodic time sync
-      const now = Date.now();
-      if (now - lastTimeSyncMs >= TIME_SYNC_MS) {
-        const unixSec = Math.floor(now / 1000);
-        await adapter.writeTime(unixSec);
-        lastTimeSyncMs = now;
-        console.log(`[TIME] Synced PLC time: ${unixSec}`);
-      }
+      // Time sync no longer needed — PLC uses SysTimeGetMs()
 
       // Read full state
       const state = await adapter.readState();
@@ -220,7 +210,7 @@ app.use('/api', fileRoutes.router);
 
 // ── Initialize & mount legacy stub routes ──
 legacyStubs.init({
-  getSimTime: () => ({ running: simRunning }),
+  getSimTime: () => ({ running: simRunning, plcTime: plcMeta.time_s || 0 }),
 });
 app.use('/api', legacyStubs.router);
 
@@ -454,12 +444,6 @@ app.post('/api/reset', async (req, res) => {
 
     console.log(`[RESET] Uploaded ${stations.length} stations + ${transporters.length} transporters + ${units.length} units`);
 
-    // Sync PLC clock immediately
-    const unixSec = Math.floor(Date.now() / 1000);
-    await adapter.writeTime(unixSec);
-    lastTimeSyncMs = Date.now();
-    console.log(`[RESET] Synced PLC time: ${unixSec}`);
-
     // Update current selection
     currentCustomer = customer;
     currentPlant = plant;
@@ -671,7 +655,7 @@ app.post('/api/plc/stop', async (req, res) => {
       // Clear state caches
       plcAlive = false;
       simRunning = false;
-      plcMeta = { station_count: 0, init_done: false, cycle_count: 0 };
+      plcMeta = { station_count: 0, init_done: false, cycle_count: 0, time_s: 0 };
       res.json({ success: true, message: result.message });
     } else {
       res.status(500).json({ success: false, error: result.error });
