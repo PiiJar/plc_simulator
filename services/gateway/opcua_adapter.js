@@ -281,6 +281,27 @@ class OpcuaAdapter extends PlcAdapter {
       const metaLint = await this._readLintNodes(this._metaLintList);
       Object.assign(v, metaLint);
 
+      // Read task queue LINT fields (StartTime, FinishTime) separately.
+      // Only read active slots (up to count) to avoid 180 individual reads.
+      {
+        const tqLintList = [];
+        for (let t = 1; t <= 3; t++) {
+          const count = toNum(v[`tq.${t}.count`]);
+          if (count > 0) {
+            const tq = nodes.taskQueue(t);
+            for (let q = 1; q <= Math.min(count, 30); q++) {
+              const slot = tq[`task_${q}`];
+              tqLintList.push({ key: `tq.${t}.${q}.start_time`, nodeId: slot.start_time });
+              tqLintList.push({ key: `tq.${t}.${q}.finish_time`, nodeId: slot.finish_time });
+            }
+          }
+        }
+        if (tqLintList.length > 0) {
+          const taskQueueLint = await this._readLintNodes(tqLintList);
+          Object.assign(v, taskQueueLint);
+        }
+      }
+
       const toNum = (val) => (val != null ? Number(val) : 0);
 
       // ── Parse transporters ────────────────────────────────
