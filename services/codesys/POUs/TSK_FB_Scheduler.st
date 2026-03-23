@@ -88,6 +88,9 @@ VAR
   stretch_cnt   : INT := 0;
   si            : INT;   (* stretch apply loop *)
   new_cal       : DINT;  (* clamped calc time *)
+  (* justActivated normalization temps *)
+  ja_elapsed : REAL;
+  ja_remain  : REAL;
   (* Temp *)
   bi         : INT;
   ti         : INT;
@@ -164,10 +167,34 @@ ELSIF phase >= 1001 AND phase <= 1000 + MAX_Units THEN
   IF batch_idx <= batch_count THEN
     ui := batch_list[batch_idx];
 
-    (* Find transporter for this unit — first one with matching task_area *)
-    fb_find(i_lift_stn := g_unit[ui].location, i_sink_stn := 0);
-    sched_trans := fb_find.o_trans;
-    IF sched_trans = 0 THEN sched_trans := 1; END_IF;  (* fallback default *)
+    (* ── justActivated normalization — JS: taskScheduler.js lines 1027-1037 ──
+       When a batch is first activated (CurStage=0, State=IN_PROCESS, on station),
+       normalize its times to remaining wait time before schedule calculation.
+       JS: calc = max(1, oldCalc - elapsed), start = now, min = calc, max = 2*calc *)
+    IF g_batch[ui].CurStage = 0
+       AND g_batch[ui].State = 1
+       AND g_unit[ui].location >= 100 THEN
+      IF g_batch[ui].StartTime > 0 AND g_batch[ui].StartTime < i_time_s THEN
+        ja_elapsed := LINT_TO_REAL(i_time_s - g_batch[ui].StartTime);
+        ja_remain  := DINT_TO_REAL(g_batch[ui].CalTime) - ja_elapsed;
+        IF ja_remain < 1.0 THEN ja_remain := 1.0; END_IF;
+        g_batch[ui].CalTime   := REAL_TO_DINT(ja_remain);
+        g_batch[ui].StartTime := i_time_s;
+        g_batch[ui].MinTime   := g_batch[ui].CalTime;
+        g_batch[ui].MaxTime   := 2 * g_batch[ui].CalTime;
+      END_IF;
+    END_IF;
+
+    (* Find transporter for this unit *)
+    IF g_unit[ui].location < 100 THEN
+      (* Unit is on a transporter — location IS the transporter index *)
+      sched_trans := g_unit[ui].location;
+    ELSE
+      (* Unit is on a station — find transporter by task_area *)
+      fb_find(i_lift_stn := g_unit[ui].location, i_sink_stn := 0);
+      sched_trans := fb_find.o_trans;
+      IF sched_trans = 0 THEN sched_trans := 1; END_IF;  (* fallback default *)
+    END_IF;
 
     fb_calc(i_unit := ui, i_trans := sched_trans, i_time_s := i_time_s);
 

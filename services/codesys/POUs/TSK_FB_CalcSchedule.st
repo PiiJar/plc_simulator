@@ -124,14 +124,7 @@ ELSE
 END_IF;
 
 (* -- prevExitTime: when next stage can begin -- *)
-IF is_on_stn THEN
-  (* Unit is on station: calculate remaining time *)
-  calc_s := INT_TO_REAL(g_batch[i_unit].CurStage);
-  (* For first stage, remaining time based on calc_time *)
-  exit_t := i_time_s;
-ELSE
-  exit_t := i_time_s;
-END_IF;
+exit_t := i_time_s;
 
 is_first := TRUE;
 
@@ -151,11 +144,32 @@ IF is_on_stn AND start_st >= 1 THEN
     g_schedule[i_unit].Stages[out_count].station       := location;
     g_schedule[i_unit].Stages[out_count].ProgramStage := 0;  (* pre-position entry, not a program stage *)
     g_schedule[i_unit].Stages[out_count].EntryTime    := exit_t;
-    g_schedule[i_unit].Stages[out_count].ExitTime     := exit_t;
-    g_schedule[i_unit].Stages[out_count].MinTime      := 0;
-    g_schedule[i_unit].Stages[out_count].CalcTime     := 0;
-    g_schedule[i_unit].Stages[out_count].MaxTime      := 0;
     g_schedule[i_unit].Stages[out_count].TransferTime := 0;
+
+    (* ── Stage 0 times from batch data — JS: stage0 prepend uses batch.calc/min/max ──
+       CurStage=0 means just activated: use batch CalTime (= remaining wait time)
+       Otherwise (mid-process repositioning): zero duration *)
+    IF g_batch[i_unit].CurStage = 0 AND g_batch[i_unit].CalTime > 0 THEN
+      (* JS: remainingSec = max(1, calcTimeS - elapsed) *)
+      IF g_batch[i_unit].StartTime > 0 AND g_batch[i_unit].StartTime < i_time_s THEN
+        elapsed_s := LINT_TO_REAL(i_time_s - g_batch[i_unit].StartTime);
+      ELSE
+        elapsed_s := 0.0;
+      END_IF;
+      remain_s := DINT_TO_REAL(g_batch[i_unit].CalTime) - elapsed_s;
+      IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
+      exit_t := i_time_s + REAL_TO_LINT(remain_s);
+      g_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
+      g_schedule[i_unit].Stages[out_count].CalcTime  := REAL_TO_DINT(remain_s);
+      g_schedule[i_unit].Stages[out_count].MinTime   := g_batch[i_unit].MinTime;
+      g_schedule[i_unit].Stages[out_count].MaxTime   := g_batch[i_unit].MaxTime;
+    ELSE
+      g_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
+      g_schedule[i_unit].Stages[out_count].CalcTime  := 0;
+      g_schedule[i_unit].Stages[out_count].MinTime   := 0;
+      g_schedule[i_unit].Stages[out_count].MaxTime   := 0;
+    END_IF;
+
     is_first := FALSE;
   END_IF;
 END_IF;

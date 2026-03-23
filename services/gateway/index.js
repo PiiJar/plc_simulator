@@ -351,14 +351,14 @@ app.get('/api/transporter-tasks', (req, res) => {
 app.get('/api/schedules', (req, res) => {
   res.json({
     success: true,
-    currentTimeSec: Math.floor(Date.now() / 1000),
+    currentTimeSec: plcMeta.time_s || 0,
     schedules: plcSchedules,
   });
 });
 
 // Transporter schedule (Gantt)
 app.get('/api/transporter-schedule', (req, res) => {
-  const currentTimeSec = Math.floor(Date.now() / 1000);
+  const currentTimeSec = plcMeta.time_s || 0;
   const transporterSchedule = [];
   for (const tid of [1, 2, 3]) {
     const tq = plcTaskQueues[tid];

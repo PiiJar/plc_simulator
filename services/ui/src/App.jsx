@@ -1054,7 +1054,7 @@ export default function App() {
 
     setIsResetting(true);
     setIsRunning(false);
-    setElapsedMs(Math.floor(Date.now() / 1000));
+    setElapsedMs(0);
     setAvgCycleSec(0);
     setProductionStartTime(null);
     setProductionDuration(0);

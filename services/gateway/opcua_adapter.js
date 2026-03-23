@@ -576,7 +576,7 @@ class OpcuaAdapter extends PlcAdapter {
           { nodeId: sw.station_id,    value: stNum,                                    dataType: DataType.Int16 },
           { nodeId: sw.tank_id,       value: st.tank || 0,                             dataType: DataType.Int16 },
           { nodeId: sw.is_in_use,     value: true,                                     dataType: DataType.Boolean },
-          { nodeId: sw.station_type,  value: st.station_type || 0,                     dataType: DataType.Int16 },
+          { nodeId: sw.station_type,  value: st.operation || st.station_type || 0,     dataType: DataType.Int16 },
           { nodeId: sw.x_position,    value: Math.round(st.x_position || 0),           dataType: DataType.Int32 },
           { nodeId: sw.y_position,    value: Math.round(st.y_position || 0),           dataType: DataType.Int32 },
           { nodeId: sw.z_position,    value: Math.round(st.z_position || 0),           dataType: DataType.Int32 },
