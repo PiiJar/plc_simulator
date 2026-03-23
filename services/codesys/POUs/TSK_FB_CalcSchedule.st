@@ -332,12 +332,12 @@ FOR stg := start_st TO g_program[i_unit].StepCount DO
     IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
     exit_t := i_time_s + REAL_TO_LINT(remain_s);
   ELSIF is_first AND NOT is_on_stn THEN
-    (* Batch is on transporter: anchor to est_finish if available
-       JS: prevExitTime = estFinish = currentTime + taskRemainingTime
+    (* Batch is on transporter: anchor to absolute finish time
+       TaskFinishTime = when transporter delivers unit to sink station
        No transfer time added — transfer already in progress *)
-    IF g_transporter[i_trans].TaskRemainingTime > 0
+    IF g_transporter[i_trans].TaskFinishTime > 0
        AND g_transporter[i_trans].Phase > 0 THEN
-      entry_t := i_time_s + DINT_TO_LINT(g_transporter[i_trans].TaskRemainingTime);
+      entry_t := g_transporter[i_trans].TaskFinishTime;
     ELSE
       entry_t := exit_t;  (* fallback: now *)
     END_IF;

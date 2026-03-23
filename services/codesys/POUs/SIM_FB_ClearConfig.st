@@ -109,6 +109,7 @@ FOR i := 1 TO MAX_Transporters DO
   g_sim_trans[i].SinkDeviceDelay := 0;
   g_transporter[i].DrippingTime   := 0;
   g_transporter[i].TaskRemainingTime  := 0;
+  g_transporter[i].TaskFinishTime     := 0;
   g_transporter[i].CurrentStation := 0;
   g_transporter[i].XFinalTarget  := 0;
   g_transporter[i].XDriveTarget  := 0;
