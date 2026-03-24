@@ -18,7 +18,6 @@ STRUCT
     Phase                    : INT;  (* 0=idle, 1=to_source, 2=lift, 3=to_sink, 4=sink *)
     TaskId                   : LINT; (* Current task ID *)
     TaskRemainingTime        : DINT; (* Remaining time for current task s *)
-    TaskFinishTime           : LINT; (* Absolute time when transporter finishes delivery to sink station (s) *)
     LiftStationRemainingTime : DINT; (* Remaining time at lift station s *)
     DrippingTime             : INT;  (* Dripping time ×10 = tenths of second *)
 

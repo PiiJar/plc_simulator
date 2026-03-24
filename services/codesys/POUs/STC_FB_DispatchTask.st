@@ -301,7 +301,6 @@ FOR ti := 1 TO MAX_Transporters DO
           g_sim_trans[ti].MaxTime := g_task[ti].Queue[qi].MaxTime;
           g_sim_trans[ti].NttPrimary := g_task[ti].Queue[qi].NttPrimary;
           g_transporter[ti].TaskRemainingTime := t_calc_time;
-          g_transporter[ti].TaskFinishTime := t_finish;  (* absolute arrival time at sink station *)
 
           (* ── Emit TASK_DISPATCHED event (msg_type=1) ── *)
           (* Compute transfer time for xfer_total field *)

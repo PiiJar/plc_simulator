@@ -421,11 +421,20 @@ function buildReadList() {
   for (const [k, nid] of Object.entries(META)) add(`meta.${k}`, nid);
 
   // Transporters (1..3)
+  // NOTE: task_id (TaskId) and running_task_id (RunningTaskId) are LINT —
+  // CODESYS OPC UA server crashes when batch-reading LINT struct fields.
+  // They are read separately via _readLintNodes in opcua_adapter.js.
   for (let t = 1; t <= 3; t++) {
     const ts = transporterStatus(t);
-    for (const [k, nid] of Object.entries(ts)) add(`ts.${t}.${k}`, nid);
+    for (const [k, nid] of Object.entries(ts)) {
+      if (k === 'task_id') continue; // LINT field — read separately
+      add(`ts.${t}.${k}`, nid);
+    }
     const st = simTransporter(t);
-    for (const [k, nid] of Object.entries(st)) add(`sim.${t}.${k}`, nid);
+    for (const [k, nid] of Object.entries(st)) {
+      if (k === 'running_task_id') continue; // LINT field — read separately
+      add(`sim.${t}.${k}`, nid);
+    }
   }
 
   // Units + Batches (1..10)

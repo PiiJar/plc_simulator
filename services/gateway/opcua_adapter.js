@@ -62,14 +62,14 @@ class OpcuaAdapter extends PlcAdapter {
       this.connected = false;
 
       this.client = OPCUAClient.create({
-        applicationName: 'NodeOPCUA-Client',
+        applicationName: 'PLCGateway',
         connectionStrategy: {
-          initialDelay: 2000,
+          initialDelay: 1000,
           maxDelay: 10000,
-          maxRetry: 5,
+          maxRetry: 100,
         },
-        securityMode: MessageSecurityMode.SignAndEncrypt,
-        securityPolicy: SecurityPolicy.Basic256Sha256,
+        securityMode: MessageSecurityMode.None,
+        securityPolicy: SecurityPolicy.None,
         endpointMustExist: false,
       });
 
@@ -78,11 +78,8 @@ class OpcuaAdapter extends PlcAdapter {
       });
 
       await this.client.connect(OPCUA_ENDPOINT);
-      this.session = await this.client.createSession({
-        type: UserTokenType.UserName,
-        userName: process.env.OPCUA_USER || 'PiiJar',
-        password: process.env.OPCUA_PASSWORD || '!T0s1v41k33!',
-      });
+      // Anonymous session — CODESYS Anonymous_OPCUAServer group grants access
+      this.session = await this.client.createSession();
       this.connected = true;
       this._readList = null; // reset cached read list
       console.log(`[OPC-UA] Connected to ${OPCUA_ENDPOINT}`);
@@ -280,6 +277,10 @@ class OpcuaAdapter extends PlcAdapter {
       }
       const metaLint = await this._readLintNodes(this._metaLintList);
       Object.assign(v, metaLint);
+
+      // NOTE: transporter TaskId and RunningTaskId (LINT) are NOT read.
+      // Reading LINT fields from struct members crashes CODESYS OPC UA provider.
+      // These fields are not needed for UI display.
 
       const toNum = (val) => (val != null ? Number(val) : 0);
 

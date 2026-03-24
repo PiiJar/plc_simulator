@@ -71,6 +71,7 @@ VAR
   ov_end           : LINT;
   uj               : INT;
   sj               : INT;
+  saved_entry_t    : LINT;  (* previous cycle's first-stage EntryTime for on-transporter clamp *)
 END_VAR
 
 (* -- Validate inputs -- *)
@@ -82,6 +83,15 @@ cur_stage := g_batch[i_unit].CurStage;
 location  := g_unit[i_unit].location;
 is_on_stn := location >= 100;
 out_count := 0;
+
+(* -- Save previous first-stage entry time before clearing -- *)
+(* When unit is on transporter, we preserve the previously calculated
+   entry time as long as it is still in the future (= transporter on schedule).
+   If it has passed, we clamp to now (= transporter is late). *)
+saved_entry_t := 0;
+IF NOT is_on_stn AND g_schedule[i_unit].StageCount > 0 THEN
+  saved_entry_t := g_schedule[i_unit].Stages[1].EntryTime;
+END_IF;
 
 (* -- Clear old schedule -- *)
 FOR stg := 1 TO 30 DO
@@ -332,14 +342,13 @@ FOR stg := start_st TO g_program[i_unit].StepCount DO
     IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
     exit_t := i_time_s + REAL_TO_LINT(remain_s);
   ELSIF is_first AND NOT is_on_stn THEN
-    (* Batch is on transporter: anchor to absolute finish time
-       TaskFinishTime = when transporter delivers unit to sink station
-       No transfer time added — transfer already in progress *)
-    IF g_transporter[i_trans].TaskFinishTime > 0
-       AND g_transporter[i_trans].Phase > 0 THEN
-      entry_t := g_transporter[i_trans].TaskFinishTime;
+    (* Batch is on transporter — use saved entry time from previous cycle.
+       If transporter is on schedule (saved > now), keep it stable.
+       If transporter is late (saved <= now), clamp to now. *)
+    IF saved_entry_t > i_time_s THEN
+      entry_t := saved_entry_t;  (* on schedule — keep stable *)
     ELSE
-      entry_t := exit_t;  (* fallback: now *)
+      entry_t := i_time_s;       (* late or first cycle — clamp to now *)
     END_IF;
     exit_t  := entry_t + REAL_TO_LINT(calc_s);
   ELSE

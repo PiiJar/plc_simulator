@@ -402,11 +402,7 @@ ELSIF phase = 1030 THEN
   (* the transporter as occupied until the transfer completes.        *)
   FOR ti := 1 TO MAX_Transporters DO
     IF g_transporter[ti].Phase >= 1 AND g_transporter[ti].Phase <= 4 THEN
-      IF g_transporter[ti].TaskFinishTime > 0 THEN
-        est_finish := g_transporter[ti].TaskFinishTime;
-      ELSE
-        est_finish := i_time_s + DINT_TO_LINT(g_transporter[ti].TaskRemainingTime);
-      END_IF;
+      est_finish := i_time_s + DINT_TO_LINT(g_transporter[ti].TaskRemainingTime);
       IF est_finish > i_time_s AND g_task[ti].Count < 30 THEN
         (* ★ FIX: Remove schedule-derived task matching in-flight transfer
            to avoid duplicate (JS: inFlightTasks replace schedule tasks) *)
