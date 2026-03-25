@@ -41,7 +41,6 @@ VAR_EXTERNAL
   g_tsk_stable       : BOOL;
   g_dep_waiting_count : INT;
   g_dep_waiting       : ARRAY[1..DEP_MAX_WAITING] OF INT;
-  g_dep_wait_unit     : INT;
 END_VAR
 VAR
   i : INT;
@@ -216,7 +215,6 @@ g_dep_pending.BatchState := 0;
 g_dep_activated     := FALSE;
 g_tsk_stable        := TRUE;   (* JS: tasksStableFlag starts true on empty line *)
 g_dep_waiting_count := 0;
-g_dep_wait_unit     := 0;
 FOR i := 1 TO 5 DO
   g_dep_waiting[i] := 0;
 END_FOR;

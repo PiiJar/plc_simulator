@@ -70,6 +70,8 @@ VAR
   ov_end           : LINT;
   uj               : INT;
   sj               : INT;
+  pickup_wait      : REAL;   (* earliest pickup time for waiting batch *)
+  MIN_PICKUP_WAIT  : REAL := 5.0;  (* minimum pickup wait seconds *)
 END_VAR
 
 STC_CalcSchedule := FALSE;
@@ -147,10 +149,44 @@ IF is_on_stn AND start_st >= 1 THEN
       io_schedule[i_unit].Stages[out_count].MinTime   := io_batch[i_unit].MinTime;
       io_schedule[i_unit].Stages[out_count].MaxTime   := io_batch[i_unit].MaxTime;
     ELSE
-      io_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
-      io_schedule[i_unit].Stages[out_count].CalcTime  := 0;
-      io_schedule[i_unit].Stages[out_count].MinTime   := 0;
-      io_schedule[i_unit].Stages[out_count].MaxTime   := 0;
+      (* Waiting batch (State=0, CalTime=0): calculate earliest pickup time.
+         Transporter must travel to the batch location before it can pick up. *)
+      IF io_batch[i_unit].State = 0 THEN
+        tmp_move := g_move[i_trans];
+        pickup_wait := 0.0;
+
+        IF g_transporter[i_trans].Phase >= 1 AND g_transporter[i_trans].Phase <= 4 THEN
+          (* Transporter busy: finish current task + travel from sink to batch *)
+          pickup_wait := DINT_TO_REAL(g_transporter[i_trans].TaskRemainingTime);
+          IF g_transporter[i_trans].SinkStationTarget <> location THEN
+            pickup_wait := pickup_wait + STC_CalcHorizontalTravel(
+              i_from_stn := g_transporter[i_trans].SinkStationTarget,
+              i_to_stn   := location,
+              i_move     := tmp_move);
+          END_IF;
+        ELSE
+          (* Transporter idle: only travel time *)
+          IF g_transporter[i_trans].CurrentStation <> location THEN
+            pickup_wait := STC_CalcHorizontalTravel(
+              i_from_stn := g_transporter[i_trans].CurrentStation,
+              i_to_stn   := location,
+              i_move     := tmp_move);
+          END_IF;
+        END_IF;
+
+        IF pickup_wait < MIN_PICKUP_WAIT THEN pickup_wait := MIN_PICKUP_WAIT; END_IF;
+
+        exit_t := i_time_s + REAL_TO_LINT(pickup_wait);
+        io_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
+        io_schedule[i_unit].Stages[out_count].CalcTime  := REAL_TO_DINT(pickup_wait);
+        io_schedule[i_unit].Stages[out_count].MinTime   := REAL_TO_DINT(pickup_wait);
+        io_schedule[i_unit].Stages[out_count].MaxTime   := REAL_TO_DINT(pickup_wait * 2.0);
+      ELSE
+        io_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
+        io_schedule[i_unit].Stages[out_count].CalcTime  := 0;
+        io_schedule[i_unit].Stages[out_count].MinTime   := 0;
+        io_schedule[i_unit].Stages[out_count].MaxTime   := 0;
+      END_IF;
     END_IF;
 
     is_first := FALSE;

@@ -148,7 +148,7 @@ FUNCTION STC_NoTreatmentStates : BOOL
     free_found := FALSE;
     avoid_uid  := 0;
     FOR p := 0 TO MAX_STATIONS_PER_STEP - 1 DO
-      next_stn := g_program[u].Steps[snap[u].CurStage].Stations[p];
+      next_stn := g_program[u].Steps[snap[u].CurStage + 1].Stations[p];
       IF next_stn = 0 THEN
         EXIT;
       END_IF;
@@ -170,7 +170,7 @@ FUNCTION STC_NoTreatmentStates : BOOL
     (* — Pass 2: all occupied → mark ONE movable unit TO_AVOID — *)
     IF NOT free_found THEN
       FOR p := 0 TO MAX_STATIONS_PER_STEP - 1 DO
-        next_stn := g_program[u].Steps[snap[u].CurStage].Stations[p];
+        next_stn := g_program[u].Steps[snap[u].CurStage + 1].Stations[p];
         IF next_stn = 0 THEN
           EXIT;
         END_IF;

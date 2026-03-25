@@ -47,8 +47,7 @@ VAR_EXTERNAL
   g_dep_overlap      : UDT_JC_DepOverlapType;
   g_dep_pending      : UDT_JC_DepPendingWriteType;
   g_dep_waiting      : ARRAY[1..DEP_MAX_WAITING] OF INT;
-  g_dep_wait_sched   : UDT_JC_TskScheduleType;
-  g_dep_wait_unit    : INT;
+
   (* --- Scheduler Debug --- *)
   g_sched_dbg_tsk_phase : INT;
   g_sched_dbg_dep_phase : INT;
@@ -80,10 +79,6 @@ VAR
   evt_queue      : SIM_FB_EventQueue;
   (* Time from SysTime library *)
   now_ms        : LINT := 0;
-  (* Waiting batch at station 114 *)
-  dep_wait_114_unit  : INT := 0;
-  dep_wait_114_last  : INT := 0;
-  wait_i             : INT;
 END_VAR
 
 (* ============================================================
@@ -176,31 +171,5 @@ evt_queue();
 (* ── Cycle counter ── *)
 cycle_count := cycle_count + 1;
 IF cycle_count > 30000 THEN cycle_count := 0; END_IF;
-
-(* ── WAITING BATCH AT STATION 114 — shortcut for UI ──
-   Scan for NOT_PROCESSED unit at station 114 with valid program.
-   Calculate schedule once when a new unit appears there. *)
-dep_wait_114_unit := 0;
-FOR wait_i := 1 TO 10 DO
-  IF g_unit[wait_i].location = 114
-     AND g_batch[wait_i].State = 0
-     AND g_program[wait_i].ProgramId > 0
-     AND g_batch[wait_i].ProgId = g_program[wait_i].ProgramId THEN
-    dep_wait_114_unit := wait_i;
-  END_IF;
-END_FOR;
-
-IF dep_wait_114_unit <> dep_wait_114_last THEN
-  dep_wait_114_last := dep_wait_114_unit;
-  IF dep_wait_114_unit > 0 THEN
-    STC_CalcSchedule(i_unit := dep_wait_114_unit, i_trans := 1, i_time_s := g_time_s,
-                      io_schedule := g_schedule, io_batch := g_batch, io_program := g_program);
-    g_dep_wait_sched := g_schedule[dep_wait_114_unit];
-    g_dep_wait_unit  := dep_wait_114_unit;
-    g_schedule[dep_wait_114_unit].StageCount := 0;
-  ELSE
-    g_dep_wait_unit := 0;
-  END_IF;
-END_IF;
 
 END_PROGRAM

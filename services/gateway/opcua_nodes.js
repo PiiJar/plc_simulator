@@ -175,7 +175,6 @@ const DEP = {
   pending_unit:  S('g_dep_pending.BatchUnit'),
   pending_stage: S('g_dep_pending.BatchStage'),
   pending_time:  S('g_dep_pending.TimeStamp'),
-  wait_unit:     S('g_dep_wait_unit'),
 };
 
 // DEP waiting array (1..5)

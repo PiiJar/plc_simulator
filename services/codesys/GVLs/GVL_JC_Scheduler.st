@@ -32,8 +32,7 @@ VAR_GLOBAL
   g_dep_activated               : BOOL;  (* handshake TSK ← DEP *)
   g_tsk_stable                  : BOOL;  (* tasksStableFlag: TRUE when last TSK cycle reached READY+conflict_free, cleared only on DEP activation/reset *)
   g_conflict_resolved           : BOOL;  (* TRUE when TSK Analyze found no conflicts — gate for DEP *)
-  g_dep_wait_sched              : UDT_JC_TskScheduleType;  (* last DEP-calculated waiting batch schedule for UI *)
-  g_dep_wait_unit               : INT;  (* unit index of waiting schedule (0=none) *)
+
 
   (* ===== Scheduler Debug Observability ===== *)
   g_sched_dbg_tsk_phase         : INT;  (* TSK scheduler current phase *)
@@ -45,6 +44,7 @@ VAR_GLOBAL
   g_sched_dbg_dep_cur_wait_unit : INT;  (* DEP current waiting batch unit *)
   g_sched_dbg_dep_wait_cnt      : INT;  (* DEP waiting batch count *)
   g_sched_dbg_batch_cnt         : INT;  (* TSK active batch count *)
+
 
   (* ===== TSK Conflict Debug (non-LINT for OPC UA) ===== *)
   g_dbg_tsk_conflict_type       : INT;   (* last analyze: 0=none, 1=TASK_SEQ, 2=COLLISION, 3=HANDOFF *)
