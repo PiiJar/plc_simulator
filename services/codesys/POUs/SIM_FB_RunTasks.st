@@ -281,7 +281,7 @@ FOR i := 1 TO MAX_Transporters DO
       (* Unit moves from lift station → transporter *)
       pick_unit_id := g_station_loc[g_transporter[i].LiftStationTarget].UnitId;
       IF pick_unit_id >= 1 THEN
-        STC_UpdateUnitLocation(i_unit := pick_unit_id, i_location := i);
+        STC_UpdateUnitLocation(i_unit := pick_unit_id, i_location := i, i_ntt_primary := 0);
 
         (* Set batch transfer times for UI progress bar — matches JS behavior *)
         g_batch[pick_unit_id].StartTime := g_time_s;

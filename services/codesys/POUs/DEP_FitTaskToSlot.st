@@ -27,8 +27,6 @@ VAR_INPUT
 END_VAR
 VAR_IN_OUT
   io_idle_slot : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
-END_VAR
-VAR_OUTPUT
   o_result : UDT_JC_DepFitResultType;
 END_VAR
 VAR_EXTERNAL CONSTANT
