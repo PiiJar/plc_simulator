@@ -94,7 +94,7 @@ ELSIF turn = 1 THEN
 
 ELSIF turn = 2 THEN
   (* Last cycle was DEP → TSK's turn.
-     DEP now works on sandbox arrays (g_dep_wk_*), never live globals,
+     DEP now works on sandbox arrays g_dep_wk_xxx, never live globals,
      so TSK can run freely on any cycle. *)
   turn := 1;
 END_IF;
