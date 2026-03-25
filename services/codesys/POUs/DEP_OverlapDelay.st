@@ -1,8 +1,14 @@
 (* ============================================================
    DEP_OverlapDelay — Overlap conflict delay calculation
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC version. Returns delay needed to avoid overlap conflicts.
+   Returns delay needed to avoid overlap conflicts.
    Reads task queues via io_task (sandbox or live).
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION DEP_OverlapDelay : REAL   (* returns delay_s, 0 = no conflict *)

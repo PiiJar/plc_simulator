@@ -1,14 +1,16 @@
 (* ============================================================
    TSK_FB_Scheduler — Main task scheduler state machine
-   ============================================================
-   Ported from taskScheduler.js tick() function (V3.4)
 
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
    One phase per PLC scan cycle. Phase counter advances through:
      0    STOPPED
      1    INIT (count active batches)
      2    NO_TREATMENT_STATES (update unit/batch states)
      1000 SCHEDULE_START
-     1001..1000+N  SCHEDULE per batch (one per tick, N=MAX_Units)
+     1001..1000+N  SCHEDULE per batch (one per tick)
      1900 SCHEDULE_DONE
      2000 TASKS_START (clear task queues)
      2001..2000+N  CREATE_TASKS per batch (one per tick)
@@ -24,6 +26,8 @@
    If resolved → RESTART → new ANALYZE.
    If no conflict → NO_TREATMENT → READY.
    Max iterations to prevent infinite loops.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK TSK_FB_Scheduler

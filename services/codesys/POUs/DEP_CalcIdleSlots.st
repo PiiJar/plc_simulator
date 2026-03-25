@@ -1,8 +1,14 @@
 (* ============================================================
    DEP_CalcIdleSlots — Idle slot calculation per transporter
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC version. Reads task queue via VAR_IN_OUT (sandbox or live).
-   Writes to g_dep_idle_slot via VAR_IN_OUT.
+   Reads task queue via VAR_IN_OUT (sandbox or live).
+   Writes idle slot sets to io_idle_slot per transporter.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION DEP_CalcIdleSlots : BOOL

@@ -1,23 +1,17 @@
 (* ============================================================
-   plc_prg.st — Main program (CODESYS / OPC UA)
+   PLC_PRG — Main program (CODESYS / OPC UA)
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   Gateway communicates via OPC UA — reads/writes GVL variables
-   directly. All multi-field writes are atomic (single OPC UA call).
-
-   Gateway writes:
-     g_station[], g_cfg[], g_unit[], g_batch[], g_program[],
-     g_ntt[], g_avoid_status[], g_time_s,
-     g_production_queue, g_event_ack_seq
-
-   Gateway reads:
-     g_transporter[], g_schedule[], g_task[], g_sim_trans[],
-     g_move[], g_event, g_dep_wait_sched, g_sched_dbg_*
+   Gateway communicates via OPC UA — reads/writes GVL variables.
 
    Command interface (g_cmd_code / g_cmd_param):
-     Gateway writes g_cmd_code + g_cmd_param via OPC UA.
-     PLC processes when g_cmd_code <> 0, then clears it.
      2 = init       (param = station_count)
      3 = clear      (clear all config)
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 PROGRAM PLC_PRG

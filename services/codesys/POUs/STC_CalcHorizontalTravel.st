@@ -1,15 +1,16 @@
 (* ============================================================
-   STC_CalcHorizontalTravel — Horizontal travel time (FUNCTION)
+   STC_CalcHorizontalTravel — Horizontal travel time
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   Calculates only the horizontal travel time between two stations
+   Calculates horizontal travel time between two stations
    (no lift/sink) using precomputed move time table.
-
-   Converted from FUNCTION_BLOCK (STC_FB_CalcHorizontalTravel) to
-   FUNCTION: the caller passes the specific transporter's
-   UDT_JC_MoveTimesType instead of using VAR_EXTERNAL g_move.
-
-   Used by: TSK_FB_Analyze, DEP_FB_FitTaskToSlot, DEP_FB_Scheduler,
-            TSK_FB_NoTreatment
+   Caller passes i_move (UDT_JC_MoveTimesType) for the
+   specific transporter.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_CalcHorizontalTravel : REAL

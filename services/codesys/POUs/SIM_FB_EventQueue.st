@@ -1,22 +1,21 @@
 (* ============================================================
    SIM_FB_EventQueue — Event message queue handler (OPC UA)
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
    Manages a circular 10-slot event queue (g_event).
 
-   - enqueue: caller writes msg fields to g_event_pending,
-     then sets g_event_pending_valid := TRUE.
-     This FB picks it up and adds to queue.
-   - dequeue: Gateway reads g_event.Buffer[Head] directly
-     via OPC UA, then writes g_event_ack_seq to acknowledge.
-     PLC sees ack match → advance head, count--.
+   Enqueue: caller writes msg to g_event_pending, sets
+   g_event_pending_valid := TRUE. This FB picks it up.
 
-   Called every PLC scan from plc_prg (always, not gated by
-   scheduler turn).
+   Dequeue: Gateway reads g_event.Buffer[Head] via OPC UA,
+   then writes g_event_ack_seq to acknowledge.
 
-   OPC UA handshake:
-     PLC:    g_event.Count, g_event.Head, g_event.Buffer[] → readable via OPC UA
-     Gateway: g_event_ack_seq → writable via OPC UA
-     When g_event_ack_seq = g_event.Buffer[Head].Seq: message consumed → next.
+   Called every PLC scan from PLC_PRG.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK SIM_FB_EventQueue

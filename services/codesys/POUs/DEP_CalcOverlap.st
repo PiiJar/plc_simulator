@@ -1,8 +1,14 @@
 (* ============================================================
    DEP_CalcOverlap — Overlap station detection
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC version. Identifies stations covered by 2+ transporters.
+   Identifies stations covered by 2+ transporters.
    Reads g_cfg (read-only config). Writes io_overlap.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION DEP_CalcOverlap : BOOL

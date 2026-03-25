@@ -1,9 +1,15 @@
 (* ============================================================
    STC_SortTasks — Insertion sort task queues by priority
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
    Shared FC: both TSK and DEP call this with different arrays.
-   Priority: emergency (overtime ratio > 1.0) first, then earliest StartTime.
-   Logic ported from transporterTaskScheduler.js sort comparator.
+   Priority: emergency (overtime ratio > 1.0) first, then
+   earliest StartTime.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_SortTasks : BOOL

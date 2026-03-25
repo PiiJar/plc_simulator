@@ -1,8 +1,14 @@
 (* ============================================================
    DEP_FitTaskToSlot — Fit a departure task into idle slots
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC version. Reads idle slots and move times.
+   Reads idle slots and move times.
    Returns fit result via VAR_OUTPUT.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION DEP_FitTaskToSlot : BOOL

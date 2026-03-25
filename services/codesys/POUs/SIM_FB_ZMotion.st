@@ -1,31 +1,30 @@
 (* ============================================================
-   SIM_FB_ZMotion.st — Vertical (Z) motion simulation
-   
+   SIM_FB_ZMotion — Vertical (Z) motion simulation
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
    Simulates 2D transporter lift/sink with realistic physics:
-   - Slow start / fast middle / slow end speed profiles
-   - Different slow zones for wet vs dry stations
-   - Device delays and drip delays
-   
-   Coordinate convention: z=0 is bottom (sunk), z=z_total is top (lifted)
-   
+   slow start / fast middle / slow end speed profiles,
+   different slow zones for wet vs dry stations.
+
    LIFT sequence (z_stage 2-5, 9):
      2: Slow lift    0 → ZPosSlowUp/ZPosSlowDown
      3: Fast lift    → (z_total - ZPosSlowEnd)
      4: Slow end     → z_total
-     5: Dropping     at top, dripping time (blue bar in UI)
+     5: Dropping     at top, dripping time
      9: Drip close   drip tray close delay at top
-   
-   Note: Device delay + treatment overlap is handled by the caller
-   (SIM_FB_RunTasks) in Phase 1 via can_lift check. Stage 1 is
-   no longer used for lift — caller sets z_stage := 2 directly.
-   
+
    SINK sequence (z_stage 6-8):
-     6: Init delay  (device_delay + drip_delay)
+     6: Init delay   (device_delay + drip_delay)
      7: Fast sink    z_total → slow_zone
      8: Slow sink    → 0 mm
-   
+
    Caller sets z_stage and z_timer_s before first call.
    Output 'done' pulses TRUE when sequence completes.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK SIM_FB_ZMotion

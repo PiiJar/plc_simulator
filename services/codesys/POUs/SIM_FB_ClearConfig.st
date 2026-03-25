@@ -1,9 +1,15 @@
 (* ============================================================
-   SIM_FB_ClearConfig.st — Clear all PLC configuration data
-   
+   SIM_FB_ClearConfig — Clear all PLC configuration data
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
    Called by PLC_PRG when Gateway sends cmd=3 (clear_all).
    Zeroes out all stations, transporter configs, transporter
    states and units so the PLC is ready for fresh config upload.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK SIM_FB_ClearConfig

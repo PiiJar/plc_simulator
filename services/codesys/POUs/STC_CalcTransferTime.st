@@ -1,22 +1,22 @@
 (* ============================================================
-   STC_CalcTransferTime — Total transfer time (FUNCTION)
+   STC_CalcTransferTime — Total transfer time calculation
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
    Calculates total transfer time between two stations using
-   precomputed move time table plus operational delays.
-
-   Matches JS calculateTransferTime logic:
+   precomputed move time table plus operational delays:
      p2 = lift_s  + fromDroppingTime + dripTrayDelay
      p3 = travel_s
      p4 = sink_s  + dripTrayDelay    + toDeviceDelay
 
-   NOTE: Lift station device_delay is NOT added because covers
+   Lift station device_delay is NOT added because covers
    are opened during treatment time (overlaps).
 
-   All delay inputs are INT ×10 (tenths of second), same as
-   g_station[].DrippingTime, g_station[].DeviceDelay, g_cfg[].DripTrayDelay.
-
-   Used by: TSK_FB_CalcSchedule, TSK_FB_NoTreatment, DEP_FB_Scheduler,
-            SIM_FB_RunTasks, STC_FB_DispatchTask
+   All delay inputs are INT ×10 (tenths of second).
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_CalcTransferTime : REAL

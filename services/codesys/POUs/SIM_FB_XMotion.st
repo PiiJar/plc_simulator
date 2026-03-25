@@ -1,5 +1,15 @@
 (* ============================================================
-   SIM_FB_XMotion.st — Horizontal motion with accel / decel
+   SIM_FB_XMotion — Horizontal motion with accel / decel
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
+   Trapezoidal velocity profile: accelerate, cruise, decelerate.
+   Clamps position to [x_min..x_max] drive limits.
+   VAR_IN_OUT: x_pos, v_x (modified in place).
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK SIM_FB_XMotion

@@ -1,8 +1,12 @@
 (* ============================================================
-   TWA_FB_CalcLimits.st — Transporter Working Area: X-limit calculation
+   TWA_FB_CalcLimits — Transporter Working Area: X-limit calculation
 
-   Calculates x_min_limit and x_max_limit for all active transporters.
-   Collision avoidance layers:
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
+   Calculates x_min_limit and x_max_limit for all active
+   transporters. Collision avoidance layers:
 
      Pass 1 (per transporter):
        - Station restrictions from g_avoid_status
@@ -14,8 +18,8 @@
        - Bidirectional safety (same direction chase)
 
      Final: Trap validation
-
-   Only X-direction for now (y_avoid_mm reserved for future).
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK TWA_FB_CalcLimits

@@ -1,14 +1,20 @@
 (* ============================================================
-   STC_ShiftSchedule -- Shift schedule + task times
+   STC_ShiftSchedule — Shift schedule + task times
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC version. Propagates a time shift through one unit's
-   schedule stages AND through all matching tasks.
+   Propagates a time shift through one unit's schedule stages
+   AND through all matching tasks.
 
    Positive i_amount = DELAY (shift later),
    Negative i_amount = ADVANCE (shift earlier).
 
-   VAR_IN_OUT: io_schedule, io_task -- caller passes live or
+   VAR_IN_OUT: io_schedule, io_task — caller passes live or
    workspace arrays.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_ShiftSchedule : BOOL

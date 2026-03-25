@@ -1,6 +1,10 @@
 (* ============================================================
-   SIM_FB_RunTasks.st — Simulate transporter task execution
+   SIM_FB_RunTasks — Simulate transporter task execution
 
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
    For each active transporter [1..3], checks whether a new task
    has been assigned (task_id <> running_task_id) and executes
    the full transport cycle:
@@ -12,8 +16,9 @@
      Phase 4  sinking     — Z-sink sequence (stages 6-8)
 
    Also maintains current_station (nearest station) every cycle.
-
    Called once per PLC scan from PLC_PRG.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK SIM_FB_RunTasks

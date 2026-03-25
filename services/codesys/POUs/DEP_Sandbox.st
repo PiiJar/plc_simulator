@@ -1,13 +1,19 @@
 (* ============================================================
    DEP_Sandbox — Sandbox snapshot / restore / clear
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC version. Copies between live globals and DEP workspace
-   arrays via VAR_IN_OUT.
+   Copies between live globals and DEP workspace arrays
+   via VAR_IN_OUT.
 
    Commands:
-     1 = SNAPSHOT  — live → workspace (DEP starts planning)
-     2 = RESTORE   — workspace → live (used at ACTIVATE/REJECT)
+     1 = SNAPSHOT  — live → workspace
+     2 = RESTORE   — workspace → live
      3 = CLEAR     — noop for array-based workspace
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION DEP_Sandbox : BOOL

@@ -1,32 +1,23 @@
 (* ============================================================
    STC_FB_MainScheduler — Master scheduler orchestrator
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
    Manages TSK_FB_Scheduler and DEP_FB_Scheduler calls on
    alternating PLC scan cycles. Ensures they never execute
    on the same cycle.
 
    Synchronization rules:
-     1. Normal: alternate TSK_TURN → DEP_TURN → TSK_TURN ...
+     1. Normal: alternate TSK_TURN → DEP_TURN → TSK_TURN
      2. Skip DEP when TSK is still computing (phase < 10000)
-        → DEP would only sit in WAIT_STABLE anyway
      3. Skip DEP when g_dep_pending.Valid = TRUE
-        → TSK must process the pending data first
-     4. g_tsk_stable is computed internally after each TSK call
+     4. g_tsk_stable is computed after each TSK call
 
-   Turn values:
-     0 = INIT (first scan)
-     1 = TSK_TURN  (TSK called this cycle)
-     2 = DEP_TURN  (DEP called this cycle)
-
-   Inputs:
-     i_run     — enable (FALSE = both schedulers stopped)
-     i_time_s  — absolute simulation time (seconds)
-
-   Outputs:
-     o_tsk_phase  — TSK current phase (forwarded)
-     o_dep_phase  — DEP current phase (forwarded)
-     o_turn       — which scheduler ran this cycle (1/2)
-     o_skip_cnt   — DEP skip count (debug)
+   Turn values: 0=INIT, 1=TSK_TURN, 2=DEP_TURN
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK STC_FB_MainScheduler

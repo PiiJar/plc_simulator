@@ -1,8 +1,16 @@
 (* ============================================================
    STC_SwapTasks — Swap same-station task pairs
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
    Shared FC: both TSK and DEP call this with different arrays.
-   Logic ported from transporterTaskScheduler.js swapSameStationTasks()
+   Swaps adjacent tasks on the same transporter when the first
+   task's sink equals the second task's lift (chain optimization).
+   Returns swap count.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_SwapTasks : INT   (* returns swap count *)

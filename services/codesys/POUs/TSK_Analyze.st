@@ -1,13 +1,18 @@
 (* ============================================================
-   TSK_Analyze -- Conflict analysis for task list
+   TSK_Analyze — Conflict analysis for task list
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC version. Ported from transporterTaskScheduler.js
-   analyzeTaskConflicts(). Read-only: never writes globals.
+   Read-only analysis: never writes globals.
 
    Three conflict checks, each stops at first hit:
-   1. TASK_SEQUENCE
-   2. CROSS_TRANSPORTER_HANDOFF
-   3. TRANSPORTER_COLLISION
+     1. TASK_SEQUENCE
+     2. CROSS_TRANSPORTER_HANDOFF
+     3. TRANSPORTER_COLLISION
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION TSK_Analyze : BOOL

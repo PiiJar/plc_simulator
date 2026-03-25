@@ -1,11 +1,17 @@
 (* ============================================================
-   TSK_NoTreatment -- Create no-treatment transfer tasks
-   ============================================================
-   FC version. Scans units with a target and creates transfer
-   tasks using the g_ntt destination table.
+   TSK_NoTreatment — Create no-treatment transfer tasks
 
-   VAR_IN_OUT: io_task -- only mutable array (inserts NTT tasks).
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
+   Scans units with a target and creates transfer tasks
+   using the g_ntt destination table.
+
+   VAR_IN_OUT: io_task — only mutable array (inserts NTT tasks).
    All other globals are read-only via VAR_EXTERNAL.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION TSK_NoTreatment : BOOL

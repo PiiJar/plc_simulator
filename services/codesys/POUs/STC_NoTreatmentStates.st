@@ -1,15 +1,20 @@
-(* ==========================================================
-   STC_NoTreatmentStates — FC replacement for STC_FB_NoTreatmentStates
-   ----------------------------------------------------------
+(* ============================================================
+   STC_NoTreatmentStates — Non-treatment target state management
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
    Manages non-treatment target states for all units.
 
    Structure:
-     Pass 0 — SNAPSHOT: read unit/batch/station state once into
-              snap[] array. Also detects has_loading flag.
-     Section 1 — PROCESSED: mark last-stage units as PROCESSED.
-     Section 2 — TO_AVOID: clear occupied next-stage stations.
-     Section 3 — TO_LOADING: route one empty unit to loading.
-   ========================================================== *)
+     Pass 0 — SNAPSHOT: read unit/batch/station state into snap[]
+     Section 1 — PROCESSED: mark last-stage units as PROCESSED
+     Section 2 — TO_AVOID: clear occupied next-stage stations
+     Section 3 — TO_LOADING: route one empty unit to loading
+   ------------------------------------------------------------
+   Changes:
+   ============================================================ *)
 
 FUNCTION STC_NoTreatmentStates : BOOL
   VAR_EXTERNAL CONSTANT

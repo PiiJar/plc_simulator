@@ -1,8 +1,14 @@
 (* ============================================================
    STC_FindStation — Find a station by its number
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC replacement for STC_FB_FindStation.
+   Direct lookup in g_station[] by station number.
    Returns x_mm (DINT); other fields via VAR_OUTPUT.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_FindStation : DINT   (* returns x_mm *)

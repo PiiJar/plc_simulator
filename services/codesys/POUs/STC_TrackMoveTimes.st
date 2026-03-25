@@ -1,8 +1,17 @@
-(* STC_TrackMoveTimes — Record phase transition timestamp (0.1s) and update g_move on completion *)
-(* FC replacement for STC_FB_TrackMoveTimes.
-   Called from SIM code whenever a transporter phase changes.
-   Uses g_time_100ms (0.1s ticks). On 4→0 completion, calculates net durations
-   and updates g_move[] with weighted average: new = (old * 4 + measured) / 5 *)
+(* ============================================================
+   STC_TrackMoveTimes — Record phase transition timestamps
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
+   Called from SIM code at each transporter phase change.
+   Uses g_time_100ms (0.1s ticks). On 4→0 completion,
+   calculates net durations and updates g_move[] with
+   weighted average: new = (old * 4 + measured) / 5.
+   ------------------------------------------------------------
+   Changes:
+   ============================================================ *)
 
 FUNCTION STC_TrackMoveTimes : BOOL
 VAR_INPUT

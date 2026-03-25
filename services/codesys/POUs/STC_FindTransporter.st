@@ -1,5 +1,9 @@
 (* ============================================================
-   STC_FindTransporter — Find best covering transporter (FB)
+   STC_FindTransporter — Find best covering transporter
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
    Finds which transporter (1..3) can handle a lift→sink pair
    by checking cfg[].TaskArea[] coverage.
@@ -7,16 +11,13 @@
    When multiple transporters match, scores by:
      1. Fewest queued tasks (load balance)
      2. Closest last-sink to new lift (travel efficiency)
-   JS: selectTransporter scoring logic
 
-   If i_sink_stn = 0, only lift coverage is checked (used when
-   looking for the transporter covering a single station).
+   If i_sink_stn = 0, only lift coverage is checked.
 
-   NOTE: Kept as FUNCTION_BLOCK because MATIEC's C code generator
-   cannot handle ARRAY OF STRUCT as FUNCTION VAR_INPUT parameter.
-   (C++ __SET_VAR macro produces type mismatch.)
-
-   Used by: TSK_FB_CreateTasks, TSK_FB_Scheduler, DEP_FB_Scheduler
+   NOTE: Kept as FUNCTION_BLOCK because MATIEC cannot handle
+   ARRAY OF STRUCT as FUNCTION VAR_INPUT parameter.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK STC_FindTransporter

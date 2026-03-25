@@ -1,8 +1,10 @@
 (* ============================================================
    DEP_FB_Scheduler — Departure scheduler state machine
-   ============================================================
-   Ported from departureScheduler.js tick()
 
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
    Controls batch activation: waiting batches (state=NOT_PROCESSED)
    are checked against idle slots to see if their tasks fit into
    the existing transporter schedule without conflicts.
@@ -33,6 +35,8 @@
      8020   END_DELAY         (stabilization ticks)
      8100   RESTART           (→ WAIT_STABLE)
      9000   REJECT            (restore sandbox, try next batch)
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK DEP_FB_Scheduler

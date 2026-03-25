@@ -1,15 +1,20 @@
 (* ============================================================
    STC_UpdateUnitLocation — Update a unit's location
-   ============================================================
-   FC replacement for STC_FB_UpdateUnitLocation.
-   Sets g_unit[i_unit].location to the given new location.
-   Location 1..MAX_Transporters = transporter, MIN_StationIndex..MAX_StationIndex = station.
-   Updates g_station_loc[location].UnitId + ChangeTime for both.
 
-   When moving to a station (sink / task completion):
-     - Advances batch cur_stage if batch is IN_PROCESS
-     - Updates batch min_time/max_time/cal_time from treatment program
-     - Clears unit target to TO_NONE if target was set (NTT done)
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
+   Sets g_unit[i_unit].location to the given new location.
+   Updates g_station_loc[].UnitId + ChangeTime for both old
+   and new locations.
+
+   When moving to a station:
+     - Advances batch CurStage if batch is IN_PROCESS
+     - Updates batch min/max/cal times from treatment program
+     - Clears unit target if i_ntt_primary = 1
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_UpdateUnitLocation : BOOL

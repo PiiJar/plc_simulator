@@ -1,14 +1,20 @@
 (* ============================================================
-   TSK_Resolve -- Conflict resolution matching JS resolveConflict()
+   TSK_Resolve — Conflict resolution
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC version. Four sequential phases:
+   Four sequential resolution phases:
      1. ADVANCE (chain bottleneck + suffix flex_down)
      2. DELAY (single-stage flex_up)
      3. PRECEDING_DELAY (conf stage-1)
      4. DELAY_PREV_PAST_NEXT (force order swap)
 
-   VAR_IN_OUT: io_schedule, io_task, io_batch -- caller passes
-   live or workspace arrays.
+   VAR_IN_OUT: io_schedule, io_task, io_batch, io_locks,
+   io_lock_cnt — caller passes live or workspace arrays.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION TSK_Resolve : BOOL

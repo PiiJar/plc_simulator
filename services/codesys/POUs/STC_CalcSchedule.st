@@ -1,11 +1,15 @@
 (* ============================================================
    STC_CalcSchedule — Calculate batch schedule for one unit
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
    Shared FC: both TSK and DEP call this with different arrays.
-     TSK: io_schedule/io_batch/io_program = live globals
-     DEP: io_schedule/io_batch/io_program = g_dep_wk_* sandbox
-
-   Logic ported from transporterTaskScheduler.js calculateBatchSchedule()
+   Calculates start/finish times for each treatment stage based
+   on elapsed time, cal_time and transfer durations.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_CalcSchedule : BOOL

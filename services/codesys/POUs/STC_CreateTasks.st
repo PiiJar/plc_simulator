@@ -1,11 +1,15 @@
 (* ============================================================
    STC_CreateTasks — Build task list from schedule for one unit
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
    Shared FC: both TSK and DEP call this with different arrays.
-     TSK: io_schedule/io_task = live globals
-     DEP: io_schedule/io_task = g_dep_wk_* sandbox
-
-   Logic ported from transporterTaskScheduler.js createTaskListFromSchedule()
+   Creates transporter tasks from the calculated schedule stages
+   and appends them to the task queues.
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_CreateTasks : BOOL

@@ -1,23 +1,19 @@
 (* ============================================================
    STC_DispatchTask — Validate and dispatch tasks to transporters
-   ============================================================
-   FC replacement for STC_FB_DispatchTask.
-   Called every PLC scan from MainScheduler (before TSK/DEP).
-   For each idle transporter with queued tasks:
 
-     1. Skip if transporter not idle (phase <> 0) or queue empty
-     2. Time check: is start_time close enough?
-        travel_time_to_lift + 3s >= time_until_start → proceed
-     3. Sink station free check:
-        a) Original sink free → use it
-        b) Not free → search alternative parallel stations
-           (from g_program[].Steps[] or g_ntt[] for stage=0)
-        c) Pick the station with oldest change_time (longest empty)
-        d) No free alternative → skip, don't dispatch
-     4. Conflict check: no other active transporter targeting
-        same lift or sink station
-     5. Dispatch: write task_id, lift_station, sink_station
-        to g_transporter → RunTasks picks it up
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
+   ============================================================
+   Called every PLC scan from MainScheduler.
+   For each idle transporter with queued tasks:
+     1. Skip if transporter not idle or queue empty
+     2. Time check: start_time close enough?
+     3. Sink station free check (with parallel alternatives)
+     4. Conflict check against active transporters
+     5. Dispatch: write to g_transporter → RunTasks picks it up
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_DispatchTask : BOOL

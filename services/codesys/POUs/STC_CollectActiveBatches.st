@@ -1,12 +1,17 @@
 (* ============================================================
-   STC_CollectActiveBatches — Filter active/waiting batches to list
+   STC_CollectActiveBatches — Filter active/waiting batches
+
+   Company : Galvatek part of the John Cockerill Group
+   Author  : Jarmo Piipponen
+   Created : 25.03.2026
    ============================================================
-   FC replacement for STC_FB_CollectActiveBatches.
    Returns count of matching batches; fills o_list via VAR_OUTPUT.
 
    Mode:
      i_mode = 0 — active (in-production) batches
      i_mode = 1 — waiting batches (station 114 lookup)
+   ------------------------------------------------------------
+   Changes:
    ============================================================ *)
 
 FUNCTION STC_CollectActiveBatches : INT   (* returns count *)
