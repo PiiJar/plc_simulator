@@ -58,7 +58,7 @@ END_VAR
 VAR
   tsk_sched    : TSK_FB_Scheduler;
   dep_sched    : DEP_FB_Scheduler;
-  dispatch     : STC_FB_DispatchTask;
+  (* dispatch — now FC STC_DispatchTask, no instance needed *)
   turn         : INT := 0;   (* 0=init, 1=TSK, 2=DEP *)
   skip_cnt     : INT := 0;
   tsk_phase    : INT := 0;
@@ -77,7 +77,7 @@ IF NOT i_run THEN
 END_IF;
 
 (* ── Dispatch tasks to idle transporters (every scan) ── *)
-dispatch();
+STC_DispatchTask();
 
 (* ── Determine this cycle's turn ── *)
 IF turn = 0 THEN
@@ -102,7 +102,9 @@ ELSIF turn = 1 THEN
   END_IF;
 
 ELSIF turn = 2 THEN
-  (* Last cycle was DEP → TSK's turn *)
+  (* Last cycle was DEP → TSK's turn.
+     DEP now works on sandbox arrays (g_dep_wk_*), never live globals,
+     so TSK can run freely on any cycle. *)
   turn := 1;
 END_IF;
 

@@ -452,6 +452,12 @@ class OpcuaAdapter extends PlcAdapter {
       for (const k of Object.keys(nodes.SCHED_DEBUG)) {
         schedulerDebug[k] = toNum(v[`sched.${k}`]);
       }
+      // Program CalTime snapshot per unit (g_dbg_prog_cal[1..10])
+      schedulerDebug.prog_cal = {};
+      for (let u = 1; u <= 10; u++) {
+        const val = toNum(v[`sched.prog_cal.${u}`]);
+        if (val !== 0) schedulerDebug.prog_cal[u] = val;
+      }
 
       // ── Parse events (for event consumer) ─────────────────
       const eventHead = {

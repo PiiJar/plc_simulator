@@ -89,6 +89,7 @@ let simRunning = false;
 let plcUnits = [];
 let depState = {};
 let schedulerDebug = {};
+let prevSchedSnapshot = '';  // JSON string for change detection
 let twaLimits = { 1: { x_min: 0, x_max: 0 }, 2: { x_min: 0, x_max: 0 }, 3: { x_min: 0, x_max: 0 } };
 let plcTaskQueues = { 1: { count: 0, tasks: [] }, 2: { count: 0, tasks: [] }, 3: { count: 0, tasks: [] } };
 let plcSchedules = [];
@@ -148,6 +149,40 @@ function startPolling() {
       depState = state.depState;
       schedulerDebug = state.schedulerDebug;
       plcAlive = true;
+
+      // ── Scheduler conflict debug log ──────────────────────
+      if (schedulerDebug && schedulerDebug.conflict_type !== undefined) {
+        const snap = JSON.stringify({
+          ct: schedulerDebug.conflict_type,
+          ci: schedulerDebug.conflict_iter,
+          cu: schedulerDebug.conf_unit,
+          cs: schedulerDebug.conf_stage,
+          bu: schedulerDebug.blocked_unit,
+          bs: schedulerDebug.blocked_stage,
+          df: schedulerDebug.deficit,
+          sc: schedulerDebug.stretch_cnt,
+          ta: schedulerDebug.total_adv,
+          td: schedulerDebug.total_delay,
+          pc: schedulerDebug.prog_cal,
+        });
+        if (snap !== prevSchedSnapshot) {
+          prevSchedSnapshot = snap;
+          const CTYPE = ['none', 'TASK_SEQ', 'COLLISION', 'HANDOFF'];
+          const ct = schedulerDebug.conflict_type || 0;
+          const parts = [`[TSK-DBG] cycle phase=${schedulerDebug.tsk_phase}`];
+          if (ct > 0) {
+            parts.push(`conflict=${CTYPE[ct]||ct} U${schedulerDebug.conf_unit}s${schedulerDebug.conf_stage}←U${schedulerDebug.blocked_unit}s${schedulerDebug.blocked_stage} deficit=${schedulerDebug.deficit}s`);
+          } else {
+            parts.push('no-conflict');
+          }
+          parts.push(`iter=${schedulerDebug.conflict_iter} stretches=${schedulerDebug.stretch_cnt} adv=${schedulerDebug.total_adv}s delay=${schedulerDebug.total_delay}s`);
+          if (schedulerDebug.prog_cal) {
+            const pc = Object.entries(schedulerDebug.prog_cal).map(([u, v]) => `U${u}:${v}s`).join(' ');
+            if (pc) parts.push(`prog_cal=[${pc}]`);
+          }
+          console.log(parts.join(' | '));
+        }
+      }
 
       if (plcMeta.init_done && !simRunning) {
         simRunning = true;

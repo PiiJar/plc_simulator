@@ -7,9 +7,10 @@
    are checked against idle slots to see if their tasks fit into
    the existing transporter schedule without conflicts.
 
-   Uses the "wrapper approach": works directly on globals while
-   TSK is paused at phase >= 10000. Sandbox is a backup for
-   rollback on REJECT.
+   Uses sandbox workspace arrays (g_dep_wk_xxx): DEP never touches
+   live globals. Sandbox SNAPSHOT copies live → workspace at INIT.
+   All computation happens on workspace arrays. Only ACTIVATE
+   writes results to g_dep_pending for TSK to apply.
 
    Phase flow:
      0      STOPPED
@@ -58,7 +59,6 @@ VAR_EXTERNAL
   g_station          : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_cfg              : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_transporter      : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_dep_sandbox      : UDT_JC_DepSandboxType;
   g_dep_idle_slot   : ARRAY[1..MAX_Transporters] OF UDT_JC_DepIdleSlotSetType;
   g_dep_overlap      : UDT_JC_DepOverlapType;
   g_dep_pending      : UDT_JC_DepPendingWriteType;
@@ -69,6 +69,10 @@ VAR_EXTERNAL
   g_dep_waiting_count : INT;
   g_dep_wait_sched    : UDT_JC_TskScheduleType;
   g_dep_wait_unit     : INT;
+  g_dep_wk_schedule  : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_dep_wk_task      : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_dep_wk_program   : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_dep_wk_batch     : ARRAY[1..MAX_Units] OF UDT_BatchType;
 END_VAR
 VAR_OUTPUT
   o_phase     : INT;
@@ -119,20 +123,10 @@ VAR
   (* ── End delay counter ── *)
   end_delay_cnt : INT;
 
-  (* ── Sub-FB instances ── *)
-  fb_sandbox      : DEP_FB_Sandbox;
-  fb_overlap      : DEP_FB_CalcOverlap;
-  fb_idle_slots   : DEP_FB_CalcIdleSlots;
-  fb_fit          : DEP_FB_FitTaskToSlot;
-  fb_ovlp_delay   : DEP_FB_OverlapDelay;
-  fb_calc_sched   : TSK_FB_CalcSchedule;
-  fb_create_tasks : TSK_FB_CreateTasks;
-  fb_swap_tasks   : TSK_FB_SwapTasks;
-  fb_clear        : STC_FB_ClearTaskQueues;
-  fb_sort         : STC_FB_SortTaskQueue;
-  fb_collect_all  : STC_FB_CollectActiveBatches;
-  fb_collect_wait : STC_FB_CollectActiveBatches;
+  (* Sub-FB instances removed — CollectActiveBatches is now FC *)
   fb_find         : STC_FindTransporter;
+  (* ── FC result cache ── *)
+  fit_result      : UDT_JC_DepFitResultType;
 
   (* ── Temp variables ── *)
   ti : INT;
@@ -220,15 +214,13 @@ ELSIF phase = 1 THEN
 (* PHASE 100: INIT — snapshot sandbox, find waiting batches    *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 100 THEN
-  (* Snapshot globals → sandbox (backup for rollback) *)
-  fb_sandbox(i_cmd := 1);
+  (* Snapshot live → workspace (DEP works only on workspace) *)
+  DEP_Sandbox(i_cmd := 1,
+    io_wk_schedule := g_dep_wk_schedule, io_wk_batch := g_dep_wk_batch,
+    io_wk_program := g_dep_wk_program, io_wk_task := g_dep_wk_task);
 
   (* Find waiting batches (state = NOT_PROCESSED) *)
-  fb_collect_wait(i_mode := 1);
-  waiting_cnt := fb_collect_wait.o_count;
-  FOR ui := 1 TO waiting_cnt DO
-    waiting_list[ui] := fb_collect_wait.o_list[ui];
-  END_FOR;
+  waiting_cnt := STC_CollectActiveBatches(i_mode := 1, o_list => waiting_list);
 
   o_wait_cnt := waiting_cnt;
   o_reject_cnt := 0;
@@ -240,16 +232,11 @@ ELSIF phase = 100 THEN
   END_FOR;
 
   (* Build active batch list for rebuild phases *)
-  fb_collect_all(i_mode := 0);
-  batch_count := fb_collect_all.o_count;
-  FOR ui := 1 TO batch_count DO
-    batch_list[ui] := fb_collect_all.o_list[ui];
-  END_FOR;
+  batch_count := STC_CollectActiveBatches(i_mode := 0, o_list => batch_list);
 
   IF waiting_cnt = 0 THEN
     (* No waiting batches → back to waiting *)
-    fb_sandbox(i_cmd := 3);   (* clear sandbox *)
-    next_phase := 1;
+    next_phase := 1;   (* workspace discarded; re-snapshot on next INIT *)
   ELSE
     cur_wait_idx := 1;
     next_phase := 150;
@@ -262,10 +249,10 @@ ELSIF phase = 150 THEN
   (* Insertion sort waiting list by g_batch[unit].StartTime ascending *)
   FOR si := 2 TO waiting_cnt DO
     tmp_unit := waiting_list[si];
-    tmp_key  := g_batch[tmp_unit].StartTime;
+    tmp_key  := g_dep_wk_batch[tmp_unit].StartTime;
     ji := 0;
     FOR ji := si - 1 TO 1 BY -1 DO
-      IF g_batch[waiting_list[ji]].StartTime > tmp_key THEN
+      IF g_dep_wk_batch[waiting_list[ji]].StartTime > tmp_key THEN
         waiting_list[ji + 1] := waiting_list[ji];
       ELSE
         EXIT;
@@ -279,7 +266,7 @@ ELSIF phase = 150 THEN
 (* PHASE 200: CALC_OVERLAP — compute overlap stations          *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 200 THEN
-  fb_overlap();
+  DEP_CalcOverlap(io_overlap := g_dep_overlap);
   next_phase := 1000;
 
 (* ════════════════════════════════════════════════════════════ *)
@@ -287,9 +274,7 @@ ELSIF phase = 200 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1000 THEN
   IF cur_wait_idx > waiting_cnt THEN
-    (* All batches processed, none activated → back to waiting *)
-    fb_sandbox(i_cmd := 2);   (* restore globals from snapshot *)
-    fb_sandbox(i_cmd := 3);   (* clear sandbox *)
+    (* All batches processed, none activated — workspace discarded *)
     next_phase := 1;
   ELSE
     cur_wait_unit := waiting_list[cur_wait_idx];
@@ -312,19 +297,28 @@ ELSIF phase = 1010 THEN
   IF sched_trans = 0 THEN sched_trans := 1; END_IF;
 
   (* Calculate schedule using (possibly shifted) base time *)
-  fb_calc_sched(
+  STC_CalcSchedule(
     i_unit   := cur_wait_unit,
     i_trans  := sched_trans,
-    i_time_s := sched_base_time
+    i_time_s := sched_base_time,
+    io_schedule := g_dep_wk_schedule,
+    io_batch    := g_dep_wk_batch,
+    io_program  := g_dep_wk_program
   );
 
   next_phase := 1020;
 
 (* ════════════════════════════════════════════════════════════ *)
-(* PHASE 1020: CLEAR_TASKS — clear all task queues             *)
+(* PHASE 1020: CLEAR_TASKS — clear sandbox task queues         *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1020 THEN
-  fb_clear();
+  (* Clear workspace task queues (not live g_task) *)
+  FOR ti := 1 TO MAX_Transporters DO
+    g_dep_wk_task[ti].Count := 0;
+    FOR qi := 1 TO 30 DO
+      g_dep_wk_task[ti].Queue[qi].Unit := 0;
+    END_FOR;
+  END_FOR;
   create_idx := 1;
   next_phase := 1021;
 
@@ -333,7 +327,7 @@ ELSIF phase = 1020 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1021 THEN
   IF create_idx <= batch_count THEN
-    fb_create_tasks(i_unit := batch_list[create_idx]);
+    STC_CreateTasks(i_unit := batch_list[create_idx], io_schedule := g_dep_wk_schedule, io_task := g_dep_wk_task);
     create_idx := create_idx + 1;
     next_phase := 1021;   (* stay until all active batches done *)
   ELSIF create_idx = batch_count + 1 THEN
@@ -341,7 +335,7 @@ ELSIF phase = 1021 THEN
        so phase 1030 EXTRACT_WAIT can find and separate them.
        JS: CHECK_CREATE_TASKS creates tasks from ALL schedules,
        then splits into existingTasks and waitingBatchTasks. *)
-    fb_create_tasks(i_unit := cur_wait_unit);
+    STC_CreateTasks(i_unit := cur_wait_unit, io_schedule := g_dep_wk_schedule, io_task := g_dep_wk_task);
     create_idx := create_idx + 1;
     next_phase := 1022;   (* waiting batch done → sort *)
   ELSE
@@ -352,14 +346,14 @@ ELSIF phase = 1021 THEN
 (* PHASE 1022: SORT_TASKS — sort all queues by start_time      *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1022 THEN
-  fb_sort(i_trans := 0);
+  STC_SortTasks(i_trans := 0, i_time_s := i_time_s, io_task := g_dep_wk_task, io_batch := g_dep_wk_batch);
   next_phase := 1023;
 
 (* ════════════════════════════════════════════════════════════ *)
 (* PHASE 1023: SWAP_TASKS — swap same-station pairs            *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1023 THEN
-  fb_swap_tasks();
+  STC_SwapTasks(io_task := g_dep_wk_task);
   next_phase := 1030;
 
 (* ════════════════════════════════════════════════════════════ *)
@@ -371,27 +365,27 @@ ELSIF phase = 1030 THEN
 
   FOR ti := 1 TO MAX_Transporters DO
     write_idx := 0;
-    FOR qi := 1 TO g_task[ti].Count DO
-      IF g_task[ti].Queue[qi].Unit = cur_wait_unit THEN
+    FOR qi := 1 TO g_dep_wk_task[ti].Count DO
+      IF g_dep_wk_task[ti].Queue[qi].Unit = cur_wait_unit THEN
         (* Copy to waiting task array *)
         w_task_cnt := w_task_cnt + 1;
         IF w_task_cnt <= 30 THEN
-          w_tasks[w_task_cnt] := g_task[ti].Queue[qi];
+          w_tasks[w_task_cnt] := g_dep_wk_task[ti].Queue[qi];
           w_trans[w_task_cnt] := ti;
         END_IF;
       ELSE
         (* Keep in queue — shift down *)
         write_idx := write_idx + 1;
         IF write_idx <> qi THEN
-          g_task[ti].Queue[write_idx] := g_task[ti].Queue[qi];
+          g_dep_wk_task[ti].Queue[write_idx] := g_dep_wk_task[ti].Queue[qi];
         END_IF;
       END_IF;
     END_FOR;
     (* Clear remaining slots *)
-    FOR qi := write_idx + 1 TO g_task[ti].Count DO
-      g_task[ti].Queue[qi].Unit := 0;
+    FOR qi := write_idx + 1 TO g_dep_wk_task[ti].Count DO
+      g_dep_wk_task[ti].Queue[qi].Unit := 0;
     END_FOR;
-    g_task[ti].Count := write_idx;
+    g_dep_wk_task[ti].Count := write_idx;
   END_FOR;
 
   (* ── G04: Inject in-flight pseudo-tasks for active transporters ── *)
@@ -403,35 +397,35 @@ ELSIF phase = 1030 THEN
   FOR ti := 1 TO MAX_Transporters DO
     IF g_transporter[ti].Phase >= 1 AND g_transporter[ti].Phase <= 4 THEN
       est_finish := i_time_s + DINT_TO_LINT(g_transporter[ti].TaskRemainingTime);
-      IF est_finish > i_time_s AND g_task[ti].Count < 30 THEN
+      IF est_finish > i_time_s AND g_dep_wk_task[ti].Count < 30 THEN
         (* ★ FIX: Remove schedule-derived task matching in-flight transfer
            to avoid duplicate (JS: inFlightTasks replace schedule tasks) *)
-        FOR qi := 1 TO g_task[ti].Count DO
-          IF g_task[ti].Queue[qi].LiftStationTarget = g_transporter[ti].LiftStationTarget
-             AND g_task[ti].Queue[qi].SinkStationTarget = g_transporter[ti].SinkStationTarget THEN
-            FOR bi := qi TO g_task[ti].Count - 1 DO
-              g_task[ti].Queue[bi] := g_task[ti].Queue[bi + 1];
+        FOR qi := 1 TO g_dep_wk_task[ti].Count DO
+          IF g_dep_wk_task[ti].Queue[qi].LiftStationTarget = g_transporter[ti].LiftStationTarget
+             AND g_dep_wk_task[ti].Queue[qi].SinkStationTarget = g_transporter[ti].SinkStationTarget THEN
+            FOR bi := qi TO g_dep_wk_task[ti].Count - 1 DO
+              g_dep_wk_task[ti].Queue[bi] := g_dep_wk_task[ti].Queue[bi + 1];
             END_FOR;
-            g_task[ti].Queue[g_task[ti].Count].Unit := 0;
-            g_task[ti].Count := g_task[ti].Count - 1;
+            g_dep_wk_task[ti].Queue[g_dep_wk_task[ti].Count].Unit := 0;
+            g_dep_wk_task[ti].Count := g_dep_wk_task[ti].Count - 1;
             EXIT;
           END_IF;
         END_FOR;
         (* Shift existing tasks up by 1 to make room at position 1 *)
-        FOR qi := g_task[ti].Count TO 1 BY -1 DO
-          g_task[ti].Queue[qi + 1] := g_task[ti].Queue[qi];
+        FOR qi := g_dep_wk_task[ti].Count TO 1 BY -1 DO
+          g_dep_wk_task[ti].Queue[qi + 1] := g_dep_wk_task[ti].Queue[qi];
         END_FOR;
         (* Insert in-flight pseudo-task at position 1 *)
-        g_task[ti].Queue[1].Unit              := 0;    (* pseudo — no unit *)
-        g_task[ti].Queue[1].Stage             := -1;   (* pseudo-stage marker *)
-        g_task[ti].Queue[1].LiftStationTarget := g_transporter[ti].LiftStationTarget;
-        g_task[ti].Queue[1].SinkStationTarget := g_transporter[ti].SinkStationTarget;
-        g_task[ti].Queue[1].StartTime         := i_time_s;
-        g_task[ti].Queue[1].FinishTime        := est_finish;
-        g_task[ti].Queue[1].CalcTime          := 0;
-        g_task[ti].Queue[1].MinTime           := 0;
-        g_task[ti].Queue[1].MaxTime           := 0;
-        g_task[ti].Count := g_task[ti].Count + 1;
+        g_dep_wk_task[ti].Queue[1].Unit              := 0;    (* pseudo — no unit *)
+        g_dep_wk_task[ti].Queue[1].Stage             := -1;   (* pseudo-stage marker *)
+        g_dep_wk_task[ti].Queue[1].LiftStationTarget := g_transporter[ti].LiftStationTarget;
+        g_dep_wk_task[ti].Queue[1].SinkStationTarget := g_transporter[ti].SinkStationTarget;
+        g_dep_wk_task[ti].Queue[1].StartTime         := i_time_s;
+        g_dep_wk_task[ti].Queue[1].FinishTime        := est_finish;
+        g_dep_wk_task[ti].Queue[1].CalcTime          := 0;
+        g_dep_wk_task[ti].Queue[1].MinTime           := 0;
+        g_dep_wk_task[ti].Queue[1].MaxTime           := 0;
+        g_dep_wk_task[ti].Count := g_dep_wk_task[ti].Count + 1;
       END_IF;
     END_IF;
   END_FOR;
@@ -443,7 +437,8 @@ ELSIF phase = 1030 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1040 THEN
   FOR ti := 1 TO MAX_Transporters DO
-    fb_idle_slots(i_trans := ti, i_time_s := i_time_s);
+    DEP_CalcIdleSlots(i_trans := ti, i_time_s := i_time_s,
+                      io_task := g_dep_wk_task, io_idle_slot := g_dep_idle_slot);
   END_FOR;
   cur_task_idx := 1;
   next_phase := 2000;
@@ -464,13 +459,13 @@ ELSIF phase = 2000 THEN
      Otherwise Stages[1] = first treatment directly. *)
   first_stn := 0;
   prepend_offset := 0;
-  IF g_schedule[cur_wait_unit].StageCount >= 1 THEN
-    first_stn := g_schedule[cur_wait_unit].Stages[1].station;
+  IF g_dep_wk_schedule[cur_wait_unit].StageCount >= 1 THEN
+    first_stn := g_dep_wk_schedule[cur_wait_unit].Stages[1].station;
     (* Detect prepend: first schedule stage = loading station with zero calc_time *)
     IF first_stn = loading_stn
-       AND g_schedule[cur_wait_unit].Stages[1].CalcTime = 0
-       AND g_schedule[cur_wait_unit].StageCount >= 2 THEN
-      first_stn := g_schedule[cur_wait_unit].Stages[2].station;
+       AND g_dep_wk_schedule[cur_wait_unit].Stages[1].CalcTime = 0
+       AND g_dep_wk_schedule[cur_wait_unit].StageCount >= 2 THEN
+      first_stn := g_dep_wk_schedule[cur_wait_unit].Stages[2].station;
       prepend_offset := 1;
     END_IF;
   END_IF;
@@ -552,16 +547,18 @@ ELSIF phase = 2000 THEN
         END_IF;
 
         (* ★ G10: Overlap check for stage 0 *)
-        fb_ovlp_delay(
+        stage0_ovlp := DEP_OverlapDelay(
           i_lift_stn   := loading_stn,
           i_sink_stn   := first_stn,
           i_trans_id   := sched_trans,
           i_task_start := s0_earliest,
           i_task_end   := s0_earliest + s0_task_dur,
-          i_margin_s   := CONFLICT_MARGIN_S
+          i_margin_s   := CONFLICT_MARGIN_S,
+          io_task      := g_dep_wk_task,
+          io_overlap   := g_dep_overlap
         );
-        IF fb_ovlp_delay.o_delay_s > 0.0 THEN
-          s0_earliest := s0_earliest + REAL_TO_LINT(fb_ovlp_delay.o_delay_s);
+        IF stage0_ovlp > 0.0 THEN
+          s0_earliest := s0_earliest + REAL_TO_LINT(stage0_ovlp);
         END_IF;
 
         (* Does the task fit? *)
@@ -629,18 +626,19 @@ ELSIF phase = 2001 THEN
     ti := w_trans[cur_task_idx];
 
     (* Overlap delay check *)
-    fb_ovlp_delay(
+    ovlp_delay_s := DEP_OverlapDelay(
       i_lift_stn   := w_tasks[cur_task_idx].LiftStationTarget,
       i_sink_stn   := w_tasks[cur_task_idx].SinkStationTarget,
       i_trans_id   := ti,
       i_task_start := w_tasks[cur_task_idx].StartTime,
       i_task_end   := w_tasks[cur_task_idx].FinishTime,
-      i_margin_s   := CONFLICT_MARGIN_S
+      i_margin_s   := CONFLICT_MARGIN_S,
+      io_task      := g_dep_wk_task,
+      io_overlap   := g_dep_overlap
     );
-    ovlp_delay_s := fb_ovlp_delay.o_delay_s;
 
     (* Idle-slot fit check *)
-    fb_fit(
+    DEP_FitTaskToSlot(
       i_lift_stn     := w_tasks[cur_task_idx].LiftStationTarget,
       i_sink_stn     := w_tasks[cur_task_idx].SinkStationTarget,
       i_trans_id     := ti,
@@ -651,16 +649,18 @@ ELSIF phase = 2001 THEN
       i_max_time_s   := w_tasks[cur_task_idx].MaxTime,
       i_flex_factor  := FLEX_FACTOR,
       i_margin_s     := MARGIN_S,
-      i_conflict_margin_s := CONFLICT_MARGIN_S
+      i_conflict_margin_s := CONFLICT_MARGIN_S,
+      io_idle_slot   := g_dep_idle_slot,
+      o_result       := fit_result
     );
 
-    total_delay_s := ovlp_delay_s + DINT_TO_REAL(fb_fit.o_result.DelayTime);
+    total_delay_s := ovlp_delay_s + DINT_TO_REAL(fit_result.DelayTime);
 
-    IF fb_fit.o_result.Fits THEN
+    IF fit_result.Fits THEN
       (* ★ G11: Trim idle slot after successful stage 1+ fit *)
-      IF fb_fit.o_result.SlotIdx >= 1 AND fb_fit.o_result.SlotIdx <= DEP_MAX_IDLE_SLOTS THEN
-        g_dep_idle_slot[ti].Slots[fb_fit.o_result.SlotIdx].StartTime :=
-          fb_fit.o_result.TaskEndTime;
+      IF fit_result.SlotIdx >= 1 AND fit_result.SlotIdx <= DEP_MAX_IDLE_SLOTS THEN
+        g_dep_idle_slot[ti].Slots[fit_result.SlotIdx].StartTime :=
+          fit_result.TaskEndTime;
       END_IF;
 
       IF total_delay_s <= MARGIN_S THEN
@@ -676,12 +676,12 @@ ELSIF phase = 2001 THEN
       END_IF;
     ELSE
       (* ★ G02: Does not fit → try backward chaining *)
-      IF fb_fit.o_result.NeedExtraTime <= 0 THEN
+      IF fit_result.NeedExtraTime <= 0 THEN
         (* No slot at all → reject *)
         next_phase := 9000;
       ELSE
         (* Walk backward through w_tasks, accumulate flex *)
-        remaining_need := DINT_TO_REAL(fb_fit.o_result.NeedExtraTime);
+        remaining_need := DINT_TO_REAL(fit_result.NeedExtraTime);
         chain_delay_cnt := 0;
         chain_ok := FALSE;
 
@@ -722,13 +722,13 @@ ELSIF phase = 2001 THEN
               ELSIF chain_delays[ci].Target = 1 THEN
                 prog_idx := chain_delays[ci].Stage;  (* Stage = ProgramStage = direct g_program index *)
                 IF prog_idx >= 1 AND prog_idx <= 30 THEN
-                  old_cal := g_program[cur_wait_unit].Steps[prog_idx].CalTime;
-                  max_cal := g_program[cur_wait_unit].Steps[prog_idx].MaxTime;
+                  old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
+                  max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
                   new_cal := old_cal + chain_delays[ci].DelayTime;
                   IF new_cal > max_cal AND max_cal > 0 THEN
                     new_cal := max_cal;
                   END_IF;
-                  g_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
+                  g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
                 END_IF;
               END_IF;
             END_IF;
@@ -739,13 +739,13 @@ ELSIF phase = 2001 THEN
           IF total_delay_s > MARGIN_S THEN
             prog_idx := si;  (* si = task.Stage = ProgramStage = direct g_program index *)
             IF prog_idx >= 1 AND prog_idx <= 30 THEN
-              old_cal := g_program[cur_wait_unit].Steps[prog_idx].CalTime;
-              max_cal := g_program[cur_wait_unit].Steps[prog_idx].MaxTime;
+              old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
+              max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
               new_cal := old_cal + REAL_TO_DINT(total_delay_s);
               IF new_cal > max_cal AND max_cal > 0 THEN
                 new_cal := max_cal;
               END_IF;
-              g_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
+              g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
             END_IF;
           END_IF;
 
@@ -778,13 +778,13 @@ ELSIF phase = 3000 THEN
          Stage = ProgramStage = direct g_program.Steps[] index. *)
       prog_idx := delay_stage;
       IF prog_idx >= 1 AND prog_idx <= 30 THEN
-        old_cal := g_program[cur_wait_unit].Steps[prog_idx].CalTime;
-        max_cal := g_program[cur_wait_unit].Steps[prog_idx].MaxTime;
+        old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
+        max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
         new_cal := old_cal + REAL_TO_DINT(delay_amount);
         IF new_cal > max_cal AND max_cal > 0 THEN
           new_cal := max_cal;
         END_IF;
-        g_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
+        g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
       END_IF;
     END_IF;
     (* Recalculate: schedule → tasks → idle → fit *)
@@ -795,10 +795,10 @@ ELSIF phase = 3000 THEN
 (* PHASE 8000: ACTIVATE — commit changes to pending write      *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 8000 THEN
-  (* Store pending write data *)
+  (* Store pending write data from workspace *)
   FOR ui := 1 TO MAX_Units DO
-    g_dep_pending.Programs[ui] := g_program[ui];
-    g_dep_pending.Schedule[ui] := g_schedule[ui];
+    g_dep_pending.Programs[ui] := g_dep_wk_program[ui];
+    g_dep_pending.Schedule[ui] := g_dep_wk_schedule[ui];
   END_FOR;
   g_dep_pending.BatchUnit  := cur_wait_unit;
   g_dep_pending.BatchStage := 0;    (* cur_stage = 0, JS: batch.Stage = 0 *)
@@ -830,9 +830,7 @@ ELSIF phase = 8000 THEN
   g_dep_pending.TimeStamp      := i_time_s;
   g_dep_pending.Valid        := TRUE;
 
-  (* Restore globals from sandbox (undo DEP's temp changes) *)
-  fb_sandbox(i_cmd := 2);
-  fb_sandbox(i_cmd := 3);   (* clear sandbox *)
+  (* DEP never touched live globals — no restore needed *)
 
   g_dep_activated := TRUE;
   o_activated := TRUE;
@@ -878,18 +876,19 @@ ELSIF phase = 8100 THEN
 (* PHASE 9000: REJECT — restore, try next batch                *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 9000 THEN
-  (* Restore globals from sandbox (undo changes for this batch) *)
-  fb_sandbox(i_cmd := 2);
+  (* Re-snapshot live → workspace to undo this batch's changes *)
+  DEP_Sandbox(i_cmd := 1,
+    io_wk_schedule := g_dep_wk_schedule, io_wk_batch := g_dep_wk_batch,
+    io_wk_program := g_dep_wk_program, io_wk_task := g_dep_wk_task);
   o_reject_cnt := o_reject_cnt + 1;
 
   (* Try next waiting batch *)
   cur_wait_idx := cur_wait_idx + 1;
   IF cur_wait_idx > waiting_cnt THEN
     (* No more batches → back to waiting *)
-    fb_sandbox(i_cmd := 3);
     next_phase := 1;
   ELSE
-    (* Try next batch — re-snapshot is still valid *)
+    (* Try next batch from clean workspace *)
     next_phase := 1000;
   END_IF;
 

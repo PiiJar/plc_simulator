@@ -1,6 +1,7 @@
 (* ============================================================
-   STC_FB_UpdateUnitLocation — Update a unit's location
+   STC_UpdateUnitLocation — Update a unit's location
    ============================================================
+   FC replacement for STC_FB_UpdateUnitLocation.
    Sets g_unit[i_unit].location to the given new location.
    Location 1..MAX_Transporters = transporter, MIN_StationIndex..MAX_StationIndex = station.
    Updates g_station_loc[location].UnitId + ChangeTime for both.
@@ -11,7 +12,7 @@
      - Clears unit target to TO_NONE if target was set (NTT done)
    ============================================================ *)
 
-FUNCTION_BLOCK STC_FB_UpdateUnitLocation
+FUNCTION STC_UpdateUnitLocation : BOOL
 VAR_INPUT
   i_unit        : INT;   (* unit number to update *)
   i_location    : INT;   (* new location: <100 = transporter id, >=100 = station number *)
@@ -38,7 +39,6 @@ END_VAR
 VAR
   old_loc     : INT;
   new_stg     : INT;
-  xfer_total  : REAL;
 END_VAR
 
 IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
@@ -52,10 +52,6 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
 
   (* --- Update unit location --- *)
   g_unit[i_unit].location := i_location;
-
-  (* NOTE: transporter batch times are set directly in SIM_FB_RunTasks
-     at LIFT moment, not here — UpdateUnitLocation's transporter block
-     was unreliably executing. *)
 
   (* --- Set unit_id on new location (unified: transporter or station) --- *)
   IF (i_location >= 1) AND (i_location <= MAX_StationIndex) THEN
@@ -106,4 +102,6 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
   END_IF; (* i_location valid *)
 END_IF;
 
-END_FUNCTION_BLOCK
+STC_UpdateUnitLocation := TRUE;
+
+END_FUNCTION

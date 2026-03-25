@@ -1,5 +1,5 @@
 (* ==========================================================
-   STC_FB_NoTreatmentStates
+   STC_NoTreatmentStates — FC replacement for STC_FB_NoTreatmentStates
    ----------------------------------------------------------
    Manages non-treatment target states for all units.
 
@@ -11,7 +11,7 @@
      Section 3 — TO_LOADING: route one empty unit to loading.
    ========================================================== *)
 
-FUNCTION_BLOCK STC_FB_NoTreatmentStates
+FUNCTION STC_NoTreatmentStates : BOOL
   VAR_EXTERNAL CONSTANT
     MAX_Units          : INT;
     MAX_STEPS_PER_PROGRAM         : INT;
@@ -104,10 +104,7 @@ FUNCTION_BLOCK STC_FB_NoTreatmentStates
 
   (* ════════════════════════════════════════════════════════════
      Section 1 — PROCESSED: mark batch done at last treatment stage
-     ════════════════════════════════════════════════════════════
-     For each IN_PROCESS unit on a station:
-       If next stage is empty (stations[1]=0) → last stage.
-       If elapsed >= cal_time → set state := PROCESSED. *)
+     ════════════════════════════════════════════════════════════ *)
   FOR u := 1 TO MAX_Units DO
     IF NOT snap[u].IsActive OR NOT snap[u].HasBatch THEN
       CONTINUE;
@@ -127,12 +124,7 @@ FUNCTION_BLOCK STC_FB_NoTreatmentStates
 
   (* ════════════════════════════════════════════════════════════
      Section 2 — TO_AVOID: clear the way to next treatment station
-     ════════════════════════════════════════════════════════════
-     For each IN_PROCESS unit whose next stage exists:
-       Pass 1: check if any next-stage station is free or already
-               has a TO_AVOID unit (slot being cleared).
-       Pass 2: if all occupied, mark ONE empty-batch TO_NONE unit
-               at those stations as TO_AVOID. *)
+     ════════════════════════════════════════════════════════════ *)
   FOR u := 1 TO MAX_Units DO
     IF NOT snap[u].IsActive OR NOT snap[u].HasBatch THEN
       CONTINUE;
@@ -197,10 +189,7 @@ FUNCTION_BLOCK STC_FB_NoTreatmentStates
 
   (* ════════════════════════════════════════════════════════════
      Section 3 — TO_LOADING: route one empty unit to loading station
-     ════════════════════════════════════════════════════════════
-     When production is active and a loading/loading_unloading station
-     is free, find ONE batchless USED unit with TO_NONE target.
-     Priority: units NOT in buffer/storage first. *)
+     ════════════════════════════════════════════════════════════ *)
   IF g_production_queue = 1 AND NOT has_loading THEN
 
     (* Check if any loading station is free *)
@@ -241,4 +230,6 @@ FUNCTION_BLOCK STC_FB_NoTreatmentStates
 
   END_IF; (* production_queue AND NOT has_loading *)
 
-END_FUNCTION_BLOCK
+  STC_NoTreatmentStates := TRUE;
+
+END_FUNCTION

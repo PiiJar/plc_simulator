@@ -1,8 +1,10 @@
-(* STC_FB_TrackMoveTimes — Record phase transition timestamp (0.1s) and update g_move on completion *)
-(* Called from SIM code whenever a transporter phase changes.
-    Uses g_time_100ms (0.1s ticks). On 4→0 completion, calculates net durations
-    and updates g_move[] with weighted average: new = (old * 4 + measured) / 5 *)
-FUNCTION_BLOCK STC_FB_TrackMoveTimes
+(* STC_TrackMoveTimes — Record phase transition timestamp (0.1s) and update g_move on completion *)
+(* FC replacement for STC_FB_TrackMoveTimes.
+   Called from SIM code whenever a transporter phase changes.
+   Uses g_time_100ms (0.1s ticks). On 4→0 completion, calculates net durations
+   and updates g_move[] with weighted average: new = (old * 4 + measured) / 5 *)
+
+FUNCTION STC_TrackMoveTimes : BOOL
 VAR_INPUT
     i_trans     : INT;   (* transporter index 1..MAX_Transporters *)
     i_prev      : INT;   (* previous phase *)
@@ -137,4 +139,6 @@ CASE i_prev OF
         END_IF;
 END_CASE;
 
-END_FUNCTION_BLOCK
+STC_TrackMoveTimes := TRUE;
+
+END_FUNCTION

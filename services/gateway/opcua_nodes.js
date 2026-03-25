@@ -194,7 +194,23 @@ const SCHED_DEBUG = {
   dep_cur_wait_unit:  S('g_sched_dbg_dep_cur_wait_unit'),
   dep_wait_cnt:       S('g_sched_dbg_dep_wait_cnt'),
   batch_cnt:          S('g_sched_dbg_batch_cnt'),
+  // TSK conflict debug
+  conflict_type:      S('g_dbg_tsk_conflict_type'),
+  conflict_iter:      S('g_dbg_tsk_conflict_iter'),
+  conf_unit:          S('g_dbg_tsk_conf_unit'),
+  conf_stage:         S('g_dbg_tsk_conf_stage'),
+  blocked_unit:       S('g_dbg_tsk_blocked_unit'),
+  blocked_stage:      S('g_dbg_tsk_blocked_stage'),
+  deficit:            S('g_dbg_tsk_deficit'),
+  stretch_cnt:        S('g_dbg_tsk_stretch_cnt'),
+  total_adv:          S('g_dbg_tsk_total_adv'),
+  total_delay:        S('g_dbg_tsk_total_delay'),
 };
+
+// Program CalTime snapshot per unit (DINT, safe for OPC UA batch read)
+function progCalDebug(uid) {
+  return S(`g_dbg_prog_cal[${uid}]`);
+}
 
 // Event queue head (read-only from PLC)
 const EVENT = {
@@ -469,6 +485,9 @@ function buildReadList() {
   // Scheduler debug
   for (const [k, nid] of Object.entries(SCHED_DEBUG)) add(`sched.${k}`, nid);
 
+  // Program CalTime snapshot per unit (from g_dbg_prog_cal)
+  for (let u = 1; u <= 10; u++) add(`sched.prog_cal.${u}`, progCalDebug(u));
+
   // Event queue (count + head index + buffer[1..10] headers)
   add('event.count', EVENT.count);
   add('event.head_idx', EVENT.head_idx);
@@ -521,6 +540,7 @@ module.exports = {
   eventMsg,
   eventPayload,
   avoidStatus,
+  progCalDebug,
   CMD,
   buildReadList,
   // Write helpers

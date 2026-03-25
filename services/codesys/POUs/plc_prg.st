@@ -83,11 +83,10 @@ VAR
   cycle_count    : INT;
   main_sched     : STC_FB_MainScheduler;
   run_tasks      : SIM_FB_RunTasks;
-  evt_queue      : STC_FB_EventQueue;
+  evt_queue      : SIM_FB_EventQueue;
   (* Time from SysTime library *)
   now_ms        : LINT := 0;
   (* Waiting batch at station 114 *)
-  fb_wait_calc       : TSK_FB_CalcSchedule;
   dep_wait_114_unit  : INT := 0;
   dep_wait_114_last  : INT := 0;
   wait_i             : INT;
@@ -200,7 +199,8 @@ END_FOR;
 IF dep_wait_114_unit <> dep_wait_114_last THEN
   dep_wait_114_last := dep_wait_114_unit;
   IF dep_wait_114_unit > 0 THEN
-    fb_wait_calc(i_unit := dep_wait_114_unit, i_trans := 1, i_time_s := g_time_s);
+    STC_CalcSchedule(i_unit := dep_wait_114_unit, i_trans := 1, i_time_s := g_time_s,
+                      io_schedule := g_schedule, io_batch := g_batch, io_program := g_program);
     g_dep_wait_sched := g_schedule[dep_wait_114_unit];
     g_dep_wait_unit  := dep_wait_114_unit;
     g_schedule[dep_wait_114_unit].StageCount := 0;

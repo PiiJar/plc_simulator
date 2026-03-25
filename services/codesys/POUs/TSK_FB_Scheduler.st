@@ -47,6 +47,18 @@ VAR_EXTERNAL
   g_dep_pending : UDT_JC_DepPendingWriteType;
   g_conflict_resolved : BOOL;
   g_tsk_stable       : BOOL;  (* tasksStableFlag: FALSE on DEP activation, TRUE when READY+conflict_free *)
+  (* Debug observability *)
+  g_dbg_tsk_conflict_type   : INT;
+  g_dbg_tsk_conflict_iter   : INT;
+  g_dbg_tsk_conf_unit       : INT;
+  g_dbg_tsk_conf_stage      : INT;
+  g_dbg_tsk_blocked_unit    : INT;
+  g_dbg_tsk_blocked_stage   : INT;
+  g_dbg_tsk_deficit         : DINT;
+  g_dbg_tsk_stretch_cnt     : INT;
+  g_dbg_tsk_total_adv       : DINT;
+  g_dbg_tsk_total_delay     : DINT;
+  g_dbg_prog_cal            : ARRAY[1..MAX_Units] OF DINT;
 END_VAR
 VAR_OUTPUT
   o_phase      : INT;     (* current phase *)
@@ -65,17 +77,19 @@ VAR
   (* Conflict iteration *)
   conflict_iter : INT;
   MAX_CONFLICT_ITER : INT := 40;
-  (* Sub-FB instances *)
-  fb_calc    : TSK_FB_CalcSchedule;
-  fb_create  : TSK_FB_CreateTasks;
-  fb_swap    : TSK_FB_SwapTasks;
-  fb_analyze : TSK_FB_Analyze;
-  fb_resolve : TSK_FB_Resolve;
-  fb_notrt   : TSK_FB_NoTreatment;
-  fb_clear   : STC_FB_ClearTaskQueues;  (* shared queue clear *)
-  fb_sort    : STC_FB_SortTaskQueue;    (* shared queue sort *)
-  fb_collect : STC_FB_CollectActiveBatches; (* shared batch collector *)
-  fb_notrt_st : STC_FB_NoTreatmentStates;  (* non-treatment state updates *)
+  (* Sub-FB instances removed — CollectActiveBatches and NoTreatmentStates are now FCs *)
+  (* Analyze result cache (FC outputs stored per scan) *)
+  an_conflict  : BOOL;
+  an_conf_type : INT;
+  an_conf_unit : INT;
+  an_conf_stage : INT;
+  an_conf_trans : INT;
+  an_blocked_unit : INT;
+  an_blocked_stage : INT;
+  an_deficit   : REAL;
+  (* Resolve result cache *)
+  rs_total_adv   : REAL;
+  rs_total_delay : REAL;
   (* Transporter assignment for schedule calculation *)
   sched_trans : INT;
   (* Locked stages — prevents oscillation in resolve loop *)
@@ -103,7 +117,9 @@ END_VAR
 IF NOT i_run THEN
   IF phase <> 0 THEN
     (* Reset: clear task queues so stale tasks don't persist *)
-    fb_clear();
+    FOR ti := 1 TO MAX_Transporters DO
+      g_task[ti].Count := 0;
+    END_FOR;
   END_IF;
   phase := 0;
   o_phase := 0;
@@ -122,19 +138,19 @@ IF phase = 0 THEN
 (* PHASE 1: INIT — collect active batches                       *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1 THEN
-  fb_collect(i_mode := 0);
-  batch_count := fb_collect.o_count;
-  FOR bi := 1 TO batch_count DO
-    batch_list[bi] := fb_collect.o_list[bi];
-  END_FOR;
+  batch_count := STC_CollectActiveBatches(i_mode := 0, o_list => batch_list);
   o_batch_cnt := batch_count;
   conflict_iter := 0;
   locks_initialized := FALSE;
   stretch_cnt := 0;  (* Reset stretch collection for new cycle *)
+  g_dbg_tsk_total_adv   := 0;  (* Reset per-cycle accumulators *)
+  g_dbg_tsk_total_delay := 0;
 
   IF batch_count = 0 THEN
     (* No active batches — clear stale tasks, then run no-treatment *)
-    fb_clear();
+    FOR ti := 1 TO MAX_Transporters DO
+      g_task[ti].Count := 0;
+    END_FOR;
     g_conflict_resolved := TRUE;  (* Empty line is stable — JS: conflictResolved = true on reset *)
     next_phase := 2204;
   ELSE
@@ -150,7 +166,7 @@ ELSIF phase = 1 THEN
 (* PHASE 2: NO_TREATMENT_STATES — update unit/batch states      *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2 THEN
-  fb_notrt_st();
+  STC_NoTreatmentStates();
   next_phase := 1000;
 
 (* ══════════════════════════════════════════════════════════════ *)
@@ -196,7 +212,8 @@ ELSIF phase >= 1001 AND phase <= 1000 + MAX_Units THEN
       IF sched_trans = 0 THEN sched_trans := 1; END_IF;  (* fallback default *)
     END_IF;
 
-    fb_calc(i_unit := ui, i_trans := sched_trans, i_time_s := i_time_s);
+    STC_CalcSchedule(i_unit := ui, i_trans := sched_trans, i_time_s := i_time_s,
+                     io_schedule := g_schedule, io_batch := g_batch, io_program := g_program);
 
     batch_idx := batch_idx + 1;
     IF batch_idx <= batch_count THEN
@@ -218,7 +235,9 @@ ELSIF phase = 1900 THEN
 (* PHASE 2000: TASKS_START — clear all task queues              *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2000 THEN
-  fb_clear();
+  FOR ti := 1 TO MAX_Transporters DO
+    g_task[ti].Count := 0;
+  END_FOR;
   batch_idx := 1;
   next_phase := 2001;
 
@@ -228,7 +247,7 @@ ELSIF phase = 2000 THEN
 ELSIF phase >= 2001 AND phase <= 2000 + MAX_Units THEN
   IF batch_idx <= batch_count THEN
     ui := batch_list[batch_idx];
-    fb_create(i_unit := ui);
+    STC_CreateTasks(i_unit := ui, io_schedule := g_schedule, io_task := g_task);
     batch_idx := batch_idx + 1;
     IF batch_idx <= batch_count THEN
       next_phase := phase + 1;
@@ -243,7 +262,7 @@ ELSIF phase >= 2001 AND phase <= 2000 + MAX_Units THEN
 (* PHASE 2200: TASKS_SORT — insertion sort each queue by time   *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2200 THEN
-  fb_sort(i_trans := 0);
+  STC_SortTasks(i_trans := 0, i_time_s := i_time_s, io_task := g_task, io_batch := g_batch);
   (* Initialize locks once per scheduler cycle *)
   IF NOT locks_initialized THEN
     lock_cnt := 0;
@@ -260,16 +279,29 @@ ELSIF phase = 2200 THEN
 (* PHASE 2201: TASKS_SWAP                                       *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2201 THEN
-  fb_swap();
+  STC_SwapTasks(io_task := g_task);
   next_phase := 2202;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2202: TASKS_ANALYZE                                    *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2202 THEN
-  fb_analyze();
-  o_conflict := fb_analyze.o_has_conflict;
-  IF fb_analyze.o_has_conflict THEN
+  TSK_Analyze(io_task := g_task,
+    o_has_conflict => an_conflict, o_conf_type => an_conf_type,
+    o_conf_unit => an_conf_unit, o_conf_stage => an_conf_stage,
+    o_conf_trans => an_conf_trans, o_blocked_unit => an_blocked_unit,
+    o_blocked_stage => an_blocked_stage, o_deficit => an_deficit);
+  o_conflict := an_conflict;
+  (* Write analyze results to debug globals *)
+  IF an_conflict THEN
+    g_dbg_tsk_conflict_type  := an_conf_type;
+    g_dbg_tsk_conf_unit      := an_conf_unit;
+    g_dbg_tsk_conf_stage     := an_conf_stage;
+    g_dbg_tsk_blocked_unit   := an_blocked_unit;
+    g_dbg_tsk_blocked_stage  := an_blocked_stage;
+    g_dbg_tsk_deficit        := REAL_TO_DINT(an_deficit);
+  END_IF;
+  IF an_conflict THEN
     g_conflict_resolved := FALSE;  (* Conflicts found — DEP must not proceed *)
     next_phase := 2203;
   ELSE
@@ -282,32 +314,39 @@ ELSIF phase = 2202 THEN
 (* One conflict per cycle → recalculate                         *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2203 THEN
-  fb_resolve(
-    i_conf_unit     := fb_analyze.o_conf_unit,
-    i_conf_stage    := fb_analyze.o_conf_stage,
-    i_conf_trans    := fb_analyze.o_conf_trans,
-    i_blocked_unit  := fb_analyze.o_blocked_unit,
-    i_blocked_stage := fb_analyze.o_blocked_stage,
-    i_deficit       := fb_analyze.o_deficit,
+  TSK_Resolve(
+    i_conf_unit     := an_conf_unit,
+    i_conf_stage    := an_conf_stage,
+    i_conf_trans    := an_conf_trans,
+    i_blocked_unit  := an_blocked_unit,
+    i_blocked_stage := an_blocked_stage,
+    i_deficit       := an_deficit,
     io_locks        := locks,
-    io_lock_cnt     := lock_cnt
+    io_lock_cnt     := lock_cnt,
+    io_schedule     := g_schedule,
+    io_task         := g_task,
+    io_batch        := g_batch,
+    o_total_adv     => rs_total_adv,
+    o_total_delay   => rs_total_delay
   );
 
   (* -- Collect stretches from resolve decisions -- *)
   (* JS: TASKS_SAVE collects candidateStretches from resolveHistory *)
-  (* ADVANCE on blocked → negative DelayS *)
-  IF fb_resolve.o_total_adv > 0.1 AND stretch_cnt < 20 THEN
+  (* ADVANCE on blocked -> negative DelayS *)
+  IF rs_total_adv > 0.1 AND stretch_cnt < 20 THEN
     stretch_cnt := stretch_cnt + 1;
-    stretches[stretch_cnt].Unit   := fb_analyze.o_blocked_unit;
-    stretches[stretch_cnt].Stage  := fb_analyze.o_blocked_stage;
-    stretches[stretch_cnt].DelayS := -REAL_TO_DINT(fb_resolve.o_total_adv);
+    stretches[stretch_cnt].Unit   := an_blocked_unit;
+    stretches[stretch_cnt].Stage  := an_blocked_stage;
+    stretches[stretch_cnt].DelayS := -REAL_TO_DINT(rs_total_adv);
+    g_dbg_tsk_total_adv := g_dbg_tsk_total_adv + REAL_TO_DINT(rs_total_adv);
   END_IF;
-  (* DELAY on conf → positive DelayS *)
-  IF fb_resolve.o_total_delay > 0.1 AND stretch_cnt < 20 THEN
+  (* DELAY on conf -> positive DelayS *)
+  IF rs_total_delay > 0.1 AND stretch_cnt < 20 THEN
     stretch_cnt := stretch_cnt + 1;
-    stretches[stretch_cnt].Unit   := fb_analyze.o_conf_unit;
-    stretches[stretch_cnt].Stage  := fb_analyze.o_conf_stage;
-    stretches[stretch_cnt].DelayS := REAL_TO_DINT(fb_resolve.o_total_delay);
+    stretches[stretch_cnt].Unit   := an_conf_unit;
+    stretches[stretch_cnt].Stage  := an_conf_stage;
+    stretches[stretch_cnt].DelayS := REAL_TO_DINT(rs_total_delay);
+    g_dbg_tsk_total_delay := g_dbg_tsk_total_delay + REAL_TO_DINT(rs_total_delay);
   END_IF;
 
   conflict_iter := conflict_iter + 1;
@@ -326,7 +365,7 @@ ELSIF phase = 2203 THEN
 (* Task list is stable (no conflicts). Create unit-target tasks *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2204 THEN
-  fb_notrt(i_time_s := i_time_s);
+  TSK_NoTreatment(i_time_s := i_time_s, io_task := g_task);
   o_conflict := FALSE;
   next_phase := 2205;
 
@@ -372,6 +411,29 @@ ELSIF phase = 10000 THEN
     total_tasks := total_tasks + g_task[ti].Count;
   END_FOR;
   o_task_cnt := total_tasks;
+
+  (* Write conflict debug snapshot *)
+  IF NOT o_conflict THEN
+    g_dbg_tsk_conflict_type := 0;  (* no conflict *)
+    g_dbg_tsk_conf_unit     := 0;
+    g_dbg_tsk_conf_stage    := 0;
+    g_dbg_tsk_blocked_unit  := 0;
+    g_dbg_tsk_blocked_stage := 0;
+    g_dbg_tsk_deficit       := 0;
+  END_IF;
+  g_dbg_tsk_conflict_iter := conflict_iter;
+  g_dbg_tsk_stretch_cnt   := stretch_cnt;
+
+  (* Snapshot current-stage CalTime from g_program for each active unit *)
+  FOR ui := 1 TO MAX_Units DO
+    IF g_batch[ui].CurStage >= 1
+       AND g_batch[ui].CurStage <= g_program[ui].StepCount THEN
+      g_dbg_prog_cal[ui] := g_program[ui].Steps[g_batch[ui].CurStage].CalTime;
+    ELSE
+      g_dbg_prog_cal[ui] := 0;
+    END_IF;
+  END_FOR;
+
   next_phase := 10100;
 
 (* ══════════════════════════════════════════════════════════════ *)

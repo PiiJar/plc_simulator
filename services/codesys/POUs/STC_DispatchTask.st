@@ -1,6 +1,7 @@
 (* ============================================================
-   STC_FB_DispatchTask — Validate and dispatch tasks to transporters
+   STC_DispatchTask — Validate and dispatch tasks to transporters
    ============================================================
+   FC replacement for STC_FB_DispatchTask.
    Called every PLC scan from MainScheduler (before TSK/DEP).
    For each idle transporter with queued tasks:
 
@@ -17,11 +18,9 @@
         same lift or sink station
      5. Dispatch: write task_id, lift_station, sink_station
         to g_transporter → RunTasks picks it up
-
-   Used by: STC_FB_MainScheduler
    ============================================================ *)
 
-FUNCTION_BLOCK STC_FB_DispatchTask
+FUNCTION STC_DispatchTask : BOOL
 VAR_EXTERNAL CONSTANT
     MAX_Transporters    : INT;
     MAX_Units           : INT;
@@ -116,7 +115,6 @@ FOR ti := 1 TO MAX_Transporters DO
     END_IF;
 
     (* ── 1b. Lift station unit check — unit must be AT the lift station ── *)
-    (* Don't dispatch if unit is not present at the pickup station *)
     IF t_unit >= 1 AND t_unit <= MAX_Units
        AND g_unit[t_unit].location = t_lift THEN
 
@@ -250,16 +248,6 @@ FOR ti := 1 TO MAX_Transporters DO
       IF sink_free THEN
 
         (* ── 4. Conflict check ── *)
-        (* Check against other transporters' ACTIVE tasks (phase>0).
-           Two rules:
-           a) T2's entire task (lift AND sink) is inside our task
-              range [task_min..task_max] → conflict.
-              Example: our 114→101 range [101,114]
-                T2 114→113: both in [101,114] → conflict
-                T2 114→117: 117 outside     → no conflict (going away)
-           b) T2 delivers (sink) to one of our exact stations
-              from outside our range → conflict.
-              Example: T2 120→114, 114 is our lift → conflict *)
         conflict := FALSE;
 
         IF t_lift <= sink_stn THEN
@@ -303,7 +291,6 @@ FOR ti := 1 TO MAX_Transporters DO
           g_transporter[ti].TaskRemainingTime := t_calc_time;
 
           (* ── Emit TASK_DISPATCHED event (msg_type=1) ── *)
-          (* Compute transfer time for xfer_total field *)
           xfer_total := STC_CalcTransferTime(
             i_from_stn            := t_lift,
             i_to_stn              := sink_stn,
@@ -327,7 +314,7 @@ FOR ti := 1 TO MAX_Transporters DO
             g_event_pending.Payload[5]  := t_lift;
             g_event_pending.Payload[6]  := sink_stn;
             prog_stage := g_batch[t_unit].CurStage;
-            g_event_pending.Payload[7]  := prog_stage;  (* treatment program stage number *)
+            g_event_pending.Payload[7]  := prog_stage;
             g_event_pending.Payload[8]  := g_batch[t_unit].BatchCode;
             g_event_pending.Payload[9]  := DINT_TO_INT(t_calc_time);
             g_event_pending.Payload[10] := DINT_TO_INT(g_task[ti].Queue[qi].MinTime);
@@ -376,4 +363,6 @@ FOR ti := 1 TO MAX_Transporters DO
 
 END_FOR;
 
-END_FUNCTION_BLOCK
+STC_DispatchTask := TRUE;
+
+END_FUNCTION

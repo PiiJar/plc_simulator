@@ -30,7 +30,6 @@ VAR_EXTERNAL
   g_avoid_status     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
   g_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   g_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_dep_sandbox      : UDT_JC_DepSandboxType;
   g_dep_pending      : UDT_JC_DepPendingWriteType;
   g_dep_activated    : BOOL;
   g_tsk_stable       : BOOL;
@@ -201,8 +200,7 @@ FOR i := 1 TO MAX_Transporters DO
   END_FOR;
 END_FOR;
 
-(* --- Clear departure sandbox and pending write --- *)
-g_dep_sandbox.Valid := FALSE;
+(* --- Clear departure pending write --- *)
 g_dep_pending.Valid := FALSE;
 g_dep_pending.BatchUnit  := 0;
 g_dep_pending.BatchStage := 0;
