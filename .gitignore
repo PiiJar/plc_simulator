@@ -36,9 +36,7 @@ services/codesys/build/*
 !services/codesys/build/.gitkeep
 
 # Project runtime data (generated during simulation)
-data/runtime/production_queue.json
-data/runtime/production_setup.json
-data/runtime/simulation_purpose.json
+data/runtime/
 services/ui/.cache/
 services/ui/.next/
 services/ui/out/
