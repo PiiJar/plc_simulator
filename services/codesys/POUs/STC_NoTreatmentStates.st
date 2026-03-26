@@ -27,6 +27,7 @@ FUNCTION STC_NoTreatmentStates : BOOL
     PROCESSED          : INT;
     NOT_USED           : INT;
     TO_NONE            : INT;
+    TO_UNLOAD          : INT;
     TO_AVOID           : INT;
     TO_LOADING         : INT;
     USED               : INT;
@@ -124,6 +125,11 @@ FUNCTION STC_NoTreatmentStates : BOOL
         IF snap[u].Elapsed > 0 AND snap[u].Elapsed >= DINT_TO_LINT(snap[u].CalTime) THEN
           g_batch[u].State := PROCESSED;
           snap[u].BatchState   := PROCESSED;  (* update snapshot *)
+          (* Route to unloading station *)
+          IF snap[u].Target = TO_NONE THEN
+            g_unit[u].Target := TO_UNLOAD;
+            snap[u].Target   := TO_UNLOAD;
+          END_IF;
         END_IF;
       END_IF;
     END_IF;
