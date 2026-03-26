@@ -1,5 +1,5 @@
 (* ============================================================
-   STC_FindStation — Find a station by its number
+ *  SIM_FindStation — Find a station by its number
 
    Company : Galvatek part of the John Cockerill Group
    Author  : Jarmo Piipponen
@@ -11,7 +11,7 @@
    Changes:
    ============================================================ *)
 
-FUNCTION STC_FindStation : DINT   (* returns x_mm *)
+FUNCTION SIM_FindStation : DINT   (* returns x_mm *)
 VAR_INPUT
   station_number : INT;
 END_VAR
@@ -37,7 +37,7 @@ END_VAR
     stn_data := g_station[station_number];
     IF stn_data.TankId <> 0 THEN
       found := TRUE;
-      STC_FindStation := stn_data.XPosition;
+      SIM_FindStation := stn_data.XPosition;
       skind := stn_data.DryWet;
       device_delay_s := INT_TO_REAL(stn_data.DeviceDelay) / 10.0;
       dropping_time_s := INT_TO_REAL(stn_data.DrippingTime) / 10.0;
@@ -46,7 +46,7 @@ END_VAR
   END_IF;
 
   found := FALSE;
-  STC_FindStation := 0;
+  SIM_FindStation := 0;
   skind := 0;
   device_delay_s := 0.0;
   dropping_time_s := 0.0;

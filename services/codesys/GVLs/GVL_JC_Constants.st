@@ -45,6 +45,10 @@ VAR_GLOBAL CONSTANT
   KIND_WET                  : INT  := 1;  (* wet station *)
 
   (* Station operation — logistics *)
+  OP_BUFFER                 : INT  := 30;  (* buffer station *)
+  OP_BUFFER_EMPTY           : INT  := 31;  (* empty buffer station *)
+  OP_BUFFER_LOADED          : INT  := 32;  (* loaded buffer station *)
+  OP_BUFFER_PROCESSED       : INT  := 33;  (* processed buffer station *)
   OP_LOADING                : INT  := 40;  (* loading operation *)
   OP_UNLOADING              : INT  := 41;  (* unloading operation *)
   OP_LOADING_UNLOADING      : INT  := 42;  (* combined loading/unloading *)

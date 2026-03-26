@@ -29,6 +29,10 @@ VAR_EXTERNAL
   g_tsk_stable  : BOOL;
   g_conflict_resolved : BOOL;
   g_dep_pending : UDT_JC_DepPendingWriteType;
+  MAX_Units     : INT;
+  g_batch       : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_schedule    : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_dep_wk_schedule : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   (* Scheduler debug globals — written here, read by Gateway via OPC UA *)
   g_sched_dbg_tsk_phase        : INT;
   g_sched_dbg_dep_phase        : INT;
@@ -53,6 +57,7 @@ VAR
   turn         : INT := 0;   (* 0=init, 1=TSK, 2=DEP *)
   skip_cnt     : INT := 0;
   tsk_phase    : INT := 0;
+  ui           : INT;
 END_VAR
 
 IF NOT i_run THEN
@@ -118,6 +123,13 @@ ELSIF turn = 2 THEN
     i_tsk_phase := tsk_phase
   );
 END_IF;
+
+(* ── Publish waiting batch schedules from DEP workspace for UI display ── *)
+FOR ui := 1 TO MAX_Units DO
+  IF g_batch[ui].State = 0 AND g_dep_wk_schedule[ui].StageCount > 0 THEN
+    g_schedule[ui] := g_dep_wk_schedule[ui];
+  END_IF;
+END_FOR;
 
 (* ── Update outputs ── *)
 o_tsk_phase := tsk_sched.o_phase;

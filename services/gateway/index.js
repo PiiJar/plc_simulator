@@ -30,6 +30,9 @@ const legacyStubs = require('./legacy_stubs');
 // Production queue dispatcher
 const dispatcher = require('./production_dispatcher');
 
+// Dashboard API (scheduler stats, hoist-x, timing)
+const dashboardApi = require('./dashboard_api');
+
 // ── Simulation log helper ─────────────────────────────────────────
 async function simLog(event, detail = null) {
   try {
@@ -215,6 +218,13 @@ function startPolling() {
         }
       }
 
+      // Dashboard data collection (hoist-x sampling, cycle-time tracking)
+      dashboardApi.tick({
+        transporters: state.transporters || [],
+        meta: plcMeta,
+        schedulerDebug,
+      });
+
       // Production queue dispatcher
       if (plcMeta.init_done) {
         await dispatcher.tick(plcUnits);
@@ -242,6 +252,13 @@ fileRoutes.init({
   setCurrentSelection: (c, p) => { currentCustomer = c; currentPlant = p; loadConfigs(); },
 });
 app.use('/api', fileRoutes.router);
+
+// ── Initialize & mount dashboard API (real endpoints) ──
+dashboardApi.init({
+  dbPool,
+  getState: () => ({ stationsConfig, twaLimits, plcMeta }),
+});
+app.use('/api', dashboardApi.router);
 
 // ── Initialize & mount legacy stub routes ──
 legacyStubs.init({
@@ -730,6 +747,7 @@ async function main() {
     writeBatchToPLC: (ui, bc, bs, pi) => adapter.writeBatch(ui, bc, bs, pi),
     writeProgramStageToPLC: (ui, si, stns, min, max, cal) => adapter.writeProgramStage(ui, si, stns, min, max, cal),
     writeUnitToPLC: (uid, loc, st, tgt) => adapter.writeUnit(uid, loc, st, tgt),
+    writeProductionQueue: (val) => adapter.writeProductionQueue(val),
   });
   await dispatcher.loadQueue();
 

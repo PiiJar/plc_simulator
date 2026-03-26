@@ -42,16 +42,7 @@ router.post('/sim/speed', (req, res) => {
 
 // ─── Scheduler / schedules — real endpoints in index.js ──────────────────
 
-// /api/schedules, /api/transporter-schedule, /api/scheduler/state
-// are now served from index.js with actual PLC Modbus data.
-// Only keep /api/scheduler/state stub for backward compatibility.
-router.get('/scheduler/state', (req, res) => {
-  res.json({
-    state: 'idle',
-    message: 'PLC handles scheduling natively',
-    transporters: []
-  });
-});
+// /api/scheduler/state — now served by dashboard_api.js
 
 // ─── Batch schedules (legacy) ────────────────────────────────────────────
 
@@ -63,17 +54,8 @@ router.get('/batch-schedules/:id', (req, res) => {
   res.json({ batchId: req.params.id, schedule: [] });
 });
 
-// ─── Dashboard (legacy hoist-x timeline) ─────────────────────────────────
-
-router.get('/dashboard/hoist-x', (req, res) => {
-  res.json({ data: [], timestamp: new Date().toISOString() });
-});
-
-// ─── Station timing stats (legacy) ──────────────────────────────────────
-
-router.get('/station-timing-stats', (req, res) => {
-  res.json({ stats: [], timestamp: new Date().toISOString() });
-});
+// /api/dashboard/hoist-x — now served by dashboard_api.js
+// /api/station-timing-stats — now served by dashboard_api.js
 
 // ─── Departure cycles (endpoint never existed, UI may reference it) ─────
 

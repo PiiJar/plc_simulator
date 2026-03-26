@@ -57,7 +57,7 @@ VAR
   fb_z1        : SIM_FB_ZMotion;
   fb_z2        : SIM_FB_ZMotion;
   fb_z3        : SIM_FB_ZMotion;
-  (* Station lookup — now FC STC_FindStation, no instance needed *)
+  (* Station lookup — now FC SIM_FindStation, no instance needed *)
   (* Temp vars for VAR_IN_OUT passing *)
   tmp_x        : DINT;
   tmp_vx       : DINT;
@@ -112,7 +112,7 @@ FOR i := 1 TO MAX_Transporters DO
   IF (g_transporter[i].Phase = 0)
      AND (g_transporter[i].TaskId <> g_sim_trans[i].RunningTaskId) THEN
     g_sim_trans[i].RunningTaskId := g_transporter[i].TaskId;
-    g_transporter[i].XFinalTarget := STC_FindStation(station_number := g_transporter[i].LiftStationTarget);
+    g_transporter[i].XFinalTarget := SIM_FindStation(station_number := g_transporter[i].LiftStationTarget);
     g_transporter[i].Phase := 1;
     STC_TrackMoveTimes(i_trans := i, i_prev := 0, i_new := 1);
     g_transporter[i].Status := 4;  (* auto_run *)
@@ -186,7 +186,7 @@ FOR i := 1 TO MAX_Transporters DO
          Both timers run simultaneously from transporter arrival.
          This matches JS behavior: max(treatment, device_delay). *)
       can_lift := TRUE;
-      STC_FindStation(station_number := g_transporter[i].LiftStationTarget, device_delay_s => device_delay, dropping_time_s => drop_time);
+      SIM_FindStation(station_number := g_transporter[i].LiftStationTarget, device_delay_s => device_delay, dropping_time_s => drop_time);
 
       (* Check treatment time *)
       lift_uid := g_station_loc[g_transporter[i].LiftStationTarget].UnitId;
@@ -295,7 +295,7 @@ FOR i := 1 TO MAX_Transporters DO
 
   (* ── Phase 2: Lift Z at lift station ────────────────────── *)
   ELSIF g_transporter[i].Phase = 2 THEN
-    STC_FindStation(station_number := g_transporter[i].LiftStationTarget, skind => station_kind);
+    SIM_FindStation(station_number := g_transporter[i].LiftStationTarget, skind => station_kind);
     tmp_z  := g_transporter[i].ZPosition;
     tmp_zs := g_sim_trans[i].ZStage;
     tmp_zt := g_sim_trans[i].ZTimer;
@@ -360,7 +360,7 @@ FOR i := 1 TO MAX_Transporters DO
     IF arrived_z THEN
       (* Record lift done timestamp *)
       ts_lift_done[i] := g_time_s;
-      g_transporter[i].XFinalTarget := STC_FindStation(station_number := g_transporter[i].SinkStationTarget);
+      g_transporter[i].XFinalTarget := SIM_FindStation(station_number := g_transporter[i].SinkStationTarget);
       g_transporter[i].Phase := 3;
       STC_TrackMoveTimes(i_trans := i, i_prev := 2, i_new := 3);
     END_IF;
@@ -419,7 +419,7 @@ FOR i := 1 TO MAX_Transporters DO
       g_transporter[i].CurrentStation := g_transporter[i].SinkStationTarget;
       (* Record arrival at sink timestamp *)
       ts_at_sink[i] := g_time_s;
-      STC_FindStation(station_number := g_transporter[i].SinkStationTarget, device_delay_s => device_delay);
+      SIM_FindStation(station_number := g_transporter[i].SinkStationTarget, device_delay_s => device_delay);
       g_sim_trans[i].ZTimer := device_delay + INT_TO_REAL(g_cfg[i].DripTrayDelay) / 10.0;
       g_sim_trans[i].ZStage := 6;
       g_transporter[i].Phase := 4;
@@ -429,7 +429,7 @@ FOR i := 1 TO MAX_Transporters DO
 
   (* ── Phase 4: Sink Z at sink station ───────────────────── *)
   ELSIF g_transporter[i].Phase = 4 THEN
-    STC_FindStation(station_number := g_transporter[i].SinkStationTarget, skind => station_kind);
+    SIM_FindStation(station_number := g_transporter[i].SinkStationTarget, skind => station_kind);
     tmp_z  := g_transporter[i].ZPosition;
     tmp_zs := g_sim_trans[i].ZStage;
     tmp_zt := g_sim_trans[i].ZTimer;

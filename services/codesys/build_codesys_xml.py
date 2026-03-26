@@ -5,7 +5,7 @@ build_codesys_xml.py — Build PLCopenXML for CODESYS IDE import
 Reads ST source files from:
   UDTs/*.st   — User Data Types (structs)
   GVLs/*.st   — Global Variable Lists
-  POUs/*.st   — FBs, FUNCTIONs, PLC_PRG
+  POUs/**/*.st — FBs, FUNCTIONs, PLC_PRG (recursive, supports subfolders)
 
 Produces:
   build/project.xml — PLCopenXML importable by CODESYS IDE
@@ -656,7 +656,7 @@ def main():
     print("── POUs ──")
     pou_order = {'function': 0, 'functionBlock': 1, 'program': 2}
     pous = []
-    for p in sorted(SRC_DIR.glob('*.st')):
+    for p in sorted(SRC_DIR.rglob('*.st')):
         text = p.read_text(encoding='utf-8')
         pou = parse_pou(text)
         if pou:

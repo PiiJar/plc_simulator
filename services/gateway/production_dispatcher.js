@@ -26,6 +26,7 @@ class ProductionDispatcher {
     this._writeBatch = null;   // writeBatchToPLC(unitIndex, batchCode, batchState, programId)
     this._writeStage = null;   // writeProgramStageToPLC(unitIndex, stageIndex, stations[], min, max, cal)
     this._writeUnit  = null;   // writeUnitToPLC(unitId, location, status, target)
+    this._writeProductionQueue = null; // writeProductionQueue(value) — set g_production_queue on PLC
 
     // Queue state (loaded from / persisted to production_queue.json)
     this.queue = null;
@@ -45,11 +46,12 @@ class ProductionDispatcher {
   /**
    * Inject dependencies. Called once at gateway startup.
    */
-  init({ runtimeDir, writeBatchToPLC, writeProgramStageToPLC, writeUnitToPLC }) {
+  init({ runtimeDir, writeBatchToPLC, writeProgramStageToPLC, writeUnitToPLC, writeProductionQueue }) {
     this.runtimeDir = runtimeDir;
     this._writeBatch = writeBatchToPLC;
     this._writeStage = writeProgramStageToPLC;
     this._writeUnit  = writeUnitToPLC;
+    this._writeProductionQueue = writeProductionQueue || null;
   }
 
   // ── Queue persistence ──────────────────────────────────────────
@@ -315,6 +317,16 @@ class ProductionDispatcher {
         `(prog ${batch.program_id}, ${stages.length} stages) → Unit ${candidate.unit_id} ` +
         `[${this.queue.pointer}/${this.queue.batches.length}]`
       );
+
+      // Last batch dispatched → clear production queue flag on PLC
+      if (this.queue.pointer >= this.queue.batches.length) {
+        console.log('[DISPATCH] Last batch dispatched — setting g_production_queue = 0');
+        if (this._writeProductionQueue) {
+          await this._writeProductionQueue(0);
+        }
+        this.queue.active = false;
+        await this.saveState();
+      }
 
       // Reset timer for next batch
       this.loadingUnitId = null;

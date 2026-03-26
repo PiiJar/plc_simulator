@@ -30,6 +30,8 @@ FUNCTION STC_NoTreatmentStates : BOOL
     TO_AVOID           : INT;
     TO_LOADING         : INT;
     USED               : INT;
+    OP_BUFFER            : INT;
+    OP_BUFFER_PROCESSED  : INT;
     OP_LOADING           : INT;
     OP_LOADING_UNLOADING : INT;
   END_VAR
@@ -84,7 +86,7 @@ FUNCTION STC_NoTreatmentStates : BOOL
                           AND snap[u].Location <= MAX_StationIndex;
     IF snap[u].OnStation THEN
       snap[u].LocationOp    := g_station[snap[u].Location].StationType;
-      snap[u].InBuffer := snap[u].LocationOp >= 44 AND snap[u].LocationOp <= 47;
+      snap[u].InBuffer := snap[u].LocationOp >= OP_BUFFER AND snap[u].LocationOp <= OP_BUFFER_PROCESSED;
       IF g_station_loc[snap[u].Location].ChangeTime > 0 THEN
         snap[u].Elapsed := g_time_s - g_station_loc[snap[u].Location].ChangeTime;
       ELSE
