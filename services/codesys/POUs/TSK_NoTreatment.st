@@ -81,6 +81,7 @@ VAR
   qi3            : INT;
   slot_ok        : BOOL;
   sh             : INT;
+  (* Multi-transporter shared-area idle check *)
   ot             : INT;
   oq             : INT;
   overlap_conflict : BOOL;
@@ -94,8 +95,15 @@ VAR
   zone_max_x     : DINT;
   danger_min     : DINT;
   danger_max     : DINT;
-  ot_lift_x      : DINT;
-  ot_sink_x      : DINT;
+  (* Shared-area timing: NTT split into own-area + shared-area portions *)
+  loc_idx        : INT;
+  loc_x          : DINT;
+  phase2_s       : REAL;
+  shared_entry   : LINT;
+  shared_time    : REAL;
+  ot_idle_ok     : BOOL;
+  ot_idle_start  : LINT;
+  ot_idle_end    : LINT;
 END_VAR
 
 TSK_NoTreatment := TRUE;
@@ -269,6 +277,23 @@ FOR ui := 1 TO MAX_Units DO
             END_IF;
           END_IF;
 
+          (* ── Multi-transporter shared-area idle check ──
+             If dest_stn is on the shared drive area between two transporters,
+             the other transporter must have an idle window covering the time
+             when THIS transporter is physically on the shared area.
+
+             NTT transfer phases:
+               Phase 2: lift + drip + tray  (nostin on vielä lift-asemalla)
+               Phase 3: horizontal travel   (nostin liikkuu kohti dest)
+               Phase 4: lower + tray + dev  (nostin on dest-asemalla)
+
+             If lift station is NOT on shared area:
+               shared_entry = task_start + phase2_s  (travel starts)
+               shared_time  = xfer_s - phase2_s
+             If lift station IS on shared area:
+               shared_entry = task_start  (already there)
+               shared_time  = xfer_s
+          *)
           IF dest_stn > 0 THEN
             overlap_conflict := FALSE;
             dest_x := g_station[dest_stn].XPosition;
@@ -293,29 +318,69 @@ FOR ui := 1 TO MAX_Units DO
                 danger_min := zone_min_x - avoid_dist;
                 danger_max := zone_max_x + avoid_dist;
 
-                IF g_transporter[ot].Phase >= 1 AND g_transporter[ot].Phase <= 4
-                   AND io_task[ot].Count > 0 THEN
-                  ot_lift_x := g_station[io_task[ot].Queue[1].LiftStationTarget].XPosition;
-                  ot_sink_x := g_station[io_task[ot].Queue[1].SinkStationTarget].XPosition;
-                  IF (ot_lift_x >= danger_min AND ot_lift_x <= danger_max)
-                     OR (ot_sink_x >= danger_min AND ot_sink_x <= danger_max) THEN
-                    overlap_conflict := TRUE;
+                (* ── Calculate shared-area entry time and duration ── *)
+                loc_x := g_station[loc].XPosition;
+                IF loc_x >= danger_min AND loc_x <= danger_max THEN
+                  shared_entry := task_start;
+                  shared_time  := xfer_s;
+                ELSE
+                  loc_idx := loc - 100;
+                  IF loc_idx >= 1 AND loc_idx <= 25 THEN
+                    phase2_s := INT_TO_REAL(g_move[cov_t].LiftTime[loc_idx]) / 10.0
+                              + INT_TO_REAL(g_station[loc].DrippingTime) / 10.0
+                              + INT_TO_REAL(g_cfg[cov_t].DripTrayDelay) / 10.0;
+                  ELSE
+                    phase2_s := 0.0;
+                  END_IF;
+                  shared_entry := task_start + REAL_TO_LINT(phase2_s);
+                  shared_time  := xfer_s - phase2_s;
+                  IF shared_time < 1.0 THEN shared_time := 1.0; END_IF;
+                END_IF;
+
+                (* ── Check: does other transporter have an idle window
+                     that starts ≤ shared_entry and lasts ≥ shared_time? ── *)
+                ot_idle_ok := FALSE;
+
+                IF io_task[ot].Count = 0 AND g_transporter[ot].Phase = 0 THEN
+                  ot_idle_ok := TRUE;
+                ELSE
+                  IF io_task[ot].Count > 0 THEN
+                    IF g_transporter[ot].Phase >= 1 AND g_transporter[ot].Phase <= 4 THEN
+                      ot_idle_start := io_task[ot].Queue[1].FinishTime;
+                    ELSE
+                      ot_idle_start := task_start;
+                    END_IF;
+                    ot_idle_end := io_task[ot].Queue[1].StartTime;
+                    IF ot_idle_start <= shared_entry
+                       AND ot_idle_end >= shared_entry + REAL_TO_LINT(shared_time) THEN
+                      ot_idle_ok := TRUE;
+                    END_IF;
+                  END_IF;
+
+                  IF NOT ot_idle_ok THEN
+                    FOR oq := 1 TO io_task[ot].Count - 1 DO
+                      IF NOT ot_idle_ok THEN
+                        ot_idle_start := io_task[ot].Queue[oq].FinishTime;
+                        ot_idle_end   := io_task[ot].Queue[oq + 1].StartTime;
+                        IF ot_idle_start <= shared_entry
+                           AND ot_idle_end >= shared_entry + REAL_TO_LINT(shared_time) THEN
+                          ot_idle_ok := TRUE;
+                        END_IF;
+                      END_IF;
+                    END_FOR;
+                  END_IF;
+
+                  IF NOT ot_idle_ok AND io_task[ot].Count > 0 THEN
+                    ot_idle_start := io_task[ot].Queue[io_task[ot].Count].FinishTime;
+                    IF ot_idle_start <= shared_entry THEN
+                      ot_idle_ok := TRUE;
+                    END_IF;
                   END_IF;
                 END_IF;
 
-                FOR oq := 1 TO io_task[ot].Count DO
-                  IF NOT overlap_conflict THEN
-                    IF io_task[ot].Queue[oq].FinishTime > task_start
-                       AND io_task[ot].Queue[oq].StartTime < task_end THEN
-                      ot_lift_x := g_station[io_task[ot].Queue[oq].LiftStationTarget].XPosition;
-                      ot_sink_x := g_station[io_task[ot].Queue[oq].SinkStationTarget].XPosition;
-                      IF (ot_lift_x >= danger_min AND ot_lift_x <= danger_max)
-                         OR (ot_sink_x >= danger_min AND ot_sink_x <= danger_max) THEN
-                        overlap_conflict := TRUE;
-                      END_IF;
-                    END_IF;
-                  END_IF;
-                END_FOR;
+                IF NOT ot_idle_ok THEN
+                  overlap_conflict := TRUE;
+                END_IF;
               END_IF;
             END_FOR;
 
