@@ -1,88 +1,100 @@
-(* ============================================================
-   TWA_FB_CalcLimits — Transporter Working Area: X-limit calculation
+(* ===========================================================================================
+ *  TWA_FB_CalcLimits — Transporter Working Area: X-limit calculation
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Calculates x_min_limit and x_max_limit for all active
+ *  transporters. Collision avoidance layers:
+ *
+ *  Pass 1 (per transporter):
+ *  - Station restrictions from g_avoid_status
+ *  - Safety distance from same-line neighbors
+ *  - canEvade, priority, x-rank computation
+ *
+ *  Pass 2 (pair comparisons):
+ *  - Priority-based restrictions (higher → lower)
+ *  - Bidirectional safety (same direction chase)
+ *
+ *  Final: Trap validation
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Calculates x_min_limit and x_max_limit for all active
-   transporters. Collision avoidance layers:
-
-     Pass 1 (per transporter):
-       - Station restrictions from g_avoid_status
-       - Safety distance from same-line neighbors
-       - canEvade, priority, x-rank computation
-
-     Pass 2 (pair comparisons):
-       - Priority-based restrictions (higher → lower)
-       - Bidirectional safety (same direction chase)
-
-     Final: Trap validation
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION_BLOCK TWA_FB_CalcLimits
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
-    MIN_StationIndex : INT;
-    MAX_StationIndex : INT;
-    AVOID_Passable   : INT;
-    AVOID_Block      : INT;
-    MIN_WorkingArea  : DINT;
+    MAX_Transporters        : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
+    AVOID_Passable          : INT;
+    AVOID_Block             : INT;
+    MIN_WorkingArea         : DINT;
 END_VAR
 
 VAR_EXTERNAL
-  g_cfg            : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-  g_transporter    : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_station        : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_count  : INT;
-  g_avoid_status   : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_station_count           : INT;
+  g_avoid_status            : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
 END_VAR
+
 VAR
-  i            : INT;
-  j            : INT;
-  stn_num      : INT;
-  stn_x        : DINT;
-  avoid_st     : INT;
-  min_x        : DINT;
-  max_x        : DINT;
-  current_x    : DINT;
-  current_y    : DINT;
-  avoid_dist   : DINT;
-  is_target    : BOOL;
-  new_val      : DINT;
+  i                         : INT;
+  j                         : INT;
+  stn_num                   : INT;
+  stn_x                     : DINT;
+  avoid_st                  : INT;
+  min_x                     : DINT;
+  max_x                     : DINT;
+  current_x                 : DINT;
+  current_y                 : DINT;
+  avoid_dist                : DINT;
+  is_target                 : BOOL;
+  new_val                   : DINT;
 
   (* Station scan: nearest restricting station per side *)
-  near_left_x  : DINT;
-  near_right_x : DINT;
-  has_left     : BOOL;
-  has_right    : BOOL;
-  midpoint     : DINT;
+  near_left_x               : DINT;
+  near_right_x              : DINT;
+  has_left                  : BOOL;
+  has_right                 : BOOL;
+  midpoint                  : DINT;
 
   (* Per-transporter computed values *)
-  priority     : ARRAY[1..MAX_Transporters] OF DINT;
-  can_evade    : ARRAY[1..MAX_Transporters] OF BOOL;
-  rank         : ARRAY[1..MAX_Transporters] OF INT;
+  priority                  : ARRAY[1..MAX_Transporters] OF DINT;
+  can_evade                 : ARRAY[1..MAX_Transporters] OF BOOL;
+  rank                      : ARRAY[1..MAX_Transporters] OF INT;
 
   (* Pair comparison *)
-  other_x      : DINT;
-  other_y      : DINT;
-  i_phase      : INT;
-  j_phase      : INT;
-  dist         : DINT;
-  work_area    : DINT;
-  a_wins       : BOOL;
-  restrict_x   : DINT;
-  between      : INT;
-  chain_ofs    : DINT;
-  adjusted     : DINT;
+  other_x                   : DINT;
+  other_y                   : DINT;
+  i_phase                   : INT;
+  j_phase                   : INT;
+  dist                      : DINT;
+  work_area                 : DINT;
+  a_wins                    : BOOL;
+  restrict_x                : DINT;
+  between                   : INT;
+  chain_ofs                 : DINT;
+  adjusted                  : DINT;
 
   (* Bidirectional *)
-  i_moving_right : BOOL;
-  i_moving_left  : BOOL;
-  j_moving_right : BOOL;
-  j_moving_left  : BOOL;
+  i_moving_right            : BOOL;
+  i_moving_left             : BOOL;
+  j_moving_right            : BOOL;
+  j_moving_left             : BOOL;
 END_VAR
 
 (* ══════════════════════════════════════════════════════════════
@@ -153,11 +165,11 @@ FOR i := 1 TO MAX_Transporters DO
   (* Apply station restrictions *)
   IF has_left THEN
     new_val := near_left_x + avoid_dist;
-    IF new_val > min_x THEN min_x := new_val; END_IF;
+  IF new_val > min_x THEN min_x := new_val; END_IF;
   END_IF;
   IF has_right THEN
     new_val := near_right_x - avoid_dist;
-    IF new_val < max_x THEN max_x := new_val; END_IF;
+  IF new_val < max_x THEN max_x := new_val; END_IF;
   END_IF;
 
   (* Conflict: trapped between two restricting stations *)
@@ -180,11 +192,11 @@ FOR i := 1 TO MAX_Transporters DO
     IF other_x < current_x THEN
       (* j is LEFT → j's safety zone pushes i's min up *)
       new_val := other_x + g_cfg[j].AvoidanceWidth;
-      IF new_val > min_x THEN min_x := new_val; END_IF;
+  IF new_val > min_x THEN min_x := new_val; END_IF;
     ELSIF other_x > current_x THEN
       (* j is RIGHT → j's safety zone pushes i's max down *)
       new_val := other_x - g_cfg[j].AvoidanceWidth;
-      IF new_val < max_x THEN max_x := new_val; END_IF;
+  IF new_val < max_x THEN max_x := new_val; END_IF;
     END_IF;
   END_FOR;
 
@@ -212,11 +224,11 @@ FOR i := 1 TO MAX_Transporters DO
     priority[i] := DINT#100000;
   ELSIF i_phase = 3 THEN
     dist := ABS(current_x - g_transporter[i].XFinalTarget);
-    IF dist > 99999 THEN dist := 99999; END_IF;
+  IF dist > 99999 THEN dist := 99999; END_IF;
     priority[i] := DINT#200000 + (DINT#99999 - dist);
   ELSIF i_phase = 1 THEN
     dist := ABS(current_x - g_transporter[i].XFinalTarget);
-    IF dist > 99999 THEN dist := 99999; END_IF;
+  IF dist > 99999 THEN dist := 99999; END_IF;
     priority[i] := DINT#100000 + (DINT#99999 - dist);
   ELSE
     priority[i] := 1;
@@ -277,7 +289,7 @@ FOR i := 1 TO MAX_Transporters DO
 
         (* "between" from pre-computed rank *)
         between := ABS(rank[i] - rank[j]) - 1;
-        IF between < 0 THEN between := 0; END_IF;
+  IF between < 0 THEN between := 0; END_IF;
 
         chain_ofs := g_cfg[i].AvoidanceWidth
                    + INT_TO_DINT(between) * (MIN_WorkingArea + g_cfg[i].AvoidanceWidth);

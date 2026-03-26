@@ -1,45 +1,60 @@
-(* ============================================================
-   STC_ShiftSchedule — Shift schedule + task times
+(* ===========================================================================================
+ *  STC_ShiftSchedule — Shift schedule + task times
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Propagates a time shift through one unit's schedule stages
+ *  AND through all matching tasks.
+ *
+ *  Positive i_amount = DELAY (shift later),
+ *  Negative i_amount = ADVANCE (shift earlier).
+ *
+ *  VAR_IN_OUT: io_schedule, io_task — caller passes live or
+ *  workspace arrays.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Propagates a time shift through one unit's schedule stages
-   AND through all matching tasks.
-
-   Positive i_amount = DELAY (shift later),
-   Negative i_amount = ADVANCE (shift earlier).
-
-   VAR_IN_OUT: io_schedule, io_task — caller passes live or
-   workspace arrays.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_ShiftSchedule : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_unit       : INT;     (* unit index 1..10 *)
-  i_from_stage : INT;     (* propagate from this stage onward *)
-  i_amount     : REAL;    (* seconds to shift (+ = later, - = earlier) *)
+  i_unit                    : INT;     (* unit index 1..10 *)
+  i_from_stage              : INT;     (* propagate from this stage onward *)
+  i_amount                  : REAL;    (* seconds to shift (+ = later, - = earlier) *)
 END_VAR
+
 VAR_IN_OUT
-  io_schedule : ARRAY[1..10] OF UDT_JC_TskScheduleType;
-  io_task     : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
-    MAX_Units        : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_time_s : LINT;
+  g_time_s                  : LINT;
 END_VAR
+
 VAR
-  sc       : INT;
-  si       : INT;
-  qi       : INT;
-  ti       : INT;
-  duration : LINT;
+  sc                        : INT;
+  si                        : INT;
+  qi                        : INT;
+  ti                        : INT;
+  duration                  : LINT;
 END_VAR
 
 STC_ShiftSchedule := TRUE;

@@ -1,48 +1,63 @@
-(* ============================================================
-   STC_SortTasks — Insertion sort task queues by priority
+(* ===========================================================================================
+ *  STC_SortTasks — Insertion sort task queues by priority
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Shared FC: both TSK and DEP call this with different arrays.
+ *  Priority: emergency (overtime ratio > 1.0) first, then
+ *  earliest StartTime.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Shared FC: both TSK and DEP call this with different arrays.
-   Priority: emergency (overtime ratio > 1.0) first, then
-   earliest StartTime.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_SortTasks : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_trans  : INT;    (* 0 = all, 1..3 = specific transporter *)
-  i_time_s : LINT;
+  i_trans                   : INT;    (* 0 = all, 1..3 = specific transporter *)
+  i_time_s                  : LINT;
 END_VAR
+
 VAR_IN_OUT
-  io_task  : ARRAY[1..3] OF UDT_JC_TskQueueType;
-  io_batch : ARRAY[1..10] OF UDT_BatchType;
+  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  io_batch                  : ARRAY[1..10] OF UDT_BatchType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
-    MAX_Units        : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_unit : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
 END_VAR
+
 VAR
-  ti         : INT;
-  t_start    : INT;
-  t_end      : INT;
-  ins_i      : INT;
-  ins_j      : INT;
-  ins_cnt    : INT;
-  tmp_task   : UDT_JC_TskTaskType;
-  tmp_unit   : INT;
-  cur_unit   : INT;
-  tmp_ratio  : REAL;
-  cur_ratio  : REAL;
-  tmp_emerg  : BOOL;
-  cur_emerg  : BOOL;
-  do_shift   : BOOL;
+  ti                        : INT;
+  t_start                   : INT;
+  t_end                     : INT;
+  ins_i                     : INT;
+  ins_j                     : INT;
+  ins_cnt                   : INT;
+  tmp_task                  : UDT_JC_TskTaskType;
+  tmp_unit                  : INT;
+  cur_unit                  : INT;
+  tmp_ratio                 : REAL;
+  cur_ratio                 : REAL;
+  tmp_emerg                 : BOOL;
+  cur_emerg                 : BOOL;
+  do_shift                  : BOOL;
 END_VAR
 
 STC_SortTasks := TRUE;

@@ -1,57 +1,72 @@
-(* ============================================================
-   STC_FindTransporter — Find best covering transporter
+(* ===========================================================================================
+ *  STC_FindTransporter — Find best covering transporter
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Finds which transporter (1..3) can handle a lift→sink pair
+ *  by checking cfg[].TaskArea[] coverage.
+ *
+ *  When multiple transporters match, scores by:
+ *  1. Fewest queued tasks (load balance)
+ *  2. Closest last-sink to new lift (travel efficiency)
+ *
+ *  If i_sink_stn = 0, only lift coverage is checked.
+ *
+ *  NOTE: Kept as FUNCTION_BLOCK because MATIEC cannot handle
+ *  ARRAY OF STRUCT as FUNCTION VAR_INPUT parameter.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Finds which transporter (1..3) can handle a lift→sink pair
-   by checking cfg[].TaskArea[] coverage.
-
-   When multiple transporters match, scores by:
-     1. Fewest queued tasks (load balance)
-     2. Closest last-sink to new lift (travel efficiency)
-
-   If i_sink_stn = 0, only lift coverage is checked.
-
-   NOTE: Kept as FUNCTION_BLOCK because MATIEC cannot handle
-   ARRAY OF STRUCT as FUNCTION VAR_INPUT parameter.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION_BLOCK STC_FindTransporter
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_lift_stn : INT;     (* lift station number *)
-  i_sink_stn : INT;     (* sink station number, 0 = lift-only search *)
+  i_lift_stn                : INT;     (* lift station number *)
+  i_sink_stn                : INT;     (* sink station number, 0 = lift-only search *)
 END_VAR
+
 VAR_OUTPUT
-  o_trans : INT;         (* transporter ID 1..3, 0 = not found *)
+  o_trans                   : INT;         (* transporter ID 1..3, 0 = not found *)
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-  MAX_Transporters : INT;
+    MAX_Transporters        : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_cfg : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-  g_task : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
 END_VAR
+
 VAR
-  ti       : INT;
-  ai       : INT;
-  area     : UDT_TaskArea;
-  can_lift : BOOL;
-  can_sink : BOOL;
+  ti                        : INT;
+  ai                        : INT;
+  area                      : UDT_TaskArea;
+  can_lift                  : BOOL;
+  can_sink                  : BOOL;
   (* Multi-transporter scoring *)
-  capable      : ARRAY[1..3] OF INT;   (* capable transporter IDs *)
-  cap_count    : INT;
-  best_idx     : INT;
-  best_count   : INT;
-  best_dist    : INT;
-  cur_count    : INT;
-  cur_dist     : INT;
-  last_sink    : INT;
-  ci           : INT;
-  qi           : INT;
+  capable                   : ARRAY[1..3] OF INT;   (* capable transporter IDs *)
+  cap_count                 : INT;
+  best_idx                  : INT;
+  best_count                : INT;
+  best_dist                 : INT;
+  cur_count                 : INT;
+  cur_dist                  : INT;
+  last_sink                 : INT;
+  ci                        : INT;
+  qi                        : INT;
 END_VAR
 
 o_trans := 0;

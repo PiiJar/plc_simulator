@@ -236,23 +236,36 @@ router.get('/station-timing-stats', async (req, res) => {
   }
 
   try {
-    // 1) Per-station min/max treatment window (from lift events)
+    // Find the start of the latest production run
+    const prodStartResult = await _dbPool.query(`
+      SELECT created_at FROM sim_log
+      WHERE event = 'PRODUCTION_START'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
+    const prodStartTs = prodStartResult.rows.length > 0
+      ? prodStartResult.rows[0].created_at
+      : null;
+
+    // 1) Per-station min/max treatment window (from lift events, current run only)
     const stationsResult = await _dbPool.query(`
       SELECT station,
              MIN(min_time_s) AS min_s,
              MAX(max_time_s) AS max_s
       FROM lift_events
       WHERE stage > 0 AND min_time_s > 0
+        AND ($1::timestamptz IS NULL OR received_at >= $1)
       GROUP BY station
       ORDER BY station
-    `);
+    `, [prodStartTs]);
 
-    // 2) Up to 10 most recent batches with per-station actual durations
+    // 2) Up to 10 most recent batches with per-station actual durations (current run only)
     const batchesResult = await _dbPool.query(`
       WITH recent AS (
         SELECT batch_code, MAX(id) AS last_ev
         FROM lift_events
         WHERE stage > 0
+          AND ($1::timestamptz IS NULL OR received_at >= $1)
         GROUP BY batch_code
         ORDER BY last_ev DESC
         LIMIT 10
@@ -261,8 +274,9 @@ router.get('/station-timing-stats', async (req, res) => {
       FROM lift_events le
       JOIN recent r ON le.batch_code = r.batch_code
       WHERE le.stage > 0
+        AND ($1::timestamptz IS NULL OR le.received_at >= $1)
       ORDER BY le.batch_code, le.station
-    `);
+    `, [prodStartTs]);
 
     const stations = stationsResult.rows.map(r => ({
       station: r.station,

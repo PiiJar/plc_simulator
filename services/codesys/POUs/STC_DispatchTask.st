@@ -1,88 +1,101 @@
-(* ============================================================
-   STC_DispatchTask — Validate and dispatch tasks to transporters
+(* ===========================================================================================
+ *  STC_DispatchTask — Validate and dispatch tasks to transporters
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Called every PLC scan from MainScheduler.
+ *  For each idle transporter with queued tasks:
+ *  1. Skip if transporter not idle or queue empty
+ *  2. Time check: start_time close enough?
+ *  3. Sink station free check (with parallel alternatives)
+ *  4. Conflict check against active transporters
+ *  5. Dispatch: write to g_transporter → RunTasks picks it up
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Called every PLC scan from MainScheduler.
-   For each idle transporter with queued tasks:
-     1. Skip if transporter not idle or queue empty
-     2. Time check: start_time close enough?
-     3. Sink station free check (with parallel alternatives)
-     4. Conflict check against active transporters
-     5. Dispatch: write to g_transporter → RunTasks picks it up
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_DispatchTask : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters    : INT;
-    MAX_Units           : INT;
-    MAX_STATIONS_PER_STEP       : INT;
-    MAX_STEPS_PER_PROGRAM          : INT;
-    MIN_StationIndex : INT;
-    MAX_StationIndex   : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
+    MAX_STATIONS_PER_STEP   : INT;
+    MAX_STEPS_PER_PROGRAM   : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_transporter : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_sim_trans   : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
-  g_task        : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_station     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_unit        : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_program     : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_ntt         : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
-  g_batch       : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_move        : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_cfg         : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-  g_schedule    : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_time_s      : LINT;
-  g_event_pending       : UDT_JC_EventMsgType;
-  g_event_pending_valid : BOOL;
+  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_sim_trans               : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
+  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_time_s                  : LINT;
+  g_event_pending           : UDT_JC_EventMsgType;
+  g_event_pending_valid     : BOOL;
 END_VAR
+
 VAR
-  ti           : INT;     (* transporter loop *)
+  ti                        : INT;     (* transporter loop *)
   (* Task fields — read from queue[1] to avoid struct copy *)
-  t_unit       : INT;
-  t_stage      : INT;
-  t_lift       : INT;
-  t_sink       : INT;
-  t_start      : LINT;
-  t_finish     : LINT;
-  t_calc_time  : DINT;
+  t_unit                    : INT;
+  t_stage                   : INT;
+  t_lift                    : INT;
+  t_sink                    : INT;
+  t_start                   : LINT;
+  t_finish                  : LINT;
+  t_calc_time               : DINT;
   (* Time check *)
-  travel_s     : REAL;
-  margin_s     : LINT;
-  from_idx     : INT;
-  to_idx       : INT;
+  travel_s                  : REAL;
+  margin_s                  : LINT;
+  from_idx                  : INT;
+  to_idx                    : INT;
   (* Sink search *)
-  sink_stn     : INT;
-  sink_free    : BOOL;
-  best_stn     : INT;
-  best_change  : LINT;
-  si           : INT;
-  cand_stn     : INT;
-  cand_free    : BOOL;
-  uj           : INT;
-  tgt          : INT;
-  ntt_idx      : INT;     (* resolved NTT index (buffer 6/7/8) *)
-  ntt_cnt      : INT;
-  ntt_fb_cnt   : INT;
+  sink_stn                  : INT;
+  sink_free                 : BOOL;
+  best_stn                  : INT;
+  best_change               : LINT;
+  si                        : INT;
+  cand_stn                  : INT;
+  cand_free                 : BOOL;
+  uj                        : INT;
+  tgt                       : INT;
+  ntt_idx                   : INT;     (* resolved NTT index (buffer 6/7/8) *)
+  ntt_cnt                   : INT;
+  ntt_fb_cnt                : INT;
   (* Conflict check *)
-  conflict     : BOOL;
-  cj           : INT;
-  task_min     : INT;     (* min station of our proposed task *)
-  task_max     : INT;     (* max station of our proposed task *)
+  conflict                  : BOOL;
+  cj                        : INT;
+  task_min                  : INT;     (* min station of our proposed task *)
+  task_max                  : INT;     (* max station of our proposed task *)
   (* Queue position loop *)
-  qi           : INT;
+  qi                        : INT;
   (* Shift-down after dispatch *)
-  sh           : INT;
+  sh                        : INT;
   (* Transfer time for batch progress bar *)
-  xfer_total   : REAL;
+  xfer_total                : REAL;
   (* Program stage number for event *)
-  prog_stage   : INT;
+  prog_stage                : INT;
 END_VAR
 
 FOR ti := 1 TO MAX_Transporters DO
@@ -102,13 +115,8 @@ FOR ti := 1 TO MAX_Transporters DO
     t_finish    := g_task[ti].Queue[qi].FinishTime;
     t_calc_time := g_task[ti].Queue[qi].CalcTime;
 
-    (* Convert schedule index → program stage number for g_program access *)
-    prog_stage := 0;
-    IF t_unit >= 1 AND t_unit <= MAX_Units THEN
-      IF t_stage >= 1 AND t_stage <= g_schedule[t_unit].StageCount THEN
-        prog_stage := g_schedule[t_unit].Stages[t_stage].ProgramStage;
-      END_IF;
-    END_IF;
+    (* Queue[].Stage already contains ProgramStage (set by STC_CreateTasks) *)
+    prog_stage := t_stage;
 
     (* ── 1b. Lift station unit check — unit must be AT the lift station ── *)
     IF t_unit >= 1 AND t_unit <= MAX_Units
@@ -298,7 +306,7 @@ FOR ti := 1 TO MAX_Transporters DO
           IF xfer_total < 1.0 THEN
             xfer_total := INT_TO_REAL(ABS(sink_stn - t_lift)) * 8.0;
           END_IF;
-          IF xfer_total < 5.0 THEN xfer_total := 60.0; END_IF;
+  IF xfer_total < 5.0 THEN xfer_total := 60.0; END_IF;
           IF NOT g_event_pending_valid THEN
             g_event_pending.MsgType := 1;
             g_event_pending.TsHi := LINT_TO_INT(g_time_s / LINT#65536);

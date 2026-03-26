@@ -1,45 +1,60 @@
-(* ============================================================
-   STC_CreateTasks — Build task list from schedule for one unit
+(* ===========================================================================================
+ *  STC_CreateTasks — Build task list from schedule for one unit
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Shared FC: both TSK and DEP call this with different arrays.
+ *  Creates transporter tasks from the calculated schedule stages
+ *  and appends them to the task queues.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Shared FC: both TSK and DEP call this with different arrays.
-   Creates transporter tasks from the calculated schedule stages
-   and appends them to the task queues.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_CreateTasks : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_unit : INT;
+  i_unit                    : INT;
 END_VAR
+
 VAR_IN_OUT
-  io_schedule : ARRAY[1..10] OF UDT_JC_TskScheduleType;
-  io_task     : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
-    MAX_Units        : INT;
-    MAX_TASK_QUEUE   : INT;
-    MIN_StationIndex : INT;
-    MAX_StationIndex : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
+    MAX_TASK_QUEUE          : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_cfg     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-  g_station : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
 END_VAR
+
 VAR
-  si         : INT;
-  sc         : INT;
-  lift_stn   : INT;
-  sink_stn   : INT;
-  tid        : INT;
-  qi         : INT;
-  fb_find    : STC_FindTransporter;
-  eff_lift_stn : INT;
+  si                        : INT;
+  sc                        : INT;
+  lift_stn                  : INT;
+  sink_stn                  : INT;
+  tid                       : INT;
+  qi                        : INT;
+  fb_find                   : STC_FindTransporter;
+  eff_lift_stn              : INT;
 END_VAR
 
 STC_CreateTasks := FALSE;

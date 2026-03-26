@@ -1,53 +1,67 @@
-(* ============================================================
-   STC_TrackMoveTimes — Record phase transition timestamps
+(* ===========================================================================================
+ *  STC_TrackMoveTimes — Record phase transition timestamps
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Called from SIM code at each transporter phase change.
+ *  Uses g_time_100ms (0.1s ticks). On 4→0 completion,
+ *  calculates net durations and updates g_move[] with
+ *  weighted average: new = (old * 4 + measured) / 5.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Called from SIM code at each transporter phase change.
-   Uses g_time_100ms (0.1s ticks). On 4→0 completion,
-   calculates net durations and updates g_move[] with
-   weighted average: new = (old * 4 + measured) / 5.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_TrackMoveTimes : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-    i_trans     : INT;   (* transporter index 1..MAX_Transporters *)
-    i_prev      : INT;   (* previous phase *)
-    i_new       : INT;   (* new phase *)
+  i_trans                   : INT;   (* transporter index 1..MAX_Transporters *)
+  i_prev                    : INT;   (* previous phase *)
+  i_new                     : INT;   (* new phase *)
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
-    MIN_StationIndex : INT;
-    MAX_StationIndex : INT;
+    MAX_Transporters        : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
 END_VAR
+
 VAR_EXTERNAL
-    g_transporter  : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-    g_station      : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-    g_cfg          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-    g_move         : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-    g_actual_move  : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
-    g_time_s       : LINT;
-    g_time_100ms   : LINT;
+  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_actual_move             : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
+  g_time_s                  : LINT;
+  g_time_100ms              : LINT;
 END_VAR
+
 VAR
-    t          : INT;
-    lift_stn   : INT;
-    sink_stn   : INT;
-    start_stn  : INT;
-    li         : INT;   (* lift station index = stn - 100 *)
-    si         : INT;   (* sink station index = stn - 100 *)
-    st_i       : INT;   (* start station index = stn - 100 *)
-    raw_lift   : INT;   (* measured lift duration in 0.1s ticks *)
-    raw_sink   : INT;   (* measured sink duration in 0.1s ticks *)
-    raw_trav1  : INT;   (* measured travel start→lift in 0.1s ticks *)
-    raw_trav2  : INT;   (* measured travel lift→sink in 0.1s ticks *)
-    drip_x10   : INT;   (* DrippingTime in 0.1s ticks from lift station *)
-    tray_x10   : INT;   (* DripTrayDelay in 0.1s ticks from transporter config *)
-    dev_x10    : INT;   (* DeviceDelay in 0.1s ticks from sink station *)
+  t                         : INT;
+  lift_stn                  : INT;
+  sink_stn                  : INT;
+  start_stn                 : INT;
+  li                        : INT;   (* lift station index = stn - 100 *)
+  si                        : INT;   (* sink station index = stn - 100 *)
+  st_i                      : INT;   (* start station index = stn - 100 *)
+  raw_lift                  : INT;   (* measured lift duration in 0.1s ticks *)
+  raw_sink                  : INT;   (* measured sink duration in 0.1s ticks *)
+  raw_trav1                 : INT;   (* measured travel start→lift in 0.1s ticks *)
+  raw_trav2                 : INT;   (* measured travel lift→sink in 0.1s ticks *)
+  drip_x10                  : INT;   (* DrippingTime in 0.1s ticks from lift station *)
+  tray_x10                  : INT;   (* DripTrayDelay in 0.1s ticks from transporter config *)
+  dev_x10                   : INT;   (* DeviceDelay in 0.1s ticks from sink station *)
 END_VAR
 
 t := i_trans;
@@ -112,10 +126,10 @@ CASE i_prev OF
                             - tray_x10 - dev_x10;
 
                 (* Clamp to minimum 0 *)
-                IF raw_lift < 0 THEN raw_lift := 0; END_IF;
-                IF raw_sink < 0 THEN raw_sink := 0; END_IF;
-                IF raw_trav1 < 0 THEN raw_trav1 := 0; END_IF;
-                IF raw_trav2 < 0 THEN raw_trav2 := 0; END_IF;
+  IF raw_lift < 0 THEN raw_lift := 0; END_IF;
+  IF raw_sink < 0 THEN raw_sink := 0; END_IF;
+  IF raw_trav1 < 0 THEN raw_trav1 := 0; END_IF;
+  IF raw_trav2 < 0 THEN raw_trav2 := 0; END_IF;
 
                 (* Bounds check indices *)
                 IF li >= 1 AND li <= 30

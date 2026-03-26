@@ -1,77 +1,92 @@
-(* ============================================================
-   STC_CalcSchedule — Calculate batch schedule for one unit
+(* ===========================================================================================
+ *  STC_CalcSchedule — Calculate batch schedule for one unit
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Shared FC: both TSK and DEP call this with different arrays.
+ *  Calculates start/finish times for each treatment stage based
+ *  on elapsed time, cal_time and transfer durations.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Shared FC: both TSK and DEP call this with different arrays.
-   Calculates start/finish times for each treatment stage based
-   on elapsed time, cal_time and transfer durations.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_CalcSchedule : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_unit     : INT;
-  i_trans    : INT;
-  i_time_s   : LINT;
+  i_unit                    : INT;
+  i_trans                   : INT;
+  i_time_s                  : LINT;
 END_VAR
+
 VAR_IN_OUT
-  io_schedule : ARRAY[1..10] OF UDT_JC_TskScheduleType;
-  io_batch    : ARRAY[1..10] OF UDT_BatchType;
-  io_program  : ARRAY[1..10] OF UDT_TreatmentProgramType;
+  io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  io_batch                  : ARRAY[1..10] OF UDT_BatchType;
+  io_program                : ARRAY[1..10] OF UDT_TreatmentProgramType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MIN_StationIndex : INT;
-    MAX_StationIndex : INT;
-    MAX_Units        : INT;
-    MAX_Transporters : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
+    MAX_Units               : INT;
+    MAX_Transporters        : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_unit        : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_station     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_station_count : INT;
-  g_move        : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_cfg         : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-  g_transporter : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_station_count           : INT;
+  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
 END_VAR
+
 VAR
-  stg         : INT;
-  stn_num    : INT;
-  prev_stn   : INT;
-  cur_stage  : INT;
-  location   : INT;
-  start_st   : INT;
-  entry_t    : LINT;
-  exit_t     : LINT;
-  xfer_t     : REAL;
-  calc_s     : REAL;
-  min_s      : REAL;
-  max_s      : REAL;
-  is_on_stn  : BOOL;
-  is_first   : BOOL;
-  remain_s   : REAL;
-  elapsed_s  : REAL;
-  out_count  : INT;
-  p          : INT;
-  chosen_stn : INT;
-  tmp_move   : UDT_JC_MoveTimesType;
-  cand_arr         : ARRAY[1..5] OF INT;
-  cand_cnt         : INT;
-  sched_occupied   : ARRAY[1..5] OF BOOL;
-  phys_occupied    : ARRAY[1..5] OF BOOL;
-  best_change_time : LINT;
-  my_entry         : LINT;
-  my_exit          : LINT;
-  ov_start         : LINT;
-  ov_end           : LINT;
-  uj               : INT;
-  sj               : INT;
-  pickup_wait      : REAL;   (* earliest pickup time for waiting batch *)
-  MIN_PICKUP_WAIT  : REAL := 5.0;  (* minimum pickup wait seconds *)
+  stg                       : INT;
+  stn_num                   : INT;
+  prev_stn                  : INT;
+  cur_stage                 : INT;
+  location                  : INT;
+  start_st                  : INT;
+  entry_t                   : LINT;
+  exit_t                    : LINT;
+  xfer_t                    : REAL;
+  calc_s                    : REAL;
+  min_s                     : REAL;
+  max_s                     : REAL;
+  is_on_stn                 : BOOL;
+  is_first                  : BOOL;
+  remain_s                  : REAL;
+  elapsed_s                 : REAL;
+  out_count                 : INT;
+  p                         : INT;
+  chosen_stn                : INT;
+  tmp_move                  : UDT_JC_MoveTimesType;
+  cand_arr                  : ARRAY[1..5] OF INT;
+  cand_cnt                  : INT;
+  sched_occupied            : ARRAY[1..5] OF BOOL;
+  phys_occupied             : ARRAY[1..5] OF BOOL;
+  best_change_time          : LINT;
+  my_entry                  : LINT;
+  my_exit                   : LINT;
+  ov_start                  : LINT;
+  ov_end                    : LINT;
+  uj                        : INT;
+  sj                        : INT;
+  pickup_wait               : REAL;   (* earliest pickup time for waiting batch *)
+  MIN_PICKUP_WAIT           : REAL := 5.0;  (* minimum pickup wait seconds *)
 END_VAR
 
 STC_CalcSchedule := FALSE;
@@ -142,7 +157,7 @@ IF is_on_stn AND start_st >= 1 THEN
         elapsed_s := 0.0;
       END_IF;
       remain_s := DINT_TO_REAL(io_batch[i_unit].CalTime) - elapsed_s;
-      IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
+  IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
       exit_t := i_time_s + REAL_TO_LINT(remain_s);
       io_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
       io_schedule[i_unit].Stages[out_count].CalcTime  := REAL_TO_DINT(remain_s);
@@ -174,7 +189,7 @@ IF is_on_stn AND start_st >= 1 THEN
           END_IF;
         END_IF;
 
-        IF pickup_wait < MIN_PICKUP_WAIT THEN pickup_wait := MIN_PICKUP_WAIT; END_IF;
+  IF pickup_wait < MIN_PICKUP_WAIT THEN pickup_wait := MIN_PICKUP_WAIT; END_IF;
 
         exit_t := i_time_s + REAL_TO_LINT(pickup_wait);
         io_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
@@ -325,7 +340,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
       elapsed_s := 0.0;
     END_IF;
     remain_s := DINT_TO_REAL(io_batch[i_unit].CalTime) - elapsed_s;
-    IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
+  IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
     exit_t := i_time_s + REAL_TO_LINT(remain_s);
   ELSIF is_first AND NOT is_on_stn THEN
     IF io_batch[i_unit].StartTime > 0 AND io_batch[i_unit].CalTime > 0 THEN

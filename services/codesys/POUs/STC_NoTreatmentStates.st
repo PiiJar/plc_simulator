@@ -1,70 +1,81 @@
-(* ============================================================
-   STC_NoTreatmentStates — Non-treatment target state management
+(* ===========================================================================================
+ *  STC_NoTreatmentStates — Non-treatment target state management
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Manages non-treatment target states for all units.
+ *
+ *  Structure:
+ *  Pass 0 — SNAPSHOT: read unit/batch/station state into snap[]
+ *  Section 1 — PROCESSED: mark last-stage units as PROCESSED
+ *  Section 2 — TO_AVOID: clear occupied next-stage stations
+ *  Section 3 — TO_LOADING: route one empty unit to loading
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Manages non-treatment target states for all units.
-
-   Structure:
-     Pass 0 — SNAPSHOT: read unit/batch/station state into snap[]
-     Section 1 — PROCESSED: mark last-stage units as PROCESSED
-     Section 2 — TO_AVOID: clear occupied next-stage stations
-     Section 3 — TO_LOADING: route one empty unit to loading
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_NoTreatmentStates : BOOL
-  VAR_EXTERNAL CONSTANT
-    MAX_Units          : INT;
-    MAX_STEPS_PER_PROGRAM         : INT;
-    MAX_STATIONS_PER_STEP      : INT;
-    MIN_StationIndex : INT;
-    MAX_StationIndex  : INT;
-    IN_PROCESS         : INT;
-    PROCESSED          : INT;
-    NOT_USED           : INT;
-    TO_NONE            : INT;
-    TO_UNLOAD          : INT;
-    TO_AVOID           : INT;
-    TO_LOADING         : INT;
-    USED               : INT;
-    OP_BUFFER            : INT;
-    OP_BUFFER_PROCESSED  : INT;
-    OP_LOADING           : INT;
-    OP_LOADING_UNLOADING : INT;
-  END_VAR
 
-  VAR_EXTERNAL
-    g_unit             : ARRAY[1..MAX_Units] OF UDT_UnitType;
-    g_batch            : ARRAY[1..MAX_Units] OF UDT_BatchType;
-    g_program          : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-    g_station          : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-    g_station_loc      : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-    g_time_s           : LINT;
-    g_production_queue : INT;
-  END_VAR
 
-  VAR
-    (* Snapshot *)
-    snap        : ARRAY[1..MAX_Units] OF UDT_JC_UnitSnapType;
-    u           : INT;        (* unit loop index *)
-    has_loading : BOOL;       (* any unit already has TO_LOADING *)
-    (* Section 1+2 *)
-    p           : INT;        (* parallel station loop *)
-    next_stn    : INT;        (* next stage station *)
-    occ_uid     : INT;        (* unit_id at an occupied station *)
-    free_found  : BOOL;       (* any next-stage station is free *)
-    avoid_uid   : INT;        (* unit to mark TO_AVOID *)
-    (* Section 3 *)
-    load_free   : BOOL;       (* a loading station is free *)
-    load_uid    : INT;        (* best candidate for TO_LOADING *)
-    load_in_buf : BOOL;       (* current candidate is in buffer *)
-    stk         : INT;        (* station loop *)
-    op          : INT;        (* station operation code *)
-  END_VAR
+(* Introduction of Variables ----------------------------------------------------------------*)
+
+VAR_EXTERNAL CONSTANT
+    MAX_Units               : INT;
+    MAX_STEPS_PER_PROGRAM   : INT;
+    MAX_STATIONS_PER_STEP   : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
+    IN_PROCESS              : INT;
+    PROCESSED               : INT;
+    NOT_USED                : INT;
+    TO_NONE                 : INT;
+    TO_UNLOAD               : INT;
+    TO_AVOID                : INT;
+    TO_LOADING              : INT;
+    USED                    : INT;
+    OP_BUFFER               : INT;
+    OP_BUFFER_PROCESSED     : INT;
+    OP_LOADING              : INT;
+    OP_LOADING_UNLOADING    : INT;
+END_VAR
+
+VAR_EXTERNAL
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_time_s                  : LINT;
+  g_production_queue        : INT;
+END_VAR
+
+VAR
+  (* Snapshot *)
+  snap                      : ARRAY[1..MAX_Units] OF UDT_JC_UnitSnapType;
+  u                         : INT;        (* unit loop index *)
+  has_loading               : BOOL;       (* any unit already has TO_LOADING *)
+  (* Section 1+2 *)
+  p                         : INT;        (* parallel station loop *)
+  next_stn                  : INT;        (* next stage station *)
+  occ_uid                   : INT;        (* unit_id at an occupied station *)
+  free_found                : BOOL;       (* any next-stage station is free *)
+  avoid_uid                 : INT;        (* unit to mark TO_AVOID *)
+  (* Section 3 *)
+  load_free                 : BOOL;       (* a loading station is free *)
+  load_uid                  : INT;        (* best candidate for TO_LOADING *)
+  load_in_buf               : BOOL;       (* current candidate is in buffer *)
+  stk                       : INT;        (* station loop *)
+  op                        : INT;        (* station operation code *)
+END_VAR
 
   (* ════════════════════════════════════════════════════════════
      Pass 0 — SNAPSHOT: collect per-unit state in one pass

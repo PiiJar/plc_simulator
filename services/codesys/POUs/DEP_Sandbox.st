@@ -1,46 +1,61 @@
-(* ============================================================
-   DEP_Sandbox — Sandbox snapshot / restore / clear
+(* ===========================================================================================
+ *  DEP_Sandbox — Sandbox snapshot / restore / clear
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Copies batch and program data between live globals and
+ *  DEP workspace arrays via VAR_IN_OUT.
+ *  Schedule is NOT copied — DEP calculates it fresh (phases 1000+i).
+ *  Task queues are NOT copied — DEP rebuilds them (phases 2000+).
+ *
+ *  Commands:
+ *  1 = SNAPSHOT  — live batch+program → workspace
+ *  2 = RESTORE   — workspace batch+program → live
+ *  3 = CLEAR     — noop for array-based workspace
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Copies batch and program data between live globals and
-   DEP workspace arrays via VAR_IN_OUT.
-   Schedule is NOT copied — DEP calculates it fresh (phases 1000+i).
-   Task queues are NOT copied — DEP rebuilds them (phases 2000+).
-
-   Commands:
-     1 = SNAPSHOT  — live batch+program → workspace
-     2 = RESTORE   — workspace batch+program → live
-     3 = CLEAR     — noop for array-based workspace
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION DEP_Sandbox : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_cmd : INT;
+  i_cmd                     : INT;
 END_VAR
+
 VAR_IN_OUT
-  io_wk_schedule : ARRAY[1..10] OF UDT_JC_TskScheduleType;
-  io_wk_batch    : ARRAY[1..10] OF UDT_BatchType;
-  io_wk_program  : ARRAY[1..10] OF UDT_TreatmentProgramType;
-  io_wk_task     : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  io_wk_schedule            : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  io_wk_batch               : ARRAY[1..10] OF UDT_BatchType;
+  io_wk_program             : ARRAY[1..10] OF UDT_TreatmentProgramType;
+  io_wk_task                : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
-    MAX_Units        : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_schedule : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_batch    : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_program  : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_task     : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
 END_VAR
+
 VAR
-  ui : INT;
-  ti : INT;
+  ui                        : INT;
+  ti                        : INT;
 END_VAR
 
 DEP_Sandbox := TRUE;

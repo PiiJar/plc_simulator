@@ -1,200 +1,213 @@
-(* ============================================================
-   DEP_FB_Scheduler — Departure scheduler state machine
+(* ===========================================================================================
+ *  DEP_FB_Scheduler — Departure scheduler state machine
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Controls batch activation: waiting batches (state=NOT_PROCESSED)
+ *  are checked against idle slots to see if their tasks fit into
+ *  the existing transporter schedule without conflicts.
+ *
+ *  Uses sandbox workspace arrays (g_dep_wk_xxx): DEP never touches
+ *  live globals. Sandbox SNAPSHOT copies live -> workspace at INIT.
+ *  All computation happens on workspace arrays. Only ACTIVATE
+ *  writes results to g_dep_pending for TSK to apply.
+ *
+ *  Phase flow (structured by 100/1000 groups):
+ *  0        STOPPED
+ *  1        WAIT_STABLE          (wait for TSK phase >= 10000)
+ *  100      INIT_SNAPSHOT        (snapshot batch+program to sandbox)
+ *  101      INIT_COLLECT         (find waiting + active batches)
+ *  102      INIT_SORT_WAITING    (FIFO sort by start_time)
+ *  103      INIT_CALC_OVERLAP    (compute overlap stations)
+ *  200      BATCH_START          (prepare next waiting batch)
+ *  1000+i   CALC_SCHEDULE        (calculate schedule for batch i)
+ *  2000     CLEAR_TASKS          (clear sandbox task queues)
+ *  2001+i   CREATE_TASKS         (create tasks for batch i)
+ *  2100     SORT_TASKS           (sort all queues)
+ *  2101     SWAP_TASKS           (swap same-station pairs)
+ *  2200     EXTRACT_WAIT         (extract waiting batch tasks, inject in-flight)
+ *  2300     CALC_IDLE            (calculate idle slots)
+ *  3000     FIT_STAGE0           (check pickup fits in idle slot)
+ *  3100+i   FIT_TASK             (check stage 1+ task i)
+ *  4000     APPLY_DELAY          (record delay -> recalc loop)
+ *  8000     ACTIVATE             (commit, set pending)
+ *  8100     WAIT_SAVE            (wait for TSK to process)
+ *  8200+i   END_DELAY            (stabilization ticks, i=0..N)
+ *  8500     RESTART              (-> WAIT_STABLE)
+ *  9000     REJECT               (restore sandbox, try next batch)
+ *
+ *  Phase advancement:
+ *  Default = phase + 1 (at end of function body).
+ *  next_phase is set ONLY when jumping to a different group.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *  25.03.2026 - Restructured state machine: 100/1000 groups,
+ *  phase+1 default, index by phase offset.
+ *  Removed create_idx, cur_task_idx, end_delay_cnt.
+ *  Schedule computed for ALL batches (no sandbox copy needed).
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Controls batch activation: waiting batches (state=NOT_PROCESSED)
-   are checked against idle slots to see if their tasks fit into
-   the existing transporter schedule without conflicts.
-
-   Uses sandbox workspace arrays (g_dep_wk_xxx): DEP never touches
-   live globals. Sandbox SNAPSHOT copies live -> workspace at INIT.
-   All computation happens on workspace arrays. Only ACTIVATE
-   writes results to g_dep_pending for TSK to apply.
-
-   Phase flow (structured by 100/1000 groups):
-     0        STOPPED
-     1        WAIT_STABLE          (wait for TSK phase >= 10000)
-     100      INIT_SNAPSHOT        (snapshot batch+program to sandbox)
-     101      INIT_COLLECT         (find waiting + active batches)
-     102      INIT_SORT_WAITING    (FIFO sort by start_time)
-     103      INIT_CALC_OVERLAP    (compute overlap stations)
-     200      BATCH_START          (prepare next waiting batch)
-     1000+i   CALC_SCHEDULE        (calculate schedule for batch i)
-     2000     CLEAR_TASKS          (clear sandbox task queues)
-     2001+i   CREATE_TASKS         (create tasks for batch i)
-     2100     SORT_TASKS           (sort all queues)
-     2101     SWAP_TASKS           (swap same-station pairs)
-     2200     EXTRACT_WAIT         (extract waiting batch tasks, inject in-flight)
-     2300     CALC_IDLE            (calculate idle slots)
-     3000     FIT_STAGE0           (check pickup fits in idle slot)
-     3100+i   FIT_TASK             (check stage 1+ task i)
-     4000     APPLY_DELAY          (record delay -> recalc loop)
-     8000     ACTIVATE             (commit, set pending)
-     8100     WAIT_SAVE            (wait for TSK to process)
-     8200+i   END_DELAY            (stabilization ticks, i=0..N)
-     8500     RESTART              (-> WAIT_STABLE)
-     9000     REJECT               (restore sandbox, try next batch)
-
-   Phase advancement:
-     Default = phase + 1 (at end of function body).
-     next_phase is set ONLY when jumping to a different group.
-   ------------------------------------------------------------
-   Changes:
-   25.03.2026 - Restructured state machine: 100/1000 groups,
-                phase+1 default, index by phase offset.
-                Removed create_idx, cur_task_idx, end_delay_cnt.
-                Schedule computed for ALL batches (no sandbox copy needed).
-   ============================================================ *)
 
 FUNCTION_BLOCK DEP_FB_Scheduler
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_run       : BOOL;     (* TRUE = run *)
-  i_time_s    : LINT;     (* current absolute time (s), unix seconds *)
-  i_tsk_phase : INT;      (* TSK_FB_Scheduler.o_phase *)
+  i_run                     : BOOL;     (* TRUE = run *)
+  i_time_s                  : LINT;     (* current absolute time (s), unix seconds *)
+  i_tsk_phase               : INT;      (* TSK_FB_Scheduler.o_phase *)
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters   : INT;
-    MAX_Units          : INT;
-    DEP_MAX_WAITING    : INT;
-    DEP_MAX_IDLE_SLOTS : INT;
-    MIN_StationIndex   : INT;
-    MAX_StationIndex   : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
+    DEP_MAX_WAITING         : INT;
+    DEP_MAX_IDLE_SLOTS      : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_batch           : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_unit            : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_program         : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_schedule        : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_task            : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_station         : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_cfg             : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-  g_transporter     : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_dep_idle_slot   : ARRAY[1..MAX_Transporters] OF UDT_JC_DepIdleSlotSetType;
-  g_dep_overlap     : UDT_JC_DepOverlapType;
-  g_dep_pending     : UDT_JC_DepPendingWriteType;
-  g_dep_activated   : BOOL;
-  g_tsk_stable      : BOOL;
-  g_move            : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_dep_waiting     : ARRAY[1..DEP_MAX_WAITING] OF INT;
-  g_dep_waiting_count : INT;
-  g_dep_wk_schedule : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_dep_wk_task     : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_dep_wk_program  : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_dep_wk_batch    : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_dep_idle_slot           : ARRAY[1..MAX_Transporters] OF UDT_JC_DepIdleSlotSetType;
+  g_dep_overlap             : UDT_JC_DepOverlapType;
+  g_dep_pending             : UDT_JC_DepPendingWriteType;
+  g_dep_activated           : BOOL;
+  g_tsk_stable              : BOOL;
+  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_dep_waiting             : ARRAY[1..DEP_MAX_WAITING] OF INT;
+  g_dep_waiting_count       : INT;
+  g_dep_wk_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_dep_wk_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_dep_wk_program          : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_dep_wk_batch            : ARRAY[1..MAX_Units] OF UDT_BatchType;
 END_VAR
+
 VAR_OUTPUT
-  o_phase     : INT;
-  o_wait_cnt  : INT;
-  o_activated : BOOL;
-  o_reject_cnt    : INT;
-  o_fit_round     : INT;
-  o_cur_wait_unit : INT;
+  o_phase                   : INT;
+  o_wait_cnt                : INT;
+  o_activated               : BOOL;
+  o_reject_cnt              : INT;
+  o_fit_round               : INT;
+  o_cur_wait_unit           : INT;
 END_VAR
+
 VAR
-  phase       : INT := 0;
-  next_phase  : INT;
+  phase                     : INT := 0;
+  next_phase                : INT;
 
   (* ── Waiting batch management ── *)
-  waiting_list  : ARRAY[1..MAX_Units] OF INT;
-  waiting_cnt   : INT;
-  cur_wait_idx  : INT;
-  cur_wait_unit : INT;
+  waiting_list              : ARRAY[1..MAX_Units] OF INT;
+  waiting_cnt               : INT;
+  cur_wait_idx              : INT;
+  cur_wait_unit             : INT;
 
   (* ── Active batch list for rebuild ── *)
-  batch_list    : ARRAY[1..MAX_Units] OF INT;
-  batch_count   : INT;
+  batch_list                : ARRAY[1..MAX_Units] OF INT;
+  batch_count               : INT;
 
   (* ── Extracted waiting batch tasks ── *)
-  w_tasks       : ARRAY[1..30] OF UDT_JC_TskTaskType;
-  w_trans       : ARRAY[1..30] OF INT;
-  w_task_cnt    : INT;
+  w_tasks                   : ARRAY[1..30] OF UDT_JC_TskTaskType;
+  w_trans                   : ARRAY[1..30] OF INT;
+  w_task_cnt                : INT;
 
   (* ── Phase index: derived from phase number ── *)
-  idx           : INT;
+  idx                       : INT;
 
   (* ── First fit task index (skip stage 0 if prepended) ── *)
-  fit_task_start : INT;
+  fit_task_start            : INT;
 
   (* ── Fit state ── *)
-  fit_round      : INT;
-  MAX_FIT_ROUNDS : INT := 50;
-  sched_base_time : LINT;
+  fit_round                 : INT;
+  MAX_FIT_ROUNDS            : INT := 50;
+  sched_base_time           : LINT;
 
   (* ── Delay recording ── *)
-  delay_stage  : INT;
-  delay_amount : REAL;
-  delay_target : INT;
+  delay_stage               : INT;
+  delay_amount              : REAL;
+  delay_target              : INT;
 
   (* ── Constants ── *)
-  FLEX_FACTOR       : REAL := 0.5;
-  MARGIN_S          : REAL := 5.0;
-  CONFLICT_MARGIN_S : REAL := 1.0;
-  MAX_INIT_WAIT_S   : REAL := 120.0;
-  END_DELAY_TICKS   : INT := 100;
+  FLEX_FACTOR               : REAL := 0.5;
+  MARGIN_S                  : REAL := 5.0;
+  CONFLICT_MARGIN_S         : REAL := 1.0;
+  MAX_INIT_WAIT_S           : REAL := 120.0;
+  END_DELAY_TICKS           : INT := 100;
 
   (* Sub-FB instances *)
-  fb_find         : STC_FindTransporter;
-  fit_result      : UDT_JC_DepFitResultType;
+  fb_find                   : STC_FindTransporter;
+  fit_result                : UDT_JC_DepFitResultType;
 
   (* ── Temp variables ── *)
-  ti : INT;
-  qi : INT;
-  bi : INT;
-  ui : INT;
-  si : INT;
-  sched_trans    : INT;
-  tmp_move       : UDT_JC_MoveTimesType;
-  write_idx      : INT;
-  loading_stn    : INT;
-  first_stn      : INT;
-  xfer_dur       : REAL;
-  stage0_delay   : REAL;
-  stage0_ovlp    : REAL;
-  stage0_pending_delay : REAL;
-  stage0_wait_time : REAL;
-  ovlp_delay_s   : REAL;
-  total_delay_s  : REAL;
-  prog_idx       : INT;
-  old_cal        : DINT;
-  new_cal        : DINT;
-  max_cal        : DINT;
-  est_finish     : LINT;
+  ti                        : INT;
+  qi                        : INT;
+  bi                        : INT;
+  ui                        : INT;
+  si                        : INT;
+  sched_trans               : INT;
+  tmp_move                  : UDT_JC_MoveTimesType;
+  write_idx                 : INT;
+  loading_stn               : INT;
+  first_stn                 : INT;
+  xfer_dur                  : REAL;
+  stage0_delay              : REAL;
+  stage0_ovlp               : REAL;
+  stage0_pending_delay      : REAL;
+  stage0_wait_time          : REAL;
+  ovlp_delay_s              : REAL;
+  total_delay_s             : REAL;
+  prog_idx                  : INT;
+  old_cal                   : DINT;
+  new_cal                   : DINT;
+  max_cal                   : DINT;
+  est_finish                : LINT;
 
   (* ── Stage 0 inline fit variables ── *)
-  s0_slot_si       : INT;
-  s0_slot_cnt      : INT;
-  s0_slot_start    : LINT;
-  s0_slot_end      : LINT;
-  s0_travel_to     : REAL;
-  s0_travel_from   : REAL;
-  s0_earliest      : LINT;
-  s0_task_dur      : LINT;
-  s0_slot_fitted   : BOOL;
-  s0_from_stn      : INT;
-  s0_to_stn        : INT;
+  s0_slot_si                : INT;
+  s0_slot_cnt               : INT;
+  s0_slot_start             : LINT;
+  s0_slot_end               : LINT;
+  s0_travel_to              : REAL;
+  s0_travel_from            : REAL;
+  s0_earliest               : LINT;
+  s0_task_dur               : LINT;
+  s0_slot_fitted            : BOOL;
+  s0_from_stn               : INT;
+  s0_to_stn                 : INT;
 
   (* ── Backward chaining variables ── *)
-  remaining_need   : REAL;
-  chain_delays     : ARRAY[1..10] OF UDT_JC_DepDelayActionType;
-  chain_delay_cnt  : INT;
-  chain_ok         : BOOL;
-  prev_flex_up     : REAL;
-  prev_capped      : REAL;
-  use_delay        : REAL;
-  bk               : INT;
-  ci               : INT;
+  remaining_need            : REAL;
+  chain_delays              : ARRAY[1..10] OF UDT_JC_DepDelayActionType;
+  chain_delay_cnt           : INT;
+  chain_ok                  : BOOL;
+  prev_flex_up              : REAL;
+  prev_capped               : REAL;
+  use_delay                 : REAL;
+  bk                        : INT;
+  ci                        : INT;
 
   (* ── Prepend offset ── *)
-  prepend_offset : INT;
+  prepend_offset            : INT;
 
   (* ── Sort variables ── *)
-  tmp_unit : INT;
-  tmp_key  : LINT;
-  ji       : INT;
+  tmp_unit                  : INT;
+  tmp_key                   : LINT;
+  ji                        : INT;
 END_VAR
 
 IF NOT i_run THEN
@@ -310,7 +323,7 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
     (* Calculate schedule for waiting batch *)
     fb_find(i_lift_stn := g_unit[cur_wait_unit].location, i_sink_stn := 0);
     sched_trans := fb_find.o_trans;
-    IF sched_trans = 0 THEN sched_trans := 1; END_IF;
+  IF sched_trans = 0 THEN sched_trans := 1; END_IF;
 
     STC_CalcSchedule(
       i_unit   := cur_wait_unit,
@@ -326,7 +339,7 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
     (* Calculate schedule for active batch *)
     fb_find(i_lift_stn := g_unit[batch_list[idx]].location, i_sink_stn := 0);
     sched_trans := fb_find.o_trans;
-    IF sched_trans = 0 THEN sched_trans := 1; END_IF;
+  IF sched_trans = 0 THEN sched_trans := 1; END_IF;
 
     STC_CalcSchedule(
       i_unit   := batch_list[idx],
@@ -508,7 +521,7 @@ ELSIF phase = 3000 THEN
   ELSE
     fb_find(i_lift_stn := loading_stn, i_sink_stn := first_stn);
     sched_trans := fb_find.o_trans;
-    IF sched_trans = 0 THEN sched_trans := 1; END_IF;
+  IF sched_trans = 0 THEN sched_trans := 1; END_IF;
   END_IF;
 
   IF next_phase = 0 THEN
@@ -522,7 +535,7 @@ ELSIF phase = 3000 THEN
       i_to_device_delay_x10 := g_station[first_stn].DeviceDelay,
       i_drip_tray_delay_x10 := g_cfg[sched_trans].DripTrayDelay
     );
-    IF xfer_dur < 1.0 THEN xfer_dur := 1.0; END_IF;
+  IF xfer_dur < 1.0 THEN xfer_dur := 1.0; END_IF;
 
     s0_task_dur := REAL_TO_LINT(xfer_dur);
     s0_slot_fitted := FALSE;
@@ -575,7 +588,7 @@ ELSIF phase = 3000 THEN
 
         IF s0_earliest + s0_task_dur <= s0_slot_end THEN
           stage0_delay := LINT_TO_REAL(s0_earliest - sched_base_time);
-          IF stage0_delay < 0.0 THEN stage0_delay := 0.0; END_IF;
+  IF stage0_delay < 0.0 THEN stage0_delay := 0.0; END_IF;
 
           IF stage0_delay <= MAX_INIT_WAIT_S THEN
             s0_slot_fitted := TRUE;
@@ -686,10 +699,10 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
         FOR bk := si - 1 TO 1 BY -1 DO
           IF remaining_need <= MARGIN_S THEN EXIT; END_IF;
           prev_flex_up := DINT_TO_REAL(w_tasks[bk].MaxTime - w_tasks[bk].CalcTime);
-          IF prev_flex_up < 0.0 THEN prev_flex_up := 0.0; END_IF;
+  IF prev_flex_up < 0.0 THEN prev_flex_up := 0.0; END_IF;
           prev_capped := prev_flex_up * FLEX_FACTOR;
           use_delay := prev_capped;
-          IF use_delay > remaining_need THEN use_delay := remaining_need; END_IF;
+  IF use_delay > remaining_need THEN use_delay := remaining_need; END_IF;
 
           IF use_delay > MARGIN_S THEN
             chain_delay_cnt := chain_delay_cnt + 1;
@@ -707,7 +720,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
           END_IF;
         END_FOR;
 
-        IF remaining_need <= MARGIN_S THEN chain_ok := TRUE; END_IF;
+  IF remaining_need <= MARGIN_S THEN chain_ok := TRUE; END_IF;
 
         IF chain_ok THEN
           (* Apply chain delays *)

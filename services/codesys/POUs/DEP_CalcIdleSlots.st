@@ -1,42 +1,57 @@
-(* ============================================================
-   DEP_CalcIdleSlots — Idle slot calculation per transporter
+(* ===========================================================================================
+ *  DEP_CalcIdleSlots — Idle slot calculation per transporter
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Reads task queue via VAR_IN_OUT (sandbox or live).
+ *  Writes idle slot sets to io_idle_slot per transporter.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Reads task queue via VAR_IN_OUT (sandbox or live).
-   Writes idle slot sets to io_idle_slot per transporter.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION DEP_CalcIdleSlots : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_trans  : INT;
-  i_time_s : LINT;
+  i_trans                   : INT;
+  i_time_s                  : LINT;
 END_VAR
+
 VAR_IN_OUT
-  io_task      : ARRAY[1..3] OF UDT_JC_TskQueueType;
-  io_idle_slot : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
+  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  io_idle_slot              : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters   : INT;
-    MAX_Units          : INT;
-    DEP_MAX_IDLE_SLOTS : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
+    DEP_MAX_IDLE_SLOTS      : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_transporter : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
 END_VAR
+
 VAR
-  qi       : INT;
-  si       : INT;
-  cnt      : INT;
-  prev_end : LINT;
-  prev_sink : INT;
-  gap_start : LINT;
-  gap_end   : LINT;
-  HORIZON  : LINT := 9999999999;
+  qi                        : INT;
+  si                        : INT;
+  cnt                       : INT;
+  prev_end                  : LINT;
+  prev_sink                 : INT;
+  gap_start                 : LINT;
+  gap_end                   : LINT;
+  HORIZON                   : LINT := 9999999999;
 END_VAR
 
 DEP_CalcIdleSlots := FALSE;

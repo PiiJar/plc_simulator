@@ -1,27 +1,39 @@
-(* ============================================================
-   STC_CalcHorizontalTravel — Horizontal travel time
+(* ===========================================================================================
+ *  STC_CalcHorizontalTravel — Horizontal travel time
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Calculates horizontal travel time between two stations
+ *  (no lift/sink) using precomputed move time table.
+ *  Caller passes i_move (UDT_JC_MoveTimesType) for the
+ *  specific transporter.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Calculates horizontal travel time between two stations
-   (no lift/sink) using precomputed move time table.
-   Caller passes i_move (UDT_JC_MoveTimesType) for the
-   specific transporter.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_CalcHorizontalTravel : REAL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_from_stn : INT;     (* source station number *)
-  i_to_stn   : INT;     (* destination station number *)
-  i_move     : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
+  i_from_stn                : INT;     (* source station number *)
+  i_to_stn                  : INT;     (* destination station number *)
+  i_move                    : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
 END_VAR
+
 VAR
-  from_idx : INT;
-  to_idx   : INT;
+  from_idx                  : INT;
+  to_idx                    : INT;
 END_VAR
 
 STC_CalcHorizontalTravel := 0.0;

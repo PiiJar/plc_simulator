@@ -1,26 +1,39 @@
-(* ============================================================
-   TSK_NoTreatment — Create no-treatment transfer tasks
+(* ===========================================================================================
+ *  TSK_NoTreatment — Create no-treatment transfer tasks
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Scans units with a target and creates transfer tasks
+ *  using the g_ntt destination table.
+ *
+ *  VAR_IN_OUT: io_task — only mutable array (inserts NTT tasks).
+ *  All other globals are read-only via VAR_EXTERNAL.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Scans units with a target and creates transfer tasks
-   using the g_ntt destination table.
-
-   VAR_IN_OUT: io_task — only mutable array (inserts NTT tasks).
-   All other globals are read-only via VAR_EXTERNAL.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION TSK_NoTreatment : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_time_s : LINT;
+  i_time_s                  : LINT;
 END_VAR
+
 VAR_IN_OUT
-  io_task : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
     MAX_Transporters        : INT;
     MAX_STATIONS_PER_STEP   : INT;
@@ -29,81 +42,80 @@ VAR_EXTERNAL CONSTANT
     MAX_Units               : INT;
     MAX_TASK_QUEUE          : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_unit        : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_batch       : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_ntt         : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
-  g_transporter : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_station     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_cfg         : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-  g_move        : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
+  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
 END_VAR
+
 VAR
-  ui       : INT;
-  qi       : INT;
-  loc      : INT;
-  tgt      : INT;
-  cov_t    : INT;
-  ai       : INT;
-  covers   : BOOL;
-  done     : BOOL;
-  dest     : UDT_JC_NttDestType;
-  ntt_idx  : INT;
-  on_primary  : BOOL;
-  on_fallback : BOOL;
-  primary_free : BOOL;
-  dest_stn : INT;
-  si       : INT;
-  station_idx : INT;
-  stn_free : BOOL;
-  uj       : INT;
-  ti       : INT;
-  already  : BOOL;
-  qi2      : INT;
-  xfer_s   : REAL;
-  task_start : LINT;
-  task_end   : LINT;
-  has_overlap    : BOOL;
-  ntt_start      : LINT;
-  ntt_end        : LINT;
-  ov_s           : LINT;
-  ov_e           : LINT;
-  margin_travel  : REAL;
-  slot_start     : LINT;
-  tmp_move       : UDT_JC_MoveTimesType;
-  slot_end       : LINT;
-  earliest_start : LINT;
-  latest_end     : LINT;
-  travel_to_lift : REAL;
-  travel_from_sink : REAL;
-  ntt_duration   : LINT;
-  qi3            : INT;
-  slot_ok        : BOOL;
-  sh             : INT;
-  (* Multi-transporter shared-area idle check *)
-  ot             : INT;
-  oq             : INT;
-  overlap_conflict : BOOL;
-  dest_x         : DINT;
-  avoid_dist     : DINT;
-  cov_min_x      : DINT;
-  cov_max_x      : DINT;
-  ot_min_x       : DINT;
-  ot_max_x       : DINT;
-  zone_min_x     : DINT;
-  zone_max_x     : DINT;
-  danger_min     : DINT;
-  danger_max     : DINT;
-  (* Shared-area timing: NTT split into own-area + shared-area portions *)
-  loc_idx        : INT;
-  loc_x          : DINT;
-  phase2_s       : REAL;
-  shared_entry   : LINT;
-  shared_time    : REAL;
-  ot_idle_ok     : BOOL;
-  ot_idle_start  : LINT;
-  ot_idle_end    : LINT;
+  ui                        : INT;
+  loc                       : INT;
+  tgt                       : INT;
+  cov_t                     : INT;
+  ai                        : INT;
+  covers                    : BOOL;
+  done                      : BOOL;
+  dest                      : UDT_JC_NttDestType;
+  ntt_idx                   : INT;
+  on_primary                : BOOL;
+  on_fallback               : BOOL;
+  primary_free              : BOOL;
+  dest_stn                  : INT;
+  si                        : INT;
+  station_idx               : INT;
+  stn_free                  : BOOL;
+  uj                        : INT;
+  ti                        : INT;
+  already                   : BOOL;
+  qi2                       : INT;
+  xfer_s                    : REAL;
+  task_start                : LINT;
+  task_end                  : LINT;
+  slot_start                : LINT;
+  tmp_move                  : UDT_JC_MoveTimesType;
+  slot_end                  : LINT;
+  latest_end                : LINT;
+  travel_from_sink          : REAL;
+  ntt_duration              : LINT;
+  slot_ok                   : BOOL;
+  sh                        : INT;
+
+  (* Idle-stretch: extend blocking batch CalTime to make room for NTT -----------------------*)
+  stretch_pending           : BOOL;
+  stretch_unit_id           : INT;
+  stretch_deficit           : DINT;
+  stretch_avail             : DINT;
+
+  (* Multi-transporter shared-area idle check -----------------------------------------------*)
+  ot                        : INT;
+  oq                        : INT;
+  overlap_conflict          : BOOL;
+  dest_x                    : DINT;
+  avoid_dist                : DINT;
+  cov_min_x                 : DINT;
+  cov_max_x                 : DINT;
+  ot_min_x                  : DINT;
+  ot_max_x                  : DINT;
+  zone_min_x                : DINT;
+  zone_max_x                : DINT;
+  danger_min                : DINT;
+  danger_max                : DINT;
+  (* Shared-area timing: NTT split into own-area + shared-area portions ---------------------*)
+  loc_idx                   : INT;
+  loc_x                     : DINT;
+  phase2_s                  : REAL;
+  shared_entry              : LINT;
+  shared_time               : REAL;
+  ot_idle_ok                : BOOL;
+  ot_idle_start             : LINT;
+  ot_idle_end               : LINT;
 END_VAR
 
 TSK_NoTreatment := TRUE;
@@ -157,22 +169,22 @@ FOR ui := 1 TO MAX_Units DO
         IF tgt = 2 THEN
           IF g_batch[ui].BatchCode = 0 THEN ntt_idx := 6;
           ELSIF g_batch[ui].State = 2 THEN ntt_idx := 8;
-          ELSE ntt_idx := 7; END_IF;
+  ELSE ntt_idx := 7; END_IF;
         ELSIF tgt = 3 THEN ntt_idx := 7;
-        ELSE ntt_idx := tgt; END_IF;
+  ELSE ntt_idx := tgt; END_IF;
 
         dest := g_ntt[cov_t].Target[ntt_idx];
 
         on_primary := FALSE;
         FOR si := 1 TO dest.StationCount DO
-          IF dest.Stations[si] = loc THEN on_primary := TRUE; END_IF;
+  IF dest.Stations[si] = loc THEN on_primary := TRUE; END_IF;
         END_FOR;
 
         IF NOT on_primary THEN
 
           on_fallback := FALSE;
           FOR si := 1 TO dest.FallbackCount DO
-            IF dest.FallbackStations[si] = loc THEN on_fallback := TRUE; END_IF;
+  IF dest.FallbackStations[si] = loc THEN on_fallback := TRUE; END_IF;
           END_FOR;
 
           primary_free := FALSE;
@@ -181,9 +193,9 @@ FOR ui := 1 TO MAX_Units DO
             IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
               stn_free := TRUE;
               FOR uj := 1 TO MAX_Units DO
-                IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
               END_FOR;
-              IF stn_free THEN primary_free := TRUE; END_IF;
+  IF stn_free THEN primary_free := TRUE; END_IF;
             END_IF;
           END_FOR;
 
@@ -198,9 +210,9 @@ FOR ui := 1 TO MAX_Units DO
                 IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
                   stn_free := TRUE;
                   FOR uj := 1 TO MAX_Units DO
-                    IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
                   END_FOR;
-                  IF stn_free THEN dest_stn := station_idx; END_IF;
+  IF stn_free THEN dest_stn := station_idx; END_IF;
                 END_IF;
               END_IF;
             END_FOR;
@@ -211,9 +223,9 @@ FOR ui := 1 TO MAX_Units DO
                 IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
                   stn_free := TRUE;
                   FOR uj := 1 TO MAX_Units DO
-                    IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
                   END_FOR;
-                  IF stn_free THEN dest_stn := station_idx; END_IF;
+  IF stn_free THEN dest_stn := station_idx; END_IF;
                 END_IF;
               END_IF;
             END_FOR;
@@ -225,9 +237,9 @@ FOR ui := 1 TO MAX_Units DO
                   IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
                     stn_free := TRUE;
                     FOR uj := 1 TO MAX_Units DO
-                      IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
                     END_FOR;
-                    IF stn_free THEN dest_stn := station_idx; END_IF;
+  IF stn_free THEN dest_stn := station_idx; END_IF;
                   END_IF;
                 END_IF;
               END_FOR;
@@ -249,6 +261,7 @@ FOR ui := 1 TO MAX_Units DO
             ntt_duration := task_end - task_start;
 
             slot_ok := FALSE;
+            stretch_pending := FALSE;
 
             IF io_task[cov_t].Count = 0 THEN
               slot_ok := TRUE;
@@ -263,6 +276,26 @@ FOR ui := 1 TO MAX_Units DO
                 latest_end := slot_end - REAL_TO_LINT(travel_from_sink) - 1;
                 IF task_start >= slot_start AND task_end <= latest_end THEN
                   slot_ok := TRUE;
+                END_IF;
+
+                (* ── Idle-stretch: NTT slightly too long for idle window ──
+                   Check if the blocking batch's treatment CalTime can be
+                   extended (up to MaxTime) to widen the idle gap.  Only flag
+                   the intent here; the actual g_batch write happens after
+                   the multi-transporter overlap check passes. *)
+                IF NOT slot_ok AND latest_end > 0 THEN
+                  stretch_deficit := LINT_TO_DINT(task_end - latest_end);
+                  IF stretch_deficit > 0 THEN
+                    stretch_unit_id := io_task[cov_t].Queue[1].Unit;
+                    IF stretch_unit_id >= 1 AND stretch_unit_id <= MAX_Units THEN
+                      stretch_avail := g_batch[stretch_unit_id].MaxTime
+                                     - g_batch[stretch_unit_id].CalTime;
+                      IF stretch_avail >= stretch_deficit THEN
+                        stretch_pending := TRUE;
+                        slot_ok := TRUE;
+                      END_IF;
+                    END_IF;
+                  END_IF;
                 END_IF;
               END_IF;
             END_IF;
@@ -308,9 +341,9 @@ FOR ui := 1 TO MAX_Units DO
                 ot_max_x := g_cfg[ot].DrivePosMax;
 
                 IF cov_min_x > ot_min_x THEN zone_min_x := cov_min_x;
-                ELSE zone_min_x := ot_min_x; END_IF;
+  ELSE zone_min_x := ot_min_x; END_IF;
                 IF cov_max_x < ot_max_x THEN zone_max_x := cov_max_x;
-                ELSE zone_max_x := ot_max_x; END_IF;
+  ELSE zone_max_x := ot_max_x; END_IF;
 
                 IF zone_min_x >= zone_max_x THEN CONTINUE; END_IF;
                 IF dest_x < zone_min_x OR dest_x > zone_max_x THEN CONTINUE; END_IF;
@@ -334,7 +367,7 @@ FOR ui := 1 TO MAX_Units DO
                   END_IF;
                   shared_entry := task_start + REAL_TO_LINT(phase2_s);
                   shared_time  := xfer_s - phase2_s;
-                  IF shared_time < 1.0 THEN shared_time := 1.0; END_IF;
+  IF shared_time < 1.0 THEN shared_time := 1.0; END_IF;
                 END_IF;
 
                 (* ── Check: does other transporter have an idle window
@@ -384,10 +417,17 @@ FOR ui := 1 TO MAX_Units DO
               END_IF;
             END_FOR;
 
-            IF overlap_conflict THEN dest_stn := 0; END_IF;
+  IF overlap_conflict THEN dest_stn := 0; END_IF;
           END_IF;
 
           IF dest_stn > 0 THEN
+            (* ── Commit idle-stretch: extend blocking batch CalTime ── *)
+            IF stretch_pending THEN
+              g_batch[stretch_unit_id].CalTime :=
+                g_batch[stretch_unit_id].CalTime + stretch_deficit;
+              stretch_pending := FALSE;
+            END_IF;
+
             IF io_task[cov_t].Count < MAX_TASK_QUEUE THEN
               FOR sh := io_task[cov_t].Count TO 1 BY -1 DO
                 io_task[cov_t].Queue[sh + 1] := io_task[cov_t].Queue[sh];

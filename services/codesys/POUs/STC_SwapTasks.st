@@ -1,31 +1,44 @@
-(* ============================================================
-   STC_SwapTasks — Swap same-station task pairs
+(* ===========================================================================================
+ *  STC_SwapTasks — Swap same-station task pairs
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Shared FC: both TSK and DEP call this with different arrays.
+ *  Swaps adjacent tasks on the same transporter when the first
+ *  task's sink equals the second task's lift (chain optimization).
+ *  Returns swap count.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Shared FC: both TSK and DEP call this with different arrays.
-   Swaps adjacent tasks on the same transporter when the first
-   task's sink equals the second task's lift (chain optimization).
-   Returns swap count.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_SwapTasks : INT   (* returns swap count *)
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_IN_OUT
-  io_task : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
+    MAX_Transporters        : INT;
 END_VAR
+
 VAR
-  ti     : INT;
-  qi     : INT;
-  cnt    : INT;
-  tmp    : UDT_JC_TskTaskType;
-  swaps  : INT;
+  ti                        : INT;
+  qi                        : INT;
+  cnt                       : INT;
+  tmp                       : UDT_JC_TskTaskType;
+  swaps                     : INT;
 END_VAR
 
 swaps := 0;

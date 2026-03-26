@@ -1,35 +1,49 @@
-(* ============================================================
-   DEP_CalcOverlap — Overlap station detection
+(* ===========================================================================================
+ *  DEP_CalcOverlap — Overlap station detection
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Identifies stations covered by 2+ transporters.
+ *  Reads g_cfg (read-only config). Writes io_overlap.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Identifies stations covered by 2+ transporters.
-   Reads g_cfg (read-only config). Writes io_overlap.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION DEP_CalcOverlap : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_IN_OUT
-  io_overlap : UDT_JC_DepOverlapType;
+  io_overlap                : UDT_JC_DepOverlapType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
-    MIN_StationIndex : INT;
-    MAX_StationIndex : INT;
+    MAX_Transporters        : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_cfg : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
 END_VAR
+
 VAR
-  station_idx : INT;
-  ti          : INT;
-  ai          : INT;
-  cover_count : INT;
-  covered     : BOOL;
-  area        : UDT_TaskArea;
+  station_idx               : INT;
+  ti                        : INT;
+  ai                        : INT;
+  cover_count               : INT;
+  covered                   : BOOL;
+  area                      : UDT_TaskArea;
 END_VAR
 
 io_overlap.Count := 0;

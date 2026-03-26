@@ -1,62 +1,77 @@
-(* ============================================================
-   DEP_FitTaskToSlot — Fit a departure task into idle slots
+(* ===========================================================================================
+ *  DEP_FitTaskToSlot — Fit a departure task into idle slots
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Reads idle slots and move times.
+ *  Returns fit result via VAR_OUTPUT.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Reads idle slots and move times.
-   Returns fit result via VAR_OUTPUT.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION DEP_FitTaskToSlot : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_lift_stn     : INT;
-  i_sink_stn     : INT;
-  i_trans_id     : INT;
-  i_task_start   : LINT;
-  i_task_end     : LINT;
-  i_shift_s      : REAL;
-  i_calc_time_s  : DINT;
-  i_max_time_s   : DINT;
-  i_flex_factor  : REAL;
-  i_margin_s     : REAL;
-  i_conflict_margin_s : REAL;
+  i_lift_stn                : INT;
+  i_sink_stn                : INT;
+  i_trans_id                : INT;
+  i_task_start              : LINT;
+  i_task_end                : LINT;
+  i_shift_s                 : REAL;
+  i_calc_time_s             : DINT;
+  i_max_time_s              : DINT;
+  i_flex_factor             : REAL;
+  i_margin_s                : REAL;
+  i_conflict_margin_s       : REAL;
 END_VAR
+
 VAR_IN_OUT
-  io_idle_slot : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
-  o_result : UDT_JC_DepFitResultType;
+  io_idle_slot              : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
+  o_result                  : UDT_JC_DepFitResultType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters   : INT;
-    DEP_MAX_IDLE_SLOTS : INT;
+    MAX_Transporters        : INT;
+    DEP_MAX_IDLE_SLOTS      : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_move : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
 END_VAR
+
 VAR
-  si          : INT;
-  slot_cnt    : INT;
-  slot_start  : LINT;
-  slot_end    : LINT;
-  from_stn    : INT;
-  to_stn      : INT;
-  travel_to   : REAL;
-  travel_from : REAL;
-  earliest    : LINT;
-  latest      : LINT;
-  task_dur    : LINT;
-  delay       : REAL;
-  flex_up     : REAL;
-  capped_flex : REAL;
-  best_delay  : REAL;
-  best_slot   : INT;
-  found       : BOOL;
-  overflow_best_delay : REAL;
-  overflow_best_slot  : INT;
-  tmp_move    : UDT_JC_MoveTimesType;
+  si                        : INT;
+  slot_cnt                  : INT;
+  slot_start                : LINT;
+  slot_end                  : LINT;
+  from_stn                  : INT;
+  to_stn                    : INT;
+  travel_to                 : REAL;
+  travel_from               : REAL;
+  earliest                  : LINT;
+  latest                    : LINT;
+  task_dur                  : LINT;
+  delay                     : REAL;
+  flex_up                   : REAL;
+  capped_flex               : REAL;
+  best_delay                : REAL;
+  best_slot                 : INT;
+  found                     : BOOL;
+  overflow_best_delay       : REAL;
+  overflow_best_slot        : INT;
+  tmp_move                  : UDT_JC_MoveTimesType;
 END_VAR
 
 o_result.Fits         := FALSE;
@@ -71,7 +86,7 @@ IF i_trans_id < 1 OR i_trans_id > MAX_Transporters THEN RETURN; END_IF;
 
 task_dur   := i_task_end - i_task_start;
 flex_up    := DINT_TO_REAL(i_max_time_s - i_calc_time_s);
-IF flex_up < 0.0 THEN flex_up := 0.0; END_IF;
+  IF flex_up < 0.0 THEN flex_up := 0.0; END_IF;
 capped_flex := flex_up * i_flex_factor;
 
 slot_cnt   := io_idle_slot[i_trans_id].Count;
@@ -114,7 +129,7 @@ FOR si := 1 TO DEP_MAX_IDLE_SLOTS DO
 
   IF earliest + task_dur <= latest THEN
     delay := LINT_TO_REAL(earliest - i_task_start) - i_shift_s;
-    IF delay < 0.0 THEN delay := 0.0; END_IF;
+  IF delay < 0.0 THEN delay := 0.0; END_IF;
 
     IF delay <= i_margin_s OR delay <= capped_flex + 1.0 THEN
       IF delay < best_delay THEN
@@ -142,7 +157,7 @@ ELSE
   IF overflow_best_delay < 1.0E8 THEN
     o_result.DelayTime     := REAL_TO_DINT(overflow_best_delay);
     o_result.NeedExtraTime := REAL_TO_DINT(overflow_best_delay - capped_flex);
-    IF o_result.NeedExtraTime < 0 THEN o_result.NeedExtraTime := 0; END_IF;
+  IF o_result.NeedExtraTime < 0 THEN o_result.NeedExtraTime := 0; END_IF;
   ELSE
     o_result.NeedExtraTime := 0;
   END_IF;

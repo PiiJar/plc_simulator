@@ -1,36 +1,48 @@
-(* ============================================================
-   STC_CalcTransferTime — Total transfer time calculation
+(* ===========================================================================================
+ *  STC_CalcTransferTime — Total transfer time calculation
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Calculates total transfer time between two stations using
+ *  precomputed move time table plus operational delays:
+ *  p2 = lift_s  + fromDroppingTime + dripTrayDelay
+ *  p3 = travel_s
+ *  p4 = sink_s  + dripTrayDelay    + toDeviceDelay
+ *
+ *  Lift station device_delay is NOT added because covers
+ *  are opened during treatment time (overlaps).
+ *
+ *  All delay inputs are INT ×10 (tenths of second).
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Calculates total transfer time between two stations using
-   precomputed move time table plus operational delays:
-     p2 = lift_s  + fromDroppingTime + dripTrayDelay
-     p3 = travel_s
-     p4 = sink_s  + dripTrayDelay    + toDeviceDelay
-
-   Lift station device_delay is NOT added because covers
-   are opened during treatment time (overlaps).
-
-   All delay inputs are INT ×10 (tenths of second).
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_CalcTransferTime : REAL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_from_stn             : INT;     (* source station, e.g. 105 *)
-  i_to_stn               : INT;     (* destination station, e.g. 112 *)
-  i_move                 : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
-  i_from_dropping_x10    : INT;     (* g_station[from].DrippingTime — tenths of second *)
-  i_to_device_delay_x10  : INT;     (* g_station[to].DeviceDelay   — tenths of second *)
-  i_drip_tray_delay_x10  : INT;     (* g_cfg[trans].DripTrayDelay  — tenths of second *)
+  i_from_stn                : INT;     (* source station, e.g. 105 *)
+  i_to_stn                  : INT;     (* destination station, e.g. 112 *)
+  i_move                    : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
+  i_from_dropping_x10       : INT;     (* g_station[from].DrippingTime — tenths of second *)
+  i_to_device_delay_x10     : INT;     (* g_station[to].DeviceDelay   — tenths of second *)
+  i_drip_tray_delay_x10     : INT;     (* g_cfg[trans].DripTrayDelay  — tenths of second *)
 END_VAR
+
 VAR
-  from_idx : INT;
-  to_idx   : INT;
+  from_idx                  : INT;
+  to_idx                    : INT;
 END_VAR
 
 STC_CalcTransferTime := 0.0;

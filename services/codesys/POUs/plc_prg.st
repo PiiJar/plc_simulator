@@ -1,84 +1,95 @@
-(* ============================================================
-   PLC_PRG — Main program (CODESYS / OPC UA)
+(* ===========================================================================================
+ *  PLC_PRG — Main program (CODESYS / OPC UA)
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Gateway communicates via OPC UA — reads/writes GVL variables.
+ *
+ *  Command interface (g_cmd_code / g_cmd_param):
+ *  2 = init       (param = station_count)
+ *  3 = clear      (clear all config)
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Gateway communicates via OPC UA — reads/writes GVL variables.
-
-   Command interface (g_cmd_code / g_cmd_param):
-     2 = init       (param = station_count)
-     3 = clear      (clear all config)
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 PROGRAM PLC_PRG
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters    : INT;
-    MAX_STATIONS_PER_STEP : INT;
-    MIN_StationIndex    : INT;
-    MAX_StationIndex    : INT;
-    MAX_Units           : INT;
-    DEP_MAX_WAITING     : INT;
+    MAX_Transporters        : INT;
+    MAX_STATIONS_PER_STEP   : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
+    MAX_Units               : INT;
+    DEP_MAX_WAITING         : INT;
 END_VAR
 
 VAR_EXTERNAL
   (* --- Shared data arrays — written by Gateway via OPC UA --- *)
-  g_station_count    : INT;
-  g_station          : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc      : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_cfg              : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-  g_transporter      : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_sim_trans        : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
-  g_unit             : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_ntt              : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
-  g_batch            : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_program          : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_avoid_status     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
-  g_move             : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_station_count           : INT;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_sim_trans               : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_avoid_status            : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
+  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
   (* --- Departure Scheduler state --- *)
-  g_dep_activated    : BOOL;
-  g_tsk_stable       : BOOL;
-  g_dep_waiting_count : INT;
-  g_dep_overlap      : UDT_JC_DepOverlapType;
-  g_dep_pending      : UDT_JC_DepPendingWriteType;
-  g_dep_waiting      : ARRAY[1..DEP_MAX_WAITING] OF INT;
+  g_dep_activated           : BOOL;
+  g_tsk_stable              : BOOL;
+  g_dep_waiting_count       : INT;
+  g_dep_overlap             : UDT_JC_DepOverlapType;
+  g_dep_pending             : UDT_JC_DepPendingWriteType;
+  g_dep_waiting             : ARRAY[1..DEP_MAX_WAITING] OF INT;
 
   (* --- Scheduler Debug --- *)
-  g_sched_dbg_tsk_phase : INT;
-  g_sched_dbg_dep_phase : INT;
-  g_sched_dbg_turn      : INT;
-  g_conflict_resolved   : BOOL;
-  g_sched_dbg_batch_cnt : INT;
+  g_sched_dbg_tsk_phase     : INT;
+  g_sched_dbg_dep_phase     : INT;
+  g_sched_dbg_turn          : INT;
+  g_conflict_resolved       : BOOL;
+  g_sched_dbg_batch_cnt     : INT;
   (* --- Production --- *)
   (* --- Time --- *)
-  g_time_s           : LINT;
-  g_time_100ms       : LINT;
+  g_time_s                  : LINT;
+  g_time_100ms              : LINT;
   (* --- Event queue --- *)
-  g_event            : UDT_JC_EventQueueType;
-  g_event_pending    : UDT_JC_EventMsgType;
-  g_event_pending_valid : BOOL;
-  g_event_ack_seq    : INT;
+  g_event                   : UDT_JC_EventQueueType;
+  g_event_pending           : UDT_JC_EventMsgType;
+  g_event_pending_valid     : BOOL;
+  g_event_ack_seq           : INT;
   (* --- OPC UA Command Interface --- *)
-  g_cmd_code         : INT;
-  g_cmd_param        : INT;
+  g_cmd_code                : INT;
+  g_cmd_param               : INT;
 END_VAR
 
 VAR
-  init_done      : BOOL := FALSE;
-  i              : INT;
-  twa_calc       : TWA_FB_CalcLimits;
-  clear_cfg      : SIM_FB_ClearConfig;
-  cycle_count    : INT;
-  main_sched     : STC_FB_MainScheduler;
-  run_tasks      : SIM_FB_RunTasks;
-  evt_queue      : SIM_FB_EventQueue;
+  init_done                 : BOOL := FALSE;
+  i                         : INT;
+  twa_calc                  : TWA_FB_CalcLimits;
+  clear_cfg                 : SIM_FB_ClearConfig;
+  cycle_count               : INT;
+  main_sched                : STC_FB_MainScheduler;
+  run_tasks                 : SIM_FB_RunTasks;
+  evt_queue                 : SIM_FB_EventQueue;
   (* Time from SysTime library *)
-  now_ms        : LINT := 0;
+  now_ms                    : LINT := 0;
 END_VAR
 
 (* ============================================================
@@ -170,6 +181,6 @@ evt_queue();
 
 (* ── Cycle counter ── *)
 cycle_count := cycle_count + 1;
-IF cycle_count > 30000 THEN cycle_count := 0; END_IF;
+  IF cycle_count > 30000 THEN cycle_count := 0; END_IF;
 
 END_PROGRAM

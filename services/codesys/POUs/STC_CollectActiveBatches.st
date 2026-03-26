@@ -1,39 +1,54 @@
-(* ============================================================
-   STC_CollectActiveBatches — Filter active/waiting batches
+(* ===========================================================================================
+ *  STC_CollectActiveBatches — Filter active/waiting batches
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Returns count of matching batches; fills o_list via VAR_OUTPUT.
+ *
+ *  Mode:
+ *  i_mode = 0 — active (in-production) batches
+ *  i_mode = 1 — waiting batches (station 114 lookup)
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Returns count of matching batches; fills o_list via VAR_OUTPUT.
-
-   Mode:
-     i_mode = 0 — active (in-production) batches
-     i_mode = 1 — waiting batches (station 114 lookup)
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_CollectActiveBatches : INT   (* returns count *)
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_mode : INT;    (* 0 = all active, 1 = waiting only *)
+  i_mode                    : INT;    (* 0 = all active, 1 = waiting only *)
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Units : INT;
-    MAX_StationIndex : INT;
+    MAX_Units               : INT;
+    MAX_StationIndex        : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_batch       : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_unit        : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_program     : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_station_loc : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
 END_VAR
+
 VAR_OUTPUT
-  o_list  : ARRAY[1..MAX_Units] OF INT;  (* unit indices *)
+  o_list                    : ARRAY[1..MAX_Units] OF INT;  (* unit indices *)
 END_VAR
+
 VAR
-  ui    : INT;
-  cnt   : INT;
+  ui                        : INT;
+  cnt                       : INT;
 END_VAR
 
 cnt := 0;

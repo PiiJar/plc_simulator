@@ -1,65 +1,76 @@
-(* ============================================================
-   TSK_FB_Scheduler — Main task scheduler state machine
+(* ===========================================================================================
+ *  TSK_FB_Scheduler — Main task scheduler state machine
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  One phase per PLC scan cycle.
+ *
+ *  Phase flow (structured by 100/1000 groups):
+ *  0        STOPPED
+ *  1        INIT             (collect active batches)
+ *  2        NO_TREATMENT_STATES
+ *  1000+i   CALC_SCHEDULE    (schedule for batch i, 0..batch_count-1)
+ *  2000     CLEAR_TASKS      (clear task queues)
+ *  2001+i   CREATE_TASKS     (tasks for batch i, 0..batch_count-1)
+ *  2100     SORT_TASKS
+ *  2101     SWAP_TASKS
+ *  2102     ANALYZE          (→ 2103 if conflict, → 2200 if clean)
+ *  2103     RESOLVE          (→ 2100 loop, or → 2200 if max iter)
+ *  2200     NO_TREATMENT     (create no-treatment tasks)
+ *  2201     APPLY_STRETCHES  (persist resolve decisions)
+ *  10000    READY            (cycle complete)
+ *  10001    CHECK_DEP_PENDING
+ *  10002    RESTART          (→ 1)
+ *
+ *  Phase advancement:
+ *  Default = phase + 1 (at end of function body).
+ *  next_phase is set ONLY when jumping to a different group.
+ *
+ *  Conflict resolution: one conflict per cycle.
+ *  If resolved → back to SORT (2100).
+ *  If no conflict → NO_TREATMENT → READY.
+ *  Max iterations to prevent infinite loops.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *  25.03.2026 - Restructured: phase+1 default, idx from phase
+ *  offset, removed batch_idx, removed 1000/1900
+ *  staging phases.
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   One phase per PLC scan cycle.
-
-   Phase flow (structured by 100/1000 groups):
-     0        STOPPED
-     1        INIT             (collect active batches)
-     2        NO_TREATMENT_STATES
-     1000+i   CALC_SCHEDULE    (schedule for batch i, 0..batch_count-1)
-     2000     CLEAR_TASKS      (clear task queues)
-     2001+i   CREATE_TASKS     (tasks for batch i, 0..batch_count-1)
-     2100     SORT_TASKS
-     2101     SWAP_TASKS
-     2102     ANALYZE          (→ 2103 if conflict, → 2200 if clean)
-     2103     RESOLVE          (→ 2100 loop, or → 2200 if max iter)
-     2200     NO_TREATMENT     (create no-treatment tasks)
-     2201     APPLY_STRETCHES  (persist resolve decisions)
-     10000    READY            (cycle complete)
-     10001    CHECK_DEP_PENDING
-     10002    RESTART          (→ 1)
-
-   Phase advancement:
-     Default = phase + 1 (at end of function body).
-     next_phase is set ONLY when jumping to a different group.
-
-   Conflict resolution: one conflict per cycle.
-   If resolved → back to SORT (2100).
-   If no conflict → NO_TREATMENT → READY.
-   Max iterations to prevent infinite loops.
-   ------------------------------------------------------------
-   Changes:
-   25.03.2026 - Restructured: phase+1 default, idx from phase
-                offset, removed batch_idx, removed 1000/1900
-                staging phases.
-   ============================================================ *)
 
 FUNCTION_BLOCK TSK_FB_Scheduler
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_run    : BOOL;    (* TRUE = run, FALSE = stop *)
-  i_time_s : LINT;    (* current absolute time (s), unix seconds *)
+  i_run                     : BOOL;    (* TRUE = run, FALSE = stop *)
+  i_time_s                  : LINT;    (* current absolute time (s), unix seconds *)
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
-    MAX_Units        : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_batch   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_unit    : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_program : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_task    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_schedule : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_cfg     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   (* DEP handshake *)
-  g_dep_pending : UDT_JC_DepPendingWriteType;
-  g_conflict_resolved : BOOL;
-  g_tsk_stable       : BOOL;
+  g_dep_pending             : UDT_JC_DepPendingWriteType;
+  g_conflict_resolved       : BOOL;
+  g_tsk_stable              : BOOL;
   (* Debug observability *)
   g_dbg_tsk_conflict_type   : INT;
   g_dbg_tsk_conflict_iter   : INT;
@@ -73,57 +84,59 @@ VAR_EXTERNAL
   g_dbg_tsk_total_delay     : DINT;
   g_dbg_prog_cal            : ARRAY[1..MAX_Units] OF DINT;
 END_VAR
+
 VAR_OUTPUT
-  o_phase      : INT;
-  o_batch_cnt  : INT;
-  o_task_cnt   : INT;
-  o_cycle_cnt  : INT;
-  o_conflict   : BOOL;
+  o_phase                   : INT;
+  o_batch_cnt               : INT;
+  o_task_cnt                : INT;
+  o_cycle_cnt               : INT;
+  o_conflict                : BOOL;
 END_VAR
+
 VAR
-  phase        : INT := 0;
-  next_phase   : INT;
-  idx          : INT;    (* derived from phase offset *)
+  phase                     : INT := 0;
+  next_phase                : INT;
+  idx                       : INT;    (* derived from phase offset *)
   (* Batch list *)
-  batch_list   : ARRAY[1..MAX_Units] OF INT;
-  batch_count  : INT;
+  batch_list                : ARRAY[1..MAX_Units] OF INT;
+  batch_count               : INT;
   (* Conflict iteration *)
-  conflict_iter : INT;
-  MAX_CONFLICT_ITER : INT := 40;
+  conflict_iter             : INT;
+  MAX_CONFLICT_ITER         : INT := 40;
   (* Analyze result cache *)
-  an_conflict  : BOOL;
-  an_conf_type : INT;
-  an_conf_unit : INT;
-  an_conf_stage : INT;
-  an_conf_trans : INT;
-  an_blocked_unit : INT;
-  an_blocked_stage : INT;
-  an_deficit   : REAL;
+  an_conflict               : BOOL;
+  an_conf_type              : INT;
+  an_conf_unit              : INT;
+  an_conf_stage             : INT;
+  an_conf_trans             : INT;
+  an_blocked_unit           : INT;
+  an_blocked_stage          : INT;
+  an_deficit                : REAL;
   (* Resolve result cache *)
-  rs_total_adv   : REAL;
-  rs_total_delay : REAL;
+  rs_total_adv              : REAL;
+  rs_total_delay            : REAL;
   (* Transporter assignment *)
-  sched_trans : INT;
+  sched_trans               : INT;
   (* Locked stages — prevents oscillation in resolve loop *)
-  locks           : ARRAY[1..50] OF UDT_JC_TskLockType;
-  lock_cnt        : INT := 0;
-  locks_initialized : BOOL := FALSE;
-  fb_find    : STC_FindTransporter;
+  locks                     : ARRAY[1..50] OF UDT_JC_TskLockType;
+  lock_cnt                  : INT := 0;
+  locks_initialized         : BOOL := FALSE;
+  fb_find                   : STC_FindTransporter;
   (* candidateStretches — JS: resolve decisions persisted to g_program *)
-  stretches     : ARRAY[1..20] OF UDT_JC_TskStretchType;
-  stretch_cnt   : INT := 0;
-  si            : INT;
-  new_cal       : DINT;
+  stretches                 : ARRAY[1..20] OF UDT_JC_TskStretchType;
+  stretch_cnt               : INT := 0;
+  si                        : INT;
+  new_cal                   : DINT;
   (* justActivated normalization temps *)
-  ja_elapsed : REAL;
-  ja_remain  : REAL;
+  ja_elapsed                : REAL;
+  ja_remain                 : REAL;
   (* Temp *)
-  bi         : INT;
-  ti         : INT;
-  qi         : INT;
-  ui         : INT;
-  total_tasks : INT;
-  cycle_count : INT := 0;
+  bi                        : INT;
+  ti                        : INT;
+  qi                        : INT;
+  ui                        : INT;
+  total_tasks               : INT;
+  cycle_count               : INT := 0;
 END_VAR
 
 IF NOT i_run THEN
@@ -186,27 +199,17 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
   IF idx < batch_count THEN
     ui := batch_list[idx + 1];
 
-    (* justActivated normalization *)
-    IF g_batch[ui].CurStage = 0
-       AND g_batch[ui].State = 1
-       AND g_unit[ui].location >= 100 THEN
-      IF g_batch[ui].StartTime > 0 AND g_batch[ui].StartTime < i_time_s THEN
-        ja_elapsed := LINT_TO_REAL(i_time_s - g_batch[ui].StartTime);
-        ja_remain  := DINT_TO_REAL(g_batch[ui].CalTime) - ja_elapsed;
-        IF ja_remain < 1.0 THEN ja_remain := 1.0; END_IF;
-        g_batch[ui].CalTime   := REAL_TO_DINT(ja_remain);
-        g_batch[ui].StartTime := i_time_s;
-        g_batch[ui].MinTime   := g_batch[ui].CalTime;
-        g_batch[ui].MaxTime   := 2 * g_batch[ui].CalTime;
-      END_IF;
-    END_IF;
+    (* justActivated normalization removed — STC_CalcSchedule already
+       computes remaining = CalTime - elapsed from the original StartTime.
+       Running it here every TSK cycle caused CalTime to shrink and
+       StartTime to reset, producing a sawtooth jump in the UI bar. *)
 
     IF g_unit[ui].location < 100 THEN
       sched_trans := g_unit[ui].location;
     ELSE
       fb_find(i_lift_stn := g_unit[ui].location, i_sink_stn := 0);
       sched_trans := fb_find.o_trans;
-      IF sched_trans = 0 THEN sched_trans := 1; END_IF;
+  IF sched_trans = 0 THEN sched_trans := 1; END_IF;
     END_IF;
 
     STC_CalcSchedule(i_unit := ui, i_trans := sched_trans, i_time_s := i_time_s,

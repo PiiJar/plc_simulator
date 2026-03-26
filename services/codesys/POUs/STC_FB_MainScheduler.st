@@ -1,63 +1,77 @@
-(* ============================================================
-   STC_FB_MainScheduler — Master scheduler orchestrator
+(* ===========================================================================================
+ *  STC_FB_MainScheduler — Master scheduler orchestrator
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Manages TSK_FB_Scheduler and DEP_FB_Scheduler calls on
+ *  alternating PLC scan cycles. Ensures they never execute
+ *  on the same cycle.
+ *
+ *  Synchronization rules:
+ *  1. Normal: alternate TSK_TURN → DEP_TURN → TSK_TURN
+ *  2. Skip DEP when TSK is still computing (phase < 10000)
+ *  3. Skip DEP when g_dep_pending.Valid = TRUE
+ *  4. g_tsk_stable is computed after each TSK call
+ *
+ *  Turn values: 0=INIT, 1=TSK_TURN, 2=DEP_TURN
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Manages TSK_FB_Scheduler and DEP_FB_Scheduler calls on
-   alternating PLC scan cycles. Ensures they never execute
-   on the same cycle.
-
-   Synchronization rules:
-     1. Normal: alternate TSK_TURN → DEP_TURN → TSK_TURN
-     2. Skip DEP when TSK is still computing (phase < 10000)
-     3. Skip DEP when g_dep_pending.Valid = TRUE
-     4. g_tsk_stable is computed after each TSK call
-
-   Turn values: 0=INIT, 1=TSK_TURN, 2=DEP_TURN
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION_BLOCK STC_FB_MainScheduler
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_run    : BOOL;     (* TRUE = run *)
-  i_time_s : LINT;     (* current absolute time (s), unix seconds *)
+  i_run                     : BOOL;     (* TRUE = run *)
+  i_time_s                  : LINT;     (* current absolute time (s), unix seconds *)
 END_VAR
+
 VAR_EXTERNAL
-  g_tsk_stable  : BOOL;
-  g_conflict_resolved : BOOL;
-  g_dep_pending : UDT_JC_DepPendingWriteType;
-  MAX_Units     : INT;
-  g_batch       : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_schedule    : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_dep_wk_schedule : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_tsk_stable              : BOOL;
+  g_conflict_resolved       : BOOL;
+  g_dep_pending             : UDT_JC_DepPendingWriteType;
+  MAX_Units                 : INT;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_dep_wk_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   (* Scheduler debug globals — written here, read by Gateway via OPC UA *)
-  g_sched_dbg_tsk_phase        : INT;
-  g_sched_dbg_dep_phase        : INT;
-  g_sched_dbg_turn             : INT;
-  g_sched_dbg_skip_cnt         : INT;
-  g_sched_dbg_dep_reject_cnt   : INT;
-  g_sched_dbg_dep_fit_round    : INT;
+  g_sched_dbg_tsk_phase     : INT;
+  g_sched_dbg_dep_phase     : INT;
+  g_sched_dbg_turn          : INT;
+  g_sched_dbg_skip_cnt      : INT;
+  g_sched_dbg_dep_reject_cnt : INT;
+  g_sched_dbg_dep_fit_round : INT;
   g_sched_dbg_dep_cur_wait_unit : INT;
-  g_sched_dbg_dep_wait_cnt     : INT;
-  g_sched_dbg_batch_cnt        : INT;
+  g_sched_dbg_dep_wait_cnt  : INT;
+  g_sched_dbg_batch_cnt     : INT;
 END_VAR
+
 VAR_OUTPUT
-  o_tsk_phase  : INT;     (* TSK scheduler phase *)
-  o_dep_phase  : INT;     (* DEP scheduler phase *)
-  o_turn       : INT;     (* 1=TSK ran, 2=DEP ran *)
-  o_skip_cnt   : INT;     (* DEP skipped count (debug) *)
+  o_tsk_phase               : INT;     (* TSK scheduler phase *)
+  o_dep_phase               : INT;     (* DEP scheduler phase *)
+  o_turn                    : INT;     (* 1=TSK ran, 2=DEP ran *)
+  o_skip_cnt                : INT;     (* DEP skipped count (debug) *)
 END_VAR
+
 VAR
-  tsk_sched    : TSK_FB_Scheduler;
-  dep_sched    : DEP_FB_Scheduler;
+  tsk_sched                 : TSK_FB_Scheduler;
+  dep_sched                 : DEP_FB_Scheduler;
   (* dispatch — now FC STC_DispatchTask, no instance needed *)
-  turn         : INT := 0;   (* 0=init, 1=TSK, 2=DEP *)
-  skip_cnt     : INT := 0;
-  tsk_phase    : INT := 0;
-  ui           : INT;
+  turn                      : INT := 0;   (* 0=init, 1=TSK, 2=DEP *)
+  skip_cnt                  : INT := 0;
+  tsk_phase                 : INT := 0;
+  ui                        : INT;
 END_VAR
 
 IF NOT i_run THEN

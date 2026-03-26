@@ -1,73 +1,88 @@
-(* ============================================================
-   TSK_Resolve — Conflict resolution
+(* ===========================================================================================
+ *  TSK_Resolve — Conflict resolution
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Four sequential resolution phases:
+ *  1. ADVANCE (chain bottleneck + suffix flex_down)
+ *  2. DELAY (single-stage flex_up)
+ *  3. PRECEDING_DELAY (conf stage-1)
+ *  4. DELAY_PREV_PAST_NEXT (force order swap)
+ *
+ *  VAR_IN_OUT: io_schedule, io_task, io_batch, io_locks,
+ *  io_lock_cnt — caller passes live or workspace arrays.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Four sequential resolution phases:
-     1. ADVANCE (chain bottleneck + suffix flex_down)
-     2. DELAY (single-stage flex_up)
-     3. PRECEDING_DELAY (conf stage-1)
-     4. DELAY_PREV_PAST_NEXT (force order swap)
-
-   VAR_IN_OUT: io_schedule, io_task, io_batch, io_locks,
-   io_lock_cnt — caller passes live or workspace arrays.
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION TSK_Resolve : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_conf_unit     : INT;
-  i_conf_stage    : INT;
-  i_conf_trans    : INT;
-  i_blocked_unit  : INT;
-  i_blocked_stage : INT;
-  i_deficit       : REAL;
+  i_conf_unit               : INT;
+  i_conf_stage              : INT;
+  i_conf_trans              : INT;
+  i_blocked_unit            : INT;
+  i_blocked_stage           : INT;
+  i_deficit                 : REAL;
 END_VAR
+
 VAR_IN_OUT
-  io_locks    : ARRAY[1..50] OF UDT_JC_TskLockType;
-  io_lock_cnt : INT;
-  io_schedule : ARRAY[1..10] OF UDT_JC_TskScheduleType;
-  io_task     : ARRAY[1..3] OF UDT_JC_TskQueueType;
-  io_batch    : ARRAY[1..10] OF UDT_BatchType;
+  io_locks                  : ARRAY[1..50] OF UDT_JC_TskLockType;
+  io_lock_cnt               : INT;
+  io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  io_batch                  : ARRAY[1..10] OF UDT_BatchType;
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters : INT;
-    MAX_Units        : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
 END_VAR
+
 VAR_OUTPUT
-  o_solved      : BOOL;
-  o_total_delay : REAL;
-  o_total_adv   : REAL;
+  o_solved                  : BOOL;
+  o_total_delay             : REAL;
+  o_total_adv               : REAL;
 END_VAR
+
 VAR
-  remain      : REAL;
-  cap         : REAL;
-  amount      : REAL;
-  stage_flex  : REAL;
-  is_locked_adv   : BOOL;
-  is_locked_del   : BOOL;
-  can_advance     : BOOL;
-  can_delay       : BOOL;
-  lock_i          : INT;
-  prev_conf_stage   : INT;
-  is_pcs_locked     : BOOL;
-  prev_sink_stn     : INT;
-  next_lift_stn     : INT;
-  is_blk_adv_locked : BOOL;
-  qi                : INT;
-  chain_flex     : REAL;
-  suffix_flex    : REAL;
-  earlier_stg    : INT;
-  earlier_flex   : REAL;
-  chain_amount   : REAL;
-  suffix_amount  : REAL;
-  sched_blocked    : INT;
-  sched_conf       : INT;
-  sched_prev_conf  : INT;
-  tmp_si           : INT;
+  remain                    : REAL;
+  cap                       : REAL;
+  amount                    : REAL;
+  stage_flex                : REAL;
+  is_locked_adv             : BOOL;
+  is_locked_del             : BOOL;
+  can_advance               : BOOL;
+  can_delay                 : BOOL;
+  lock_i                    : INT;
+  prev_conf_stage           : INT;
+  is_pcs_locked             : BOOL;
+  prev_sink_stn             : INT;
+  next_lift_stn             : INT;
+  is_blk_adv_locked         : BOOL;
+  qi                        : INT;
+  chain_flex                : REAL;
+  suffix_flex               : REAL;
+  earlier_stg               : INT;
+  earlier_flex              : REAL;
+  chain_amount              : REAL;
+  suffix_amount             : REAL;
+  sched_blocked             : INT;
+  sched_conf                : INT;
+  sched_prev_conf           : INT;
+  tmp_si                    : INT;
 END_VAR
 
 TSK_Resolve := FALSE;
@@ -110,7 +125,7 @@ sched_blocked := 0;
 IF i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
   FOR tmp_si := 1 TO io_schedule[i_blocked_unit].StageCount DO
     IF io_schedule[i_blocked_unit].Stages[tmp_si].ProgramStage = i_blocked_stage THEN
-      sched_blocked := tmp_si; EXIT;
+  sched_blocked := tmp_si; EXIT;
     END_IF;
   END_FOR;
 END_IF;
@@ -119,7 +134,7 @@ sched_conf := 0;
 IF i_conf_unit >= 1 AND i_conf_unit <= MAX_Units THEN
   FOR tmp_si := 1 TO io_schedule[i_conf_unit].StageCount DO
     IF io_schedule[i_conf_unit].Stages[tmp_si].ProgramStage = i_conf_stage THEN
-      sched_conf := tmp_si; EXIT;
+  sched_conf := tmp_si; EXIT;
     END_IF;
   END_FOR;
 END_IF;
@@ -139,7 +154,7 @@ IF sched_blocked >= 1 AND sched_blocked <= io_schedule[i_blocked_unit].StageCoun
 
   IF stage_flex > 0.1 THEN
     IF io_batch[i_blocked_unit].CurStage = i_blocked_stage THEN cap := 0.9;
-    ELSE cap := 0.5; END_IF;
+  ELSE cap := 0.5; END_IF;
 
     (* Chain bottleneck search *)
     chain_flex := stage_flex;
@@ -147,7 +162,7 @@ IF sched_blocked >= 1 AND sched_blocked <= io_schedule[i_blocked_unit].StageCoun
       earlier_flex := DINT_TO_REAL(
         io_schedule[i_blocked_unit].Stages[earlier_stg].CalcTime
         - io_schedule[i_blocked_unit].Stages[earlier_stg].MinTime);
-      IF earlier_flex < 0.0 THEN earlier_flex := 0.0; END_IF;
+  IF earlier_flex < 0.0 THEN earlier_flex := 0.0; END_IF;
       IF earlier_flex > 0.0 AND earlier_flex < chain_flex THEN
         chain_flex := earlier_flex;
       END_IF;
@@ -155,7 +170,7 @@ IF sched_blocked >= 1 AND sched_blocked <= io_schedule[i_blocked_unit].StageCoun
 
     (* CHAIN_ADVANCE *)
     chain_amount := chain_flex * cap;
-    IF chain_amount > remain THEN chain_amount := remain; END_IF;
+  IF chain_amount > remain THEN chain_amount := remain; END_IF;
 
     IF chain_amount > 0.1 THEN
       io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime :=
@@ -180,7 +195,7 @@ IF sched_blocked >= 1 AND sched_blocked <= io_schedule[i_blocked_unit].StageCoun
     suffix_flex := stage_flex - chain_flex;
     IF suffix_flex > 0.1 AND remain > 0.1 THEN
       suffix_amount := suffix_flex * cap;
-      IF suffix_amount > remain THEN suffix_amount := remain; END_IF;
+  IF suffix_amount > remain THEN suffix_amount := remain; END_IF;
 
       IF suffix_amount > 0.1 THEN
         io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime :=
@@ -211,7 +226,8 @@ IF sched_blocked >= 1 AND sched_blocked <= io_schedule[i_blocked_unit].StageCoun
     END_IF;
 
     IF remain <= 0.1 THEN
-      o_solved := TRUE; TSK_Resolve := TRUE; RETURN;
+  o_solved := TRUE;
+  TSK_Resolve := TRUE; RETURN;
     END_IF;
   END_IF;
 END_IF;
@@ -232,9 +248,9 @@ IF sched_conf >= 1 AND sched_conf <= io_schedule[i_conf_unit].StageCount THEN
 
   IF stage_flex > 0.1 THEN
     IF io_batch[i_conf_unit].CurStage = i_conf_stage THEN cap := 0.9;
-    ELSE cap := 0.5; END_IF;
+  ELSE cap := 0.5; END_IF;
     amount := stage_flex * cap;
-    IF amount > remain THEN amount := remain; END_IF;
+  IF amount > remain THEN amount := remain; END_IF;
 
     io_schedule[i_conf_unit].Stages[sched_conf].CalcTime :=
       io_schedule[i_conf_unit].Stages[sched_conf].CalcTime + REAL_TO_DINT(amount);
@@ -263,7 +279,8 @@ IF sched_conf >= 1 AND sched_conf <= io_schedule[i_conf_unit].StageCount THEN
     END_IF;
 
     IF remain <= 0.1 THEN
-      o_solved := TRUE; TSK_Resolve := TRUE; RETURN;
+  o_solved := TRUE;
+  TSK_Resolve := TRUE; RETURN;
     END_IF;
   END_IF;
 END_IF;
@@ -278,7 +295,7 @@ sched_prev_conf := 0;
 IF i_conf_unit >= 1 AND i_conf_unit <= MAX_Units AND prev_conf_stage >= 1 THEN
   FOR tmp_si := 1 TO io_schedule[i_conf_unit].StageCount DO
     IF io_schedule[i_conf_unit].Stages[tmp_si].ProgramStage = prev_conf_stage THEN
-      sched_prev_conf := tmp_si; EXIT;
+  sched_prev_conf := tmp_si; EXIT;
     END_IF;
   END_FOR;
 END_IF;
@@ -297,13 +314,13 @@ IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <=
   IF NOT is_pcs_locked THEN
     stage_flex := DINT_TO_REAL(io_schedule[i_conf_unit].Stages[sched_prev_conf].MaxTime
                 - io_schedule[i_conf_unit].Stages[sched_prev_conf].CalcTime);
-    IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
+  IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
 
     IF stage_flex > 0.1 THEN
       IF io_batch[i_conf_unit].CurStage = prev_conf_stage THEN cap := 0.9;
-      ELSE cap := 0.5; END_IF;
+  ELSE cap := 0.5; END_IF;
       amount := stage_flex * cap;
-      IF amount > remain THEN amount := remain; END_IF;
+  IF amount > remain THEN amount := remain; END_IF;
 
       io_schedule[i_conf_unit].Stages[sched_prev_conf].CalcTime :=
         io_schedule[i_conf_unit].Stages[sched_prev_conf].CalcTime + REAL_TO_DINT(amount);
@@ -331,7 +348,8 @@ IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <=
       END_IF;
 
       IF remain <= 0.1 THEN
-        o_solved := TRUE; TSK_Resolve := TRUE; RETURN;
+  o_solved := TRUE;
+  TSK_Resolve := TRUE; RETURN;
       END_IF;
     END_IF;
   END_IF;
@@ -369,13 +387,13 @@ IF remain > 0.1 AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
     IF NOT is_blk_adv_locked THEN
       stage_flex := DINT_TO_REAL(io_schedule[i_blocked_unit].Stages[sched_blocked].MaxTime
                   - io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime);
-      IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
+  IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
 
       IF stage_flex > 0.1 THEN
         IF io_batch[i_blocked_unit].CurStage = i_blocked_stage THEN cap := 0.9;
-        ELSE cap := 0.5; END_IF;
+  ELSE cap := 0.5; END_IF;
         amount := stage_flex * cap;
-        IF amount > remain THEN amount := remain; END_IF;
+  IF amount > remain THEN amount := remain; END_IF;
 
         io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime :=
           io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime + REAL_TO_DINT(amount);
@@ -403,7 +421,8 @@ IF remain > 0.1 AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
         END_IF;
 
         IF remain <= 0.1 THEN
-          o_solved := TRUE; TSK_Resolve := TRUE; RETURN;
+  o_solved := TRUE;
+  TSK_Resolve := TRUE; RETURN;
         END_IF;
       END_IF;
     END_IF;

@@ -1,49 +1,63 @@
-(* ============================================================
-   STC_UpdateUnitLocation — Update a unit's location
+(* ===========================================================================================
+ *  STC_UpdateUnitLocation — Update a unit's location
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Sets g_unit[i_unit].location to the given new location.
+ *  Updates g_station_loc[].UnitId + ChangeTime for both old
+ *  and new locations.
+ *
+ *  When moving to a station:
+ *  - Advances batch CurStage if batch is IN_PROCESS
+ *  - Updates batch min/max/cal times from treatment program
+ *  - Clears unit target if i_ntt_primary = 1
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
 
-   Company : Galvatek part of the John Cockerill Group
-   Author  : Jarmo Piipponen
-   Created : 25.03.2026
-   ============================================================
-   Sets g_unit[i_unit].location to the given new location.
-   Updates g_station_loc[].UnitId + ChangeTime for both old
-   and new locations.
-
-   When moving to a station:
-     - Advances batch CurStage if batch is IN_PROCESS
-     - Updates batch min/max/cal times from treatment program
-     - Clears unit target if i_ntt_primary = 1
-   ------------------------------------------------------------
-   Changes:
-   ============================================================ *)
 
 FUNCTION STC_UpdateUnitLocation : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
 VAR_INPUT
-  i_unit        : INT;   (* unit number to update *)
-  i_location    : INT;   (* new location: <100 = transporter id, >=100 = station number *)
-  i_ntt_primary : INT;   (* 1 = sink is NTT primary → clear target, 0 = don't clear *)
+  i_unit                    : INT;   (* unit number to update *)
+  i_location                : INT;   (* new location: <100 = transporter id, >=100 = station number *)
+  i_ntt_primary             : INT;   (* 1 = sink is NTT primary → clear target, 0 = don't clear *)
 END_VAR
+
 VAR_EXTERNAL CONSTANT
-    MAX_Units           : INT;
-    MAX_Transporters    : INT;
-    MAX_STEPS_PER_PROGRAM          : INT;
-    MIN_StationIndex : INT;
-    MAX_StationIndex   : INT;
-    IN_PROCESS          : INT;
+    MAX_Units               : INT;
+    MAX_Transporters        : INT;
+    MAX_STEPS_PER_PROGRAM   : INT;
+    MIN_StationIndex        : INT;
+    MAX_StationIndex        : INT;
+    IN_PROCESS              : INT;
 END_VAR
+
 VAR_EXTERNAL
-  g_unit        : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_station     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_batch       : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_program     : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_transporter : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_move        : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_time_s      : LINT;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_time_s                  : LINT;
 END_VAR
+
 VAR
-  old_loc     : INT;
-  new_stg     : INT;
+  old_loc                   : INT;
+  new_stg                   : INT;
 END_VAR
 
 IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
