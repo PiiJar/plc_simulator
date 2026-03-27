@@ -55,7 +55,6 @@ END_VAR
 
 VAR
   ui                        : INT;
-  ti                        : INT;
 END_VAR
 
 DEP_Sandbox := TRUE;

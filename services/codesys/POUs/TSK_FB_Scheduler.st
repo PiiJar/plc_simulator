@@ -127,14 +127,10 @@ VAR
   stretch_cnt               : INT := 0;
   si                        : INT;
   new_cal                   : DINT;
-  (* justActivated normalization temps *)
-  ja_elapsed                : REAL;
-  ja_remain                 : REAL;
   (* Temp *)
-  bi                        : INT;
-  ti                        : INT;
-  qi                        : INT;
   ui                        : INT;
+  ui2                       : INT;
+  ti                        : INT;
   total_tasks               : INT;
   cycle_count               : INT := 0;
 END_VAR

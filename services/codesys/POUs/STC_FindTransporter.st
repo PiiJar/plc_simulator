@@ -66,7 +66,6 @@ VAR
   cur_dist                  : INT;
   last_sink                 : INT;
   ci                        : INT;
-  qi                        : INT;
 END_VAR
 
 o_trans := 0;
