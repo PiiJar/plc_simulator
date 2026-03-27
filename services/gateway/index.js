@@ -207,6 +207,7 @@ function startPolling() {
           const unitInfo = plcUnits.find(pu => pu.unit_id === schReqUnit);
           const entry = {
             batch_id: schReqUnit,
+            batch_code: unitInfo ? unitInfo.batch_code : 0,
             batchStage: unitInfo ? unitInfo.batch_stage : 0,
             batchState: unitInfo ? unitInfo.batch_state_int : 0,
             stage_count: sched.stage_count,
@@ -419,14 +420,20 @@ app.get('/api/transporter-schedule', (req, res) => {
   for (const tid of [1, 2, 3]) {
     const tq = plcTaskQueues[tid];
     if (!tq) continue;
-    const slots = tq.tasks.map(task => ({
-      transporter_id: tid,
-      unit_id: task.unit_id,
-      lift_station: task.lift_station,
-      sink_station: task.sink_station,
-      start_time_s: task.start_time,
-      end_time_s: task.finish_time,
-    }));
+    const slots = tq.tasks.map(task => {
+      const unitInfo = plcUnits.find(pu => pu.unit_id === task.unit_id);
+      return {
+        transporter_id: tid,
+        batch_id: task.unit_id,
+        batch_code: unitInfo ? unitInfo.batch_code : 0,
+        unit_id: task.unit_id,
+        stage: task.stage,
+        lift_station: task.lift_station,
+        sink_station: task.sink_station,
+        start_time_s: task.start_time,
+        end_time_s: task.finish_time,
+      };
+    });
     transporterSchedule.push({ transporter_id: tid, task_count: tq.count, slots });
   }
   res.json({ success: true, currentTimeSec, transporters: transporterSchedule });

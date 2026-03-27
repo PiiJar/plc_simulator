@@ -162,9 +162,9 @@ function StationLayout({
           const batch = Array.isArray(batches)
             ? batches.find(b => b.location === station.number)
             : null;
-          const unit = batch && Array.isArray(units)
-            ? units.find(u => u.batch_id === batch.batch_id)
-            : (Array.isArray(units) ? units.find(u => u.location === station.number) : null);
+          const unit = Array.isArray(units)
+            ? units.find(u => u.location === station.number)
+            : null;
 
           return (
             <Station
@@ -196,9 +196,9 @@ function StationLayout({
               ? batches.find(b => b.location === transporter.id)
               : null;
 
-            const unit = batch && Array.isArray(units)
-              ? units.find(u => u.batch_id === batch.batch_id)
-              : (Array.isArray(units) ? units.find(u => u.location === transporter.id) : null);
+            const unit = Array.isArray(units)
+              ? units.find(u => u.location === transporter.id)
+              : null;
 
             return (
               <Transporter2D
@@ -233,9 +233,9 @@ function StationLayout({
               ? batches.find(b => b.location === transporter.id)
               : null;
 
-            const unit = batch && Array.isArray(units)
-              ? units.find(u => u.batch_id === batch.batch_id)
-              : (Array.isArray(units) ? units.find(u => u.location === transporter.id) : null);
+            const unit = Array.isArray(units)
+              ? units.find(u => u.location === transporter.id)
+              : null;
 
             return (
               <Transporter3D

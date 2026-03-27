@@ -1047,7 +1047,7 @@
                 // One row per batch
                 rows = schedules.map(sch => ({
                     id: sch.batch_id,
-                    label: `Batch ${sch.batch_id}`,
+                    label: `Batch ${sch.batch_code || sch.batch_id}`,
                     type: 'batch',
                     schedule: sch
                 }));
@@ -1192,9 +1192,9 @@
                                                 <div class="gantt-bar" 
                                                      id="${barId}"
                                                      style="left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: linear-gradient(to right, ${color} ${progressPct}%, ${lightColor} ${progressPct}%);"
-                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_id}<br>Station ${stage.station}<br>Elapsed: ${formatTimeSimple(elapsed)}<br>MinTime: ${formatTimeSimple(minTimeS)} (${progressPct}%)<br>Remaining: ${formatTimeSimple(exitFromNow)}<br>Max: ${formatTimeSimple(maxTimeS)}')"
+                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_code || sch.batch_id}<br>Station ${stage.station}<br>Elapsed: ${formatTimeSimple(elapsed)}<br>MinTime: ${formatTimeSimple(minTimeS)} (${progressPct}%)<br>Remaining: ${formatTimeSimple(exitFromNow)}<br>Max: ${formatTimeSimple(maxTimeS)}')"
                                                      onmouseleave="hideTooltip()">
-                                                    B${sch.batch_id}s${stage.stage}
+                                                    B${sch.batch_code || sch.batch_id}s${stage.stage}
                                                 </div>
                                             `;
                                         } else if (isWaiting) {
@@ -1203,9 +1203,9 @@
                                                 <div class="gantt-bar" 
                                                      id="${barId}"
                                                      style="${barBaseStyle} ${barOpacity}"
-                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_id}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
+                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_code || sch.batch_id}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
                                                      onmouseleave="hideTooltip()">
-                                                    B${sch.batch_id}s${stage.stage}
+                                                    B${sch.batch_code || sch.batch_id}s${stage.stage}
                                                 </div>
                                             `;
                                         } else if (hasExtendedTime) {
@@ -1216,9 +1216,9 @@
                                                 <div class="gantt-bar" 
                                                      id="${barId}"
                                                      style="left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: linear-gradient(to right, ${color} ${minWidthPx}px, ${lightColor} ${minWidthPx}px); ${barOpacity}"
-                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_id}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
+                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_code || sch.batch_id}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
                                                      onmouseleave="hideTooltip()">
-                                                    B${sch.batch_id}s${stage.stage}
+                                                    B${sch.batch_code || sch.batch_id}s${stage.stage}
                                                 </div>
                                             `;
                                         } else {
@@ -1227,9 +1227,9 @@
                                                 <div class="gantt-bar" 
                                                      id="${barId}"
                                                      style="${barBaseStyle}"
-                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_id}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
+                                                     onmouseenter="showTooltip(event, 'Batch ${sch.batch_code || sch.batch_id}${statusText}<br>Station ${stage.station}<br>Starts in: ${formatTimeSimple(Math.max(0, entryFromNow))}<br>Ends in: ${formatTimeSimple(exitFromNow)}<br>Duration: ${formatTimeSimple(durationS)}<br>Min: ${formatTimeSimple(minTimeS)} / Max: ${formatTimeSimple(maxTimeS)}')"
                                                      onmouseleave="hideTooltip()">
-                                                    B${sch.batch_id}s${stage.stage}
+                                                    B${sch.batch_code || sch.batch_id}s${stage.stage}
                                                 </div>
                                             `;
                                         }
@@ -1594,7 +1594,7 @@
                     const widthPx = endPx - startPx;
                     
                     const label = task.batch_id != null 
-                        ? `B${task.batch_id}${task.stage != null ? 's' + task.stage : ''}`
+                        ? `B${task.batch_code || task.batch_id}${task.stage != null ? 's' + task.stage : ''}`
                         : '?';
                     
                     const liftSink = `${task.lift_station_id || '?'} → ${task.sink_station_id || '?'}`;
@@ -1825,7 +1825,7 @@
                 detailsHtml = '<div class="cycle-card-details" style="display:block;">';
                 for (let ci = 0; ci < cycle.conflicts.length; ci++) {
                     const conf = cycle.conflicts[ci];
-                    const pair = `B${conf.prevBatchId}s${conf.prevStage} ↔ B${conf.nextBatchId}s${conf.nextStage}`;
+                    const pair = `B${conf.prevBatchCode || conf.prevBatchId}s${conf.prevStage} ↔ B${conf.nextBatchCode || conf.nextBatchId}s${conf.nextStage}`;
                     const deficit = conf.deficit ? conf.deficit.toFixed(1) + 's' : '?';
                     const resClass = conf.solved ? 'ok' : 'fail';
                     const resText = conf.solved ? `✓ ${conf.reason}` : `✗ ${conf.reason}${conf.missing ? ' (missing ' + conf.missing + 's)' : ''}`;

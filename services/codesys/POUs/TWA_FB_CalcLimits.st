@@ -36,6 +36,7 @@ FUNCTION_BLOCK TWA_FB_CalcLimits
 
 VAR_EXTERNAL CONSTANT
     MAX_Transporters        : INT;
+    MAX_Units               : INT;
     MIN_StationIndex        : INT;
     MAX_StationIndex        : INT;
     AVOID_Passable          : INT;
@@ -49,6 +50,8 @@ VAR_EXTERNAL
   g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_count           : INT;
   g_avoid_status            : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
+  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
 END_VAR
 
 VAR
@@ -95,6 +98,17 @@ VAR
   i_moving_left             : BOOL;
   j_moving_right            : BOOL;
   j_moving_left             : BOOL;
+
+  (* IN_PROCESS batch priority boost *)
+  lift_stn                  : INT;
+  lift_uid                  : INT;
+  batch_boost               : DINT;
+
+  (* Full task extent for restrict_x *)
+  lift_x                    : DINT;
+  sink_x                    : DINT;
+  i_lift_stn                : INT;
+  i_sink_stn                : INT;
 END_VAR
 
 (* ══════════════════════════════════════════════════════════════
@@ -218,18 +232,42 @@ FOR i := 1 TO MAX_Transporters DO
     can_evade[i] := FALSE;
   END_IF;
 
-  (* ── Priority (inline, replaces TWA_CalcPriority call) ── *)
+  (* ── Priority (inline, replaces TWA_CalcPriority call) ──────
+     IN_PROCESS batch boost: +100000 if the task serves an
+     IN_PROCESS batch. Phase 1 → check unit at LiftStation.
+     Phase 3 → check unit on transporter (at transporter loc).
+     This ensures treatment tasks trump NTT/empty moves. ── *)
   i_phase := g_transporter[i].Phase;
+  batch_boost := 0;
+  IF i_phase = 1 THEN
+    lift_stn := g_transporter[i].LiftStationTarget;
+    IF lift_stn >= 1 AND lift_stn <= MAX_StationIndex THEN
+      lift_uid := g_station_loc[lift_stn].UnitId;
+      IF lift_uid >= 1 AND lift_uid <= MAX_Units THEN
+        IF g_batch[lift_uid].State = 1 THEN
+          batch_boost := DINT#100000;
+        END_IF;
+      END_IF;
+    END_IF;
+  ELSIF i_phase = 3 THEN
+    lift_uid := g_station_loc[i].UnitId;
+    IF lift_uid >= 1 AND lift_uid <= MAX_Units THEN
+      IF g_batch[lift_uid].State = 1 THEN
+        batch_boost := DINT#100000;
+      END_IF;
+    END_IF;
+  END_IF;
+
   IF NOT can_evade[i] THEN
     priority[i] := DINT#100000;
   ELSIF i_phase = 3 THEN
     dist := ABS(current_x - g_transporter[i].XFinalTarget);
   IF dist > 99999 THEN dist := 99999; END_IF;
-    priority[i] := DINT#200000 + (DINT#99999 - dist);
+    priority[i] := DINT#200000 + batch_boost + (DINT#99999 - dist);
   ELSIF i_phase = 1 THEN
     dist := ABS(current_x - g_transporter[i].XFinalTarget);
   IF dist > 99999 THEN dist := 99999; END_IF;
-    priority[i] := DINT#100000 + (DINT#99999 - dist);
+    priority[i] := DINT#100000 + batch_boost + (DINT#99999 - dist);
   ELSE
     priority[i] := 1;
   END_IF;
@@ -280,9 +318,43 @@ FOR i := 1 TO MAX_Transporters DO
       END_IF;
 
       IF a_wins THEN
-        (* Higher priority uses target pos for phase 1/3 *)
+        (* Full task extent: use the extreme position
+           of both lift and sink stations on the side
+           facing j. This prevents j from first driving
+           closer and then having to reverse when i
+           moves to the other end of its task. *)
+        i_lift_stn := g_transporter[i].LiftStationTarget;
+        i_sink_stn := g_transporter[i].SinkStationTarget;
         IF (i_phase = 1) OR (i_phase = 3) THEN
-          restrict_x := g_transporter[i].XFinalTarget;
+          lift_x := current_x;
+          sink_x := current_x;
+          IF i_lift_stn >= MIN_StationIndex
+             AND i_lift_stn <= MAX_StationIndex THEN
+            lift_x := g_station[i_lift_stn].XPosition;
+          END_IF;
+          IF i_sink_stn >= MIN_StationIndex
+             AND i_sink_stn <= MAX_StationIndex THEN
+            sink_x := g_station[i_sink_stn].XPosition;
+          END_IF;
+          IF current_x < other_x THEN
+            (* i LEFT of j → use rightmost extent *)
+            restrict_x := lift_x;
+            IF sink_x > restrict_x THEN
+              restrict_x := sink_x;
+            END_IF;
+            IF current_x > restrict_x THEN
+              restrict_x := current_x;
+            END_IF;
+          ELSE
+            (* i RIGHT of j → use leftmost extent *)
+            restrict_x := lift_x;
+            IF sink_x < restrict_x THEN
+              restrict_x := sink_x;
+            END_IF;
+            IF current_x < restrict_x THEN
+              restrict_x := current_x;
+            END_IF;
+          END_IF;
         ELSE
           restrict_x := current_x;
         END_IF;
