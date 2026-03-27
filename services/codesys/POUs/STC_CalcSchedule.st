@@ -230,20 +230,23 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
   IF cand_cnt = 1 THEN
     chosen_stn := cand_arr[1];
   ELSE
+    (* Estimate this batch's time window per candidate for overlap check *)
     calc_s := DINT_TO_REAL(io_program[i_unit].Steps[stg].CalTime);
     tmp_move := g_move[i_trans];
-    xfer_t := STC_CalcTransferTime(
-      i_from_stn            := prev_stn,
-      i_to_stn              := cand_arr[1],
-      i_move                := tmp_move,
-      i_from_dropping_x10   := g_station[prev_stn].DrippingTime,
-      i_to_device_delay_x10 := g_station[cand_arr[1]].DeviceDelay,
-      i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
-    );
-    my_entry := exit_t + REAL_TO_LINT(xfer_t);
-    my_exit  := my_entry + REAL_TO_LINT(calc_s);
 
     FOR p := 1 TO cand_cnt DO
+      (* Calculate entry/exit per candidate station individually *)
+      xfer_t := STC_CalcTransferTime(
+        i_from_stn            := prev_stn,
+        i_to_stn              := cand_arr[p],
+        i_move                := tmp_move,
+        i_from_dropping_x10   := g_station[prev_stn].DrippingTime,
+        i_to_device_delay_x10 := g_station[cand_arr[p]].DeviceDelay,
+        i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
+      );
+      my_entry := exit_t + REAL_TO_LINT(xfer_t);
+      my_exit  := my_entry + REAL_TO_LINT(calc_s);
+
       FOR uj := 1 TO MAX_Units DO
         IF uj <> i_unit AND io_schedule[uj].StageCount > 0 THEN
           FOR sj := 1 TO io_schedule[uj].StageCount DO

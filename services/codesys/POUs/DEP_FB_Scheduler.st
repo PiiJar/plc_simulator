@@ -323,15 +323,31 @@ ELSIF phase = 200 THEN
 
 (* ════════════════════════════════════════════════════════════ *)
 (* PHASE 1000+i: CALC_SCHEDULE — one schedule per scan         *)
-(*   i=0: waiting batch (cur_wait_unit)                        *)
-(*   i=1..batch_count: active batches                          *)
+(*   i=0..batch_count-1: active batches FIRST                  *)
+(*   i=batch_count: waiting batch LAST (sees active schedules) *)
 (*   i>batch_count: done -> 2000                               *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase >= 1000 AND phase <= 1999 THEN
   idx := phase - 1000;
 
-  IF idx = 0 THEN
-    (* Calculate schedule for waiting batch *)
+  IF idx < batch_count THEN
+    (* Calculate schedule for active batch FIRST *)
+    fb_find(i_lift_stn := g_unit[batch_list[idx + 1]].location, i_sink_stn := 0);
+    sched_trans := fb_find.o_trans;
+  IF sched_trans = 0 THEN sched_trans := 1; END_IF;
+
+    STC_CalcSchedule(
+      i_unit   := batch_list[idx + 1],
+      i_trans  := sched_trans,
+      i_time_s := i_time_s,
+      io_schedule := g_dep_wk_schedule,
+      io_batch    := g_dep_wk_batch,
+      io_program  := g_dep_wk_program
+    );
+    (* phase + 1 -> next active batch or waiting *)
+
+  ELSIF idx = batch_count THEN
+    (* Calculate schedule for waiting batch LAST *)
     fb_find(i_lift_stn := g_unit[cur_wait_unit].location, i_sink_stn := 0);
     sched_trans := fb_find.o_trans;
   IF sched_trans = 0 THEN sched_trans := 1; END_IF;
@@ -344,23 +360,7 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
       io_batch    := g_dep_wk_batch,
       io_program  := g_dep_wk_program
     );
-    (* phase + 1 -> 1001 *)
-
-  ELSIF idx <= batch_count THEN
-    (* Calculate schedule for active batch *)
-    fb_find(i_lift_stn := g_unit[batch_list[idx]].location, i_sink_stn := 0);
-    sched_trans := fb_find.o_trans;
-  IF sched_trans = 0 THEN sched_trans := 1; END_IF;
-
-    STC_CalcSchedule(
-      i_unit   := batch_list[idx],
-      i_trans  := sched_trans,
-      i_time_s := i_time_s,
-      io_schedule := g_dep_wk_schedule,
-      io_batch    := g_dep_wk_batch,
-      io_program  := g_dep_wk_program
-    );
-    (* phase + 1 -> next batch *)
+    (* phase + 1 *)
 
   ELSE
     (* All schedules calculated -> clear tasks *)
@@ -718,9 +718,9 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
           IF use_delay > MARGIN_S THEN
             chain_delay_cnt := chain_delay_cnt + 1;
             IF chain_delay_cnt <= 10 THEN
-              chain_delays[chain_delay_cnt].Stage   := w_tasks[bk].Stage;
+              chain_delays[chain_delay_cnt].Stage   := w_tasks[bk].SrcStage;
               chain_delays[chain_delay_cnt].DelayTime := REAL_TO_DINT(use_delay);
-              IF w_tasks[bk].Stage = 0 THEN
+              IF w_tasks[bk].SrcStage = 0 THEN
                 chain_delays[chain_delay_cnt].Target := 0;
               ELSE
                 chain_delays[chain_delay_cnt].Target := 1;
@@ -756,7 +756,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
 
           (* Also apply current task's delay *)
           IF total_delay_s > MARGIN_S THEN
-            prog_idx := w_tasks[si].Stage;
+            prog_idx := w_tasks[si].SrcStage;
             IF prog_idx >= 1 AND prog_idx <= 30 THEN
               old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
               max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
@@ -782,18 +782,55 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
           widen_need := remaining_need;
           ov_slot_idx := fit_result.OverflowSlotIdx;
 
-          IF ov_slot_idx >= 1 THEN
-            (* ── Stretch RIGHT border (delay next task → slot_end later) ── *)
-            IF ov_slot_idx <= g_dep_wk_task[ti].Count THEN
-              border_unit := g_dep_wk_task[ti].Queue[ov_slot_idx].Unit;
-              border_src_stage := g_dep_wk_task[ti].Queue[ov_slot_idx].SrcStage;
+          IF ov_slot_idx >= 1 AND ov_slot_idx <= g_dep_idle_slot[ti].Count THEN
+            (* ── Stretch RIGHT border: find task whose StartTime = slot EndTime ── *)
+            border_unit := 0;
+            FOR qi := 1 TO g_dep_wk_task[ti].Count DO
+              IF g_dep_wk_task[ti].Queue[qi].StartTime = g_dep_idle_slot[ti].Slots[ov_slot_idx].EndTime THEN
+                border_unit := g_dep_wk_task[ti].Queue[qi].Unit;
+                border_src_stage := g_dep_wk_task[ti].Queue[qi].SrcStage;
+                EXIT;
+              END_IF;
+            END_FOR;
+
+            IF border_unit >= 1 AND border_unit <= MAX_Units
+               AND border_unit <> cur_wait_unit
+               AND border_src_stage >= 1 AND border_src_stage <= 30 THEN
+              border_flex := DINT_TO_REAL(
+                g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime
+              - g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime);
+  IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
+              border_capped := border_flex * FLEX_FACTOR;
+              border_use := border_capped;
+  IF border_use > widen_need THEN border_use := widen_need; END_IF;
+
+              IF border_use > MARGIN_S THEN
+                old_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime;
+                max_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime;
+                new_cal := old_cal + REAL_TO_DINT(border_use);
+  IF new_cal > max_cal AND max_cal > 0 THEN new_cal := max_cal; END_IF;
+                g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime := new_cal;
+                widen_need := widen_need - border_use;
+              END_IF;
+            END_IF;
+
+            (* ── Advance LEFT border: find task whose FinishTime = slot StartTime ── *)
+            IF widen_need > MARGIN_S THEN
+              border_unit := 0;
+              FOR qi := 1 TO g_dep_wk_task[ti].Count DO
+                IF g_dep_wk_task[ti].Queue[qi].FinishTime = g_dep_idle_slot[ti].Slots[ov_slot_idx].StartTime THEN
+                  border_unit := g_dep_wk_task[ti].Queue[qi].Unit;
+                  border_src_stage := g_dep_wk_task[ti].Queue[qi].SrcStage;
+                  EXIT;
+                END_IF;
+              END_FOR;
 
               IF border_unit >= 1 AND border_unit <= MAX_Units
                  AND border_unit <> cur_wait_unit
                  AND border_src_stage >= 1 AND border_src_stage <= 30 THEN
                 border_flex := DINT_TO_REAL(
-                  g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime
-                - g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime);
+                  g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime
+                - g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime);
   IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
                 border_capped := border_flex * FLEX_FACTOR;
                 border_use := border_capped;
@@ -801,40 +838,11 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
 
                 IF border_use > MARGIN_S THEN
                   old_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime;
-                  max_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime;
-                  new_cal := old_cal + REAL_TO_DINT(border_use);
-  IF new_cal > max_cal AND max_cal > 0 THEN new_cal := max_cal; END_IF;
+                  min_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime;
+                  new_cal := old_cal - REAL_TO_DINT(border_use);
+  IF new_cal < min_cal THEN new_cal := min_cal; END_IF;
                   g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime := new_cal;
                   widen_need := widen_need - border_use;
-                END_IF;
-              END_IF;
-            END_IF;
-
-            (* ── Advance LEFT border (advance prev task → slot_start earlier) ── *)
-            IF widen_need > MARGIN_S AND ov_slot_idx > 1 THEN
-              IF (ov_slot_idx - 1) <= g_dep_wk_task[ti].Count THEN
-                border_unit := g_dep_wk_task[ti].Queue[ov_slot_idx - 1].Unit;
-                border_src_stage := g_dep_wk_task[ti].Queue[ov_slot_idx - 1].SrcStage;
-
-                IF border_unit >= 1 AND border_unit <= MAX_Units
-                   AND border_unit <> cur_wait_unit
-                   AND border_src_stage >= 1 AND border_src_stage <= 30 THEN
-                  border_flex := DINT_TO_REAL(
-                    g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime
-                  - g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime);
-  IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
-                  border_capped := border_flex * FLEX_FACTOR;
-                  border_use := border_capped;
-  IF border_use > widen_need THEN border_use := widen_need; END_IF;
-
-                  IF border_use > MARGIN_S THEN
-                    old_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime;
-                    min_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime;
-                    new_cal := old_cal - REAL_TO_DINT(border_use);
-  IF new_cal < min_cal THEN new_cal := min_cal; END_IF;
-                    g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime := new_cal;
-                    widen_need := widen_need - border_use;
-                  END_IF;
                 END_IF;
               END_IF;
             END_IF;

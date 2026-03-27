@@ -31,7 +31,7 @@
       "description": "Move empty Unit to buffer station (store while waiting)",
       "transporters": {
         "1": {
-          "stations": [101, 102, 103, 104, 105, 106],
+          "stations": [102, 103, 104, 105, 106],
           "fallback_stations": [114]
         },
         "2": {
