@@ -131,6 +131,7 @@ VAR
   ui                        : INT;
   ui2                       : INT;
   ti                        : INT;
+  bi                        : INT;
   total_tasks               : INT;
   cycle_count               : INT := 0;
 END_VAR
