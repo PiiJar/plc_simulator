@@ -79,6 +79,7 @@ o_result.DelayTime    := 0;
 o_result.NeedExtraTime := 0;
 o_result.TaskEndTime  := 0;
 o_result.SlotIdx      := 0;
+o_result.OverflowSlotIdx := 0;
 o_result.TransporterId := i_trans_id;
 DEP_FitTaskToSlot := FALSE;
 
@@ -158,6 +159,7 @@ ELSE
     o_result.DelayTime     := REAL_TO_DINT(overflow_best_delay);
     o_result.NeedExtraTime := REAL_TO_DINT(overflow_best_delay - capped_flex);
   IF o_result.NeedExtraTime < 0 THEN o_result.NeedExtraTime := 0; END_IF;
+    o_result.OverflowSlotIdx := overflow_best_slot;
   ELSE
     o_result.NeedExtraTime := 0;
   END_IF;

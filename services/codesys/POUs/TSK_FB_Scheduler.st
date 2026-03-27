@@ -159,6 +159,10 @@ IF phase = 0 THEN
 (* PHASE 1: INIT — collect active batches                       *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1 THEN
+  (* Clear schedule for ALL units — start from clean slate *)
+  FOR ui := 1 TO MAX_Units DO
+    g_schedule[ui].StageCount := 0;
+  END_FOR;
   batch_count := STC_CollectActiveBatches(i_mode := 0, o_list => batch_list);
   o_batch_cnt := batch_count;
   conflict_iter := 0;

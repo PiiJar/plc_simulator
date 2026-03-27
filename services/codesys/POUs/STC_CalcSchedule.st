@@ -284,6 +284,16 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
       END_IF;
     END_FOR;
 
+    (* Pass 2: prefer physically free even if sched-occupied *)
+    IF chosen_stn = 0 THEN
+      FOR p := 1 TO cand_cnt DO
+        IF NOT phys_occupied[p] AND chosen_stn = 0 THEN
+          chosen_stn := cand_arr[p];
+        END_IF;
+      END_FOR;
+    END_IF;
+
+    (* Pass 3: prefer sched-free even if phys-occupied *)
     IF chosen_stn = 0 THEN
       FOR p := 1 TO cand_cnt DO
         IF NOT sched_occupied[p] AND chosen_stn = 0 THEN
@@ -292,6 +302,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
       END_FOR;
     END_IF;
 
+    (* Pass 4: all occupied — pick first candidate *)
     IF chosen_stn = 0 THEN
       chosen_stn := cand_arr[1];
     END_IF;

@@ -194,8 +194,12 @@ function startPolling() {
       }
 
       // Schedule sliding window
+      // Skip reads while TSK is recalculating (phase 1–9999) to avoid
+      // seeing the transient cleared state → prevents UI flicker.
+      const tskPhase = schedulerDebug.tsk_phase || 0;
+      const tskRecalculating = tskPhase >= 1 && tskPhase < 10000;
       scheduleTickCounter++;
-      if (scheduleTickCounter >= SCHEDULE_POLL_TICKS) {
+      if (scheduleTickCounter >= SCHEDULE_POLL_TICKS && !tskRecalculating) {
         scheduleTickCounter = 0;
         schReqUnit = (schReqUnit % 10) + 1;
         const sched = await adapter.readScheduleWindow(schReqUnit);
@@ -256,7 +260,7 @@ app.use('/api', fileRoutes.router);
 // ── Initialize & mount dashboard API (real endpoints) ──
 dashboardApi.init({
   dbPool,
-  getState: () => ({ stationsConfig, twaLimits, plcMeta }),
+  getState: () => ({ stationsConfig, twaLimits, plcMeta, plcUnits, adapter }),
 });
 app.use('/api', dashboardApi.router);
 

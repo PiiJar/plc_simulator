@@ -204,6 +204,17 @@ VAR
   (* ── Prepend offset ── *)
   prepend_offset            : INT;
 
+  (* ── Idle-slot widening: stretch IN_PROCESS batches ── *)
+  ov_slot_idx               : INT;
+  widen_need                : REAL;
+  widen_ok                  : BOOL;
+  border_unit               : INT;
+  border_src_stage          : INT;
+  border_flex               : REAL;
+  border_capped             : REAL;
+  border_use                : REAL;
+  min_cal                   : DINT;
+
   (* ── Sort variables ── *)
   tmp_unit                  : INT;
   tmp_key                   : LINT;
@@ -765,7 +776,84 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
             next_phase := 1000;  (* RECALC *)
           END_IF;
         ELSE
-          next_phase := 9000;
+          (* ── Backward chaining insufficient → try widening idle slot
+             by stretching/advancing IN_PROCESS batch CalTimes ── *)
+          widen_ok := FALSE;
+          widen_need := remaining_need;
+          ov_slot_idx := fit_result.OverflowSlotIdx;
+
+          IF ov_slot_idx >= 1 THEN
+            (* ── Stretch RIGHT border (delay next task → slot_end later) ── *)
+            IF ov_slot_idx <= g_dep_wk_task[ti].Count THEN
+              border_unit := g_dep_wk_task[ti].Queue[ov_slot_idx].Unit;
+              border_src_stage := g_dep_wk_task[ti].Queue[ov_slot_idx].SrcStage;
+
+              IF border_unit >= 1 AND border_unit <= MAX_Units
+                 AND border_unit <> cur_wait_unit
+                 AND border_src_stage >= 1 AND border_src_stage <= 30 THEN
+                border_flex := DINT_TO_REAL(
+                  g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime
+                - g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime);
+  IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
+                border_capped := border_flex * FLEX_FACTOR;
+                border_use := border_capped;
+  IF border_use > widen_need THEN border_use := widen_need; END_IF;
+
+                IF border_use > MARGIN_S THEN
+                  old_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime;
+                  max_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime;
+                  new_cal := old_cal + REAL_TO_DINT(border_use);
+  IF new_cal > max_cal AND max_cal > 0 THEN new_cal := max_cal; END_IF;
+                  g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime := new_cal;
+                  widen_need := widen_need - border_use;
+                END_IF;
+              END_IF;
+            END_IF;
+
+            (* ── Advance LEFT border (advance prev task → slot_start earlier) ── *)
+            IF widen_need > MARGIN_S AND ov_slot_idx > 1 THEN
+              IF (ov_slot_idx - 1) <= g_dep_wk_task[ti].Count THEN
+                border_unit := g_dep_wk_task[ti].Queue[ov_slot_idx - 1].Unit;
+                border_src_stage := g_dep_wk_task[ti].Queue[ov_slot_idx - 1].SrcStage;
+
+                IF border_unit >= 1 AND border_unit <= MAX_Units
+                   AND border_unit <> cur_wait_unit
+                   AND border_src_stage >= 1 AND border_src_stage <= 30 THEN
+                  border_flex := DINT_TO_REAL(
+                    g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime
+                  - g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime);
+  IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
+                  border_capped := border_flex * FLEX_FACTOR;
+                  border_use := border_capped;
+  IF border_use > widen_need THEN border_use := widen_need; END_IF;
+
+                  IF border_use > MARGIN_S THEN
+                    old_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime;
+                    min_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime;
+                    new_cal := old_cal - REAL_TO_DINT(border_use);
+  IF new_cal < min_cal THEN new_cal := min_cal; END_IF;
+                    g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime := new_cal;
+                    widen_need := widen_need - border_use;
+                  END_IF;
+                END_IF;
+              END_IF;
+            END_IF;
+
+  IF widen_need <= MARGIN_S THEN widen_ok := TRUE; END_IF;
+          END_IF;
+
+          IF widen_ok THEN
+            (* Slot widened → RECALC with modified IN_PROCESS programs *)
+            fit_round := fit_round + 1;
+            o_fit_round := fit_round;
+            IF fit_round > MAX_FIT_ROUNDS THEN
+              next_phase := 9000;
+            ELSE
+              next_phase := 1000;  (* RECALC *)
+            END_IF;
+          ELSE
+            next_phase := 9000;   (* REJECT *)
+          END_IF;
         END_IF;
       END_IF;
     END_IF;

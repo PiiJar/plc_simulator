@@ -501,6 +501,53 @@ class OpcuaAdapter extends PlcAdapter {
     }
   }
 
+
+  async getActivePrograms(activeUids) {
+    if (!this.connected || !this.session) return null;
+    if (!activeUids || activeUids.length === 0) return [];
+
+    try {
+      const readList = [];
+      for (const uid of activeUids) {
+        const pw = nodes.programWrite(uid);
+        readList.push({ key: `prog${uid}.prog_id`, nodeId: pw.program_id });
+        readList.push({ key: `prog${uid}.step_count`, nodeId: pw.step_count });
+        for (let s = 1; s <= 30; s++) { // up to max 30 stages
+          readList.push({ key: `prog${uid}.s${s}.cal`, nodeId: pw[`step_${s}`].cal_time });
+          readList.push({ key: `prog${uid}.s${s}.min`, nodeId: pw[`step_${s}`].min_time });
+          readList.push({ key: `prog${uid}.s${s}.s0`, nodeId: pw[`step_${s}`].s0 });
+        }
+      }
+
+      const results = await this._readNodes(readList);
+      
+      const programs = [];
+      for (const uid of activeUids) {
+        const stepCount = Number(results[`prog${uid}.step_count`]) || 0;
+        if (stepCount === 0) continue;
+        
+        const steps = [];
+        for (let s = 1; s <= stepCount; s++) {
+          steps.push({
+            stage: s,
+            station_id: Number(results[`prog${uid}.s${s}.s0`]),
+            min_time: Number(results[`prog${uid}.s${s}.min`]),
+            cal_time: Number(results[`prog${uid}.s${s}.cal`])
+          });
+        }
+        programs.push({
+          unit_id: uid,
+          program_id: Number(results[`prog${uid}.prog_id`]),
+          steps: steps
+        });
+      }
+      return programs;
+    } catch (err) {
+      console.error('[OPC-UA] getActivePrograms error:', err);
+      return null;
+    }
+  }
+
   async readScheduleWindow(unitId) {
     if (!this.connected || !this.session) return null;
 

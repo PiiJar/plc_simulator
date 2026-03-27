@@ -2,7 +2,8 @@
 TYPE UDT_JC_TskTaskType :
 STRUCT
     Unit              : INT;  (* unit index 1..10, 0 = no task *)
-    Stage             : INT;  (* program stage that created this task *)
+    Stage             : INT;  (* destination program stage *)
+    SrcStage          : INT;  (* source program stage (unit is HERE before transfer) *)
     LiftStationTarget : INT;  (* station to pick up from *)
     SinkStationTarget : INT;  (* station to put down to *)
     StartTime         : LINT; (* absolute time task begins (s), unix seconds *)

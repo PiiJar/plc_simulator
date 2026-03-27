@@ -39,6 +39,9 @@ class ProductionDispatcher {
     this.loadingUnitId = null;
     this.loadingStartMs = null;
 
+    // Unloading timers: { [unit_id]: startMs }
+    this.unloadingTimers = {};
+
     // Dispatch lock (prevent re-entrant tick)
     this.dispatching = false;
   }
@@ -200,6 +203,20 @@ class ProductionDispatcher {
     return stages;
   }
 
+  /**
+   * Read unloading_time_s from production_setup.json.
+   */
+  async _getUnloadingTimeS() {
+    try {
+      const fp = path.join(this.runtimeDir, 'production_setup.json');
+      const raw = await fs.readFile(fp, 'utf8');
+      const setup = JSON.parse(raw);
+      return Number(setup.unloading_time_s) || 60;
+    } catch {
+      return 60;
+    }
+  }
+
   // ── Main tick — called every Modbus poll cycle ─────────────────
 
   /**
@@ -207,8 +224,14 @@ class ProductionDispatcher {
    * @param {Array} plcUnits - array of unit objects from readPLCState()
    */
   async tick(plcUnits) {
-    if (!this.queue || !this.queue.active) return;
+    if (!this.queue) return;
     if (this.dispatching) return;
+
+    // ── Unload check: runs even when queue is inactive ──
+    await this._checkUnloads(plcUnits);
+
+    // ── Dispatch: only when queue is active ──
+    if (!this.queue.active) return;
 
     // Queue exhausted?
     if (this.queue.pointer >= this.queue.batches.length) {
@@ -337,6 +360,86 @@ class ProductionDispatcher {
       // Don't advance pointer — will retry on next tick
     } finally {
       this.dispatching = false;
+    }
+  }
+
+  // ── Unload: detect PROCESSED batches at finish station ─────────
+
+  /**
+   * Check dispatched batches: if a unit is at finish_station with
+   * batch_state=PROCESSED and has been there >= unloading_time_s,
+   * clear the batch and route the empty unit to buffer.
+   */
+  async _checkUnloads(plcUnits) {
+    if (!this.queue || !this.queue.dispatched || this.queue.dispatched.length === 0) return;
+
+    const finishStation = Number(this.queue.finish_station);
+    if (!finishStation) return;
+
+    const unloadingTimeS = await this._getUnloadingTimeS();
+
+    // Build set of still-dispatched unit IDs
+    const remaining = [];
+    for (const entry of this.queue.dispatched) {
+      const unit = plcUnits.find(u => u.unit_id === entry.unit_id);
+      if (!unit) { remaining.push(entry); continue; }
+
+      // Is it at finish station, PROCESSED, target=none?
+      const atFinish = unit.location === finishStation;
+      const isProcessed = unit.batch_state_int === 2;
+      const targetNone = unit.target === 'none' || unit.target === 0;
+
+      if (atFinish && isProcessed && targetNone) {
+        // Start or check unloading timer
+        if (!this.unloadingTimers[entry.unit_id]) {
+          this.unloadingTimers[entry.unit_id] = Date.now();
+          console.log(
+            `[DISPATCH] Unit ${entry.unit_id} at finish station ${finishStation}` +
+            ` — unloading timer started (${unloadingTimeS}s)`
+          );
+          remaining.push(entry);
+          continue;
+        }
+
+        const elapsedS = (Date.now() - this.unloadingTimers[entry.unit_id]) / 1000;
+        if (elapsedS < unloadingTimeS) {
+          remaining.push(entry);
+          continue;
+        }
+
+        // ── Unloading complete: release batch and route unit ──
+        try {
+          // Clear batch (code=0, state=0, prog=0)
+          await this._writeBatch(entry.unit_id, 0, 0, 0);
+          // Route empty unit to buffer (status=USED, target=TO_BUFFER=2)
+          await this._writeUnit(entry.unit_id, finishStation, 1, 2);
+
+          delete this.unloadingTimers[entry.unit_id];
+
+          console.log(
+            `[DISPATCH] ✓ Batch ${entry.batch_number} unloaded from Unit ${entry.unit_id}` +
+            ` — unit routed to buffer`
+          );
+
+          // Entry is NOT pushed to remaining → removed from dispatched
+        } catch (err) {
+          console.error(
+            `[DISPATCH] Unload error Unit ${entry.unit_id}: ${err.message}`
+          );
+          remaining.push(entry);  // keep in list, retry next tick
+        }
+      } else {
+        // Not at finish station yet or still in process
+        if (this.unloadingTimers[entry.unit_id]) {
+          delete this.unloadingTimers[entry.unit_id];
+        }
+        remaining.push(entry);
+      }
+    }
+
+    if (remaining.length !== this.queue.dispatched.length) {
+      this.queue.dispatched = remaining;
+      await this.saveState();
     }
   }
 }

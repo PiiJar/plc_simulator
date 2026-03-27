@@ -343,6 +343,7 @@ FOR ti := 1 TO MAX_Transporters DO
           (* Clear last slot *)
           g_task[ti].Queue[g_task[ti].Count].Unit := 0;
           g_task[ti].Queue[g_task[ti].Count].Stage := 0;
+          g_task[ti].Queue[g_task[ti].Count].SrcStage := 0;
           g_task[ti].Queue[g_task[ti].Count].LiftStationTarget := 0;
           g_task[ti].Queue[g_task[ti].Count].SinkStationTarget := 0;
           g_task[ti].Queue[g_task[ti].Count].StartTime := 0;

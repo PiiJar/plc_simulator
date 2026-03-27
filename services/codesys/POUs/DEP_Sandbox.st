@@ -60,10 +60,14 @@ END_VAR
 DEP_Sandbox := TRUE;
 
 IF i_cmd = 1 THEN
-  (* SNAPSHOT: live batch+program → workspace *)
+  (* SNAPSHOT: clear workspace, then copy live batch+program *)
   FOR ui := 1 TO MAX_Units DO
+    io_wk_schedule[ui].StageCount := 0;
     io_wk_batch[ui]    := g_batch[ui];
     io_wk_program[ui]  := g_program[ui];
+  END_FOR;
+  FOR ui := 1 TO MAX_Transporters DO
+    io_wk_task[ui].Count := 0;
   END_FOR;
 ELSIF i_cmd = 2 THEN
   (* RESTORE: workspace batch+program → live (for REJECT rollback) *)

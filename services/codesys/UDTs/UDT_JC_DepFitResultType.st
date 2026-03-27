@@ -6,6 +6,7 @@ STRUCT
     NeedExtraTime : DINT; (* extra time that does not fit (seconds) *)
     TaskEndTime   : LINT; (* calculated task end time (s), unix seconds *)
     SlotIdx       : INT;  (* index of the used idle slot *)
+    OverflowSlotIdx : INT;(* best slot that almost fits (when Fits=FALSE) *)
     TransporterId : INT;  (* transporter id that can handle it *)
 END_STRUCT;
 END_TYPE

@@ -116,6 +116,14 @@ VAR
   ot_idle_ok                : BOOL;
   ot_idle_start             : LINT;
   ot_idle_end               : LINT;
+
+  (* Idle-stretch for other transporter: widen idle gap by extending blocker CalTime --------*)
+  ot_stretch_pending        : BOOL;
+  ot_stretch_unit_id        : INT;
+  ot_stretch_deficit        : DINT;
+  ot_stretch_avail          : DINT;
+  ot_stretch_need           : LINT;
+  ot_stretch_ok             : BOOL;
 END_VAR
 
 TSK_NoTreatment := TRUE;
@@ -262,6 +270,7 @@ FOR ui := 1 TO MAX_Units DO
 
             slot_ok := FALSE;
             stretch_pending := FALSE;
+            ot_stretch_pending := FALSE;
 
             IF io_task[cov_t].Count = 0 THEN
               slot_ok := TRUE;
@@ -412,7 +421,81 @@ FOR ui := 1 TO MAX_Units DO
                 END_IF;
 
                 IF NOT ot_idle_ok THEN
-                  overlap_conflict := TRUE;
+                  (* ── Idle-stretch for other transporter ──
+                     Try to widen the nearest idle gap by extending the
+                     blocking batch CalTime (up to MaxTime).  Only tasks
+                     with Stage > 0 (regular, not NTT) are candidates. *)
+                  ot_stretch_ok := FALSE;
+
+                  (* Try gap before first task *)
+                  IF io_task[ot].Count > 0
+                     AND io_task[ot].Queue[1].Stage > 0 THEN
+                    IF g_transporter[ot].Phase >= 1 AND g_transporter[ot].Phase <= 4 THEN
+                      ot_idle_start := io_task[ot].Queue[1].FinishTime;
+                    ELSE
+                      ot_idle_start := task_start;
+                    END_IF;
+                    ot_idle_end := io_task[ot].Queue[1].StartTime;
+
+                    IF ot_idle_start <= shared_entry
+                       AND ot_idle_end > shared_entry THEN
+                      ot_stretch_need := shared_entry
+                                       + REAL_TO_LINT(shared_time)
+                                       - ot_idle_end;
+                      IF ot_stretch_need > LINT#0 THEN
+                        ot_stretch_unit_id := io_task[ot].Queue[1].Unit;
+                        IF ot_stretch_unit_id >= 1
+                           AND ot_stretch_unit_id <= MAX_Units THEN
+                          ot_stretch_avail :=
+                            g_batch[ot_stretch_unit_id].MaxTime
+                          - g_batch[ot_stretch_unit_id].CalTime;
+                          IF ot_stretch_avail >= LINT_TO_DINT(ot_stretch_need) THEN
+                            ot_stretch_deficit := LINT_TO_DINT(ot_stretch_need);
+                            ot_stretch_pending := TRUE;
+                            ot_stretch_ok      := TRUE;
+                          END_IF;
+                        END_IF;
+                      END_IF;
+                    END_IF;
+                  END_IF;
+
+                  (* Try gaps between tasks *)
+                  IF NOT ot_stretch_ok THEN
+                    FOR oq := 1 TO io_task[ot].Count - 1 DO
+                      IF NOT ot_stretch_ok
+                         AND io_task[ot].Queue[oq + 1].Stage > 0 THEN
+                        ot_idle_start := io_task[ot].Queue[oq].FinishTime;
+                        ot_idle_end   := io_task[ot].Queue[oq + 1].StartTime;
+
+                        IF ot_idle_start <= shared_entry
+                           AND ot_idle_end > shared_entry THEN
+                          ot_stretch_need := shared_entry
+                                           + REAL_TO_LINT(shared_time)
+                                           - ot_idle_end;
+                          IF ot_stretch_need > LINT#0 THEN
+                            ot_stretch_unit_id := io_task[ot].Queue[oq + 1].Unit;
+                            IF ot_stretch_unit_id >= 1
+                               AND ot_stretch_unit_id <= MAX_Units THEN
+                              ot_stretch_avail :=
+                                g_batch[ot_stretch_unit_id].MaxTime
+                              - g_batch[ot_stretch_unit_id].CalTime;
+                              IF ot_stretch_avail >= LINT_TO_DINT(ot_stretch_need) THEN
+                                ot_stretch_deficit := LINT_TO_DINT(ot_stretch_need);
+                                ot_stretch_pending := TRUE;
+                                ot_stretch_ok      := TRUE;
+                              END_IF;
+                            END_IF;
+                          END_IF;
+                        END_IF;
+                      END_IF;
+                    END_FOR;
+                  END_IF;
+
+                  IF ot_stretch_ok THEN
+                    ot_idle_ok := TRUE;
+                  ELSE
+                    overlap_conflict := TRUE;
+                  END_IF;
                 END_IF;
               END_IF;
             END_FOR;
@@ -426,6 +509,13 @@ FOR ui := 1 TO MAX_Units DO
               g_batch[stretch_unit_id].CalTime :=
                 g_batch[stretch_unit_id].CalTime + stretch_deficit;
               stretch_pending := FALSE;
+            END_IF;
+
+            (* ── Commit other-transporter idle-stretch ── *)
+            IF ot_stretch_pending THEN
+              g_batch[ot_stretch_unit_id].CalTime :=
+                g_batch[ot_stretch_unit_id].CalTime + ot_stretch_deficit;
+              ot_stretch_pending := FALSE;
             END_IF;
 
             IF io_task[cov_t].Count < MAX_TASK_QUEUE THEN

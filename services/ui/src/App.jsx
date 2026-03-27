@@ -16,6 +16,7 @@ import ConfigPanel from './components/panels/ConfigPanel';
 import ProductionPanel from './components/panels/ProductionPanel';
 import UnitsPanel from './components/panels/UnitsPanel';
 import TasksPanel from './components/panels/TasksPanel';
+import LiveProgramsPanel from './components/panels/LiveProgramsPanel';
 
 // MiniPieChart moved to ./components/StationLayout/helpers/MiniPieChart.jsx
 // DraggablePanel moved to ./components/StationLayout/helpers/DraggablePanel.jsx
@@ -35,6 +36,7 @@ export default function App() {
   const [productionStats, setProductionStats] = useState({ queueLength: 0, inProgressCount: 0, completedCount: 0, totalBatches: 0 });
   const [showBatches, setShowBatches] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
+  const [showLivePrograms, setShowLivePrograms] = useState(false);
   const [showProduction, setShowProduction] = useState(false);
   const [productionPrograms, setProductionPrograms] = useState([]);
   const [productionProgramDetails, setProductionProgramDetails] = useState([]);
@@ -1274,10 +1276,10 @@ export default function App() {
         selectedCustomer={selectedCustomer} selectedPlant={selectedPlant}
         plantStatus={plantStatus}
         showCustomer={showCustomer} showConfig={showConfig}
-        showProduction={showProduction} showBatches={showBatches} showTasks={showTasks}
+        showProduction={showProduction} showBatches={showBatches} showTasks={showTasks} showLivePrograms={showLivePrograms}
         setShowCustomer={setShowCustomer}
         setShowProduction={setShowProduction}
-        setShowBatches={setShowBatches} setShowTasks={setShowTasks}
+        setShowBatches={setShowBatches} setShowTasks={setShowTasks} setShowLivePrograms={setShowLivePrograms}
         onConfigClick={() => {
           if (config) {
             setConfigForm({
@@ -1436,6 +1438,12 @@ export default function App() {
             elapsedMs={elapsedMs}
             handleSendTask={handleSendTask}
             handleCancelManualTask={handleCancelManualTask}
+          />
+        )}
+
+        {showLivePrograms && (
+          <LiveProgramsPanel
+            onClose={() => setShowLivePrograms(false)}
           />
         )}
     </div>

@@ -305,4 +305,51 @@ router.get('/station-timing-stats', async (req, res) => {
   }
 });
 
+
+// ── GET /api/live-programs — Get active production programs ────────
+router.get('/live-programs', async (req, res) => {
+  const { plcUnits, adapter, stationsConfig } = _getState();
+  if (!adapter) {
+    return res.status(503).json({ error: 'Not connected to PLC' });
+  }
+
+  try {
+    // Collect active UID list
+    const activeUids = [];
+    if (plcUnits) {
+      for (const u of plcUnits) {
+        if (u.batch_state_int === 1) { // 1 = IN_PROCESS
+          activeUids.push(u.unit_id);
+        }
+      }
+    }
+
+    if (activeUids.length === 0) {
+      return res.json([]);
+    }
+
+    const programs = await adapter.getActivePrograms(activeUids);
+    
+    // Map station names
+    const stationNameMap = {};
+    const stationList = (stationsConfig && stationsConfig.stations) || [];
+    stationList.forEach(s => {
+      stationNameMap[s.number] = s.name || s.operation || `Station ${s.number}`;
+    });
+
+    if (programs) {
+      programs.forEach(p => {
+        p.steps.forEach(s => {
+          s.station_name = stationNameMap[s.station_id] || `Station ${s.station_id}`;
+        });
+      });
+    }
+
+    res.json(programs || []);
+  } catch (err) {
+    console.error('Error in /live-programs:', err);
+    res.status(500).json({ error: 'Failed to read live programs' });
+  }
+});
+
 module.exports = { router, init, tick };

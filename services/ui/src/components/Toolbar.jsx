@@ -10,8 +10,8 @@ import { api } from '../api/client';
 export default function Toolbar({
   plcStatus, plcToggling, setPlcToggling, setPlcStatus,
   selectedCustomer, selectedPlant, plantStatus,
-  showCustomer, showConfig, showProduction, showBatches, showTasks,
-  setShowCustomer, setShowProduction, setShowBatches, setShowTasks,
+  showCustomer, showConfig, showProduction, showBatches, showTasks, showLivePrograms,
+  setShowCustomer, setShowProduction, setShowBatches, setShowTasks, setShowLivePrograms,
   onConfigClick,
   isResetting, productionStartTime, productionDuration,
   handleStart, handleReset,
@@ -155,6 +155,7 @@ export default function Toolbar({
         {panelBtn('🏭', 'Production', showProduction, () => setShowProduction(v => !v), guard)}
         {panelBtn('📦', 'Units', showBatches, () => setShowBatches(v => !v), guard)}
         {panelBtn('📋', 'Tasks', showTasks, () => setShowTasks(v => !v), guard)}
+        {panelBtn('⏱️', 'Live Prog', showLivePrograms, () => setShowLivePrograms(v => !v), guard)}
         {panelBtn('📅', 'Schedule', false, () => window.open('/schedule.html', '_blank'), guard)}
         {panelBtn('📊', 'Dashboard', false, () => window.open('/dashboard.html', '_blank'), guard)}
       </div>
