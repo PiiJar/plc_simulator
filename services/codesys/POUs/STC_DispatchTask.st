@@ -35,6 +35,7 @@ VAR_EXTERNAL CONSTANT
     MAX_STEPS_PER_PROGRAM   : INT;
     MIN_StationIndex        : INT;
     MAX_StationIndex        : INT;
+    SCH_DISPATCH_MARGIN_S   : REAL;
 END_VAR
 
 VAR_EXTERNAL
@@ -135,7 +136,7 @@ FOR ti := 1 TO MAX_Transporters DO
 
     margin_s := t_start - g_time_s;
 
-    IF margin_s <= REAL_TO_LINT(travel_s) + 3 THEN
+    IF margin_s <= REAL_TO_LINT(travel_s + SCH_DISPATCH_MARGIN_S) THEN
 
       (* ── 3. Sink station free check ── *)
       sink_stn := t_sink;

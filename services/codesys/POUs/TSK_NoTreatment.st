@@ -41,6 +41,7 @@ VAR_EXTERNAL CONSTANT
     MAX_StationIndex        : INT;
     MAX_Units               : INT;
     MAX_TASK_QUEUE          : INT;
+    SCH_DISPATCH_MARGIN_S   : REAL;
 END_VAR
 
 VAR_EXTERNAL
@@ -419,7 +420,7 @@ FOR ui := 1 TO MAX_Units DO
                     END_IF;
                     ot_idle_end := io_task[ot].Queue[1].StartTime
                                  - REAL_TO_LINT(ot_travel_to_next)
-                                 - LINT#3;
+                                 - REAL_TO_LINT(SCH_DISPATCH_MARGIN_S);
                     IF ot_idle_end < ot_idle_start THEN
                       ot_idle_end := ot_idle_start;
                     END_IF;
@@ -446,7 +447,7 @@ FOR ui := 1 TO MAX_Units DO
                         END_IF;
                         ot_idle_end := io_task[ot].Queue[oq + 1].StartTime
                                      - REAL_TO_LINT(ot_travel_to_next)
-                                     - LINT#3;
+                                     - REAL_TO_LINT(SCH_DISPATCH_MARGIN_S);
                         IF ot_idle_end < ot_idle_start THEN
                           ot_idle_end := ot_idle_start;
                         END_IF;
@@ -495,7 +496,7 @@ FOR ui := 1 TO MAX_Units DO
                     END_IF;
                     ot_idle_end := io_task[ot].Queue[1].StartTime
                                  - REAL_TO_LINT(ot_travel_to_next)
-                                 - LINT#3;
+                                 - REAL_TO_LINT(SCH_DISPATCH_MARGIN_S);
                     IF ot_idle_end < ot_idle_start THEN
                       ot_idle_end := ot_idle_start;
                     END_IF;
@@ -541,7 +542,7 @@ FOR ui := 1 TO MAX_Units DO
                         END_IF;
                         ot_idle_end := io_task[ot].Queue[oq + 1].StartTime
                                      - REAL_TO_LINT(ot_travel_to_next)
-                                     - LINT#3;
+                                     - REAL_TO_LINT(SCH_DISPATCH_MARGIN_S);
                         IF ot_idle_end < ot_idle_start THEN
                           ot_idle_end := ot_idle_start;
                         END_IF;

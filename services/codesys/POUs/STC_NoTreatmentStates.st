@@ -56,6 +56,8 @@ VAR_EXTERNAL
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_time_s                  : LINT;
   g_production_queue        : INT;
+  g_event_pending           : UDT_JC_EventMsgType;
+  g_event_pending_valid     : BOOL;
 END_VAR
 
 VAR
@@ -136,6 +138,27 @@ END_VAR
         IF snap[u].Elapsed > 0 AND snap[u].Elapsed >= DINT_TO_LINT(snap[u].CalTime) THEN
           g_batch[u].State := PROCESSED;
           snap[u].BatchState   := PROCESSED;  (* update snapshot *)
+
+          (* ── Emit BATCH_COMPLETED event (msg_type=5) ── *)
+          IF NOT g_event_pending_valid THEN
+            g_event_pending.MsgType := 5;
+            g_event_pending.TsHi := LINT_TO_INT(g_time_s / LINT#65536);
+            g_event_pending.TsLo := LINT_TO_INT(g_time_s MOD LINT#65536);
+            g_event_pending.Payload[1]  := u;                                  (* unit_id *)
+            g_event_pending.Payload[2]  := g_batch[u].BatchCode;               (* batch_code *)
+            g_event_pending.Payload[3]  := g_program[u].StepCount;             (* stage_count *)
+            g_event_pending.Payload[4]  := snap[u].Location;                   (* final_station *)
+            g_event_pending.Payload[5]  := 0;
+            g_event_pending.Payload[6]  := 0;
+            g_event_pending.Payload[7]  := 0;
+            g_event_pending.Payload[8]  := 0;
+            g_event_pending.Payload[9]  := 0;
+            g_event_pending.Payload[10] := 0;
+            g_event_pending.Payload[11] := 0;
+            g_event_pending.Payload[12] := 0;
+            g_event_pending_valid := TRUE;
+          END_IF;
+
           (* Route to unloading station *)
           IF snap[u].Target = TO_NONE THEN
             g_unit[u].Target := TO_UNLOAD;

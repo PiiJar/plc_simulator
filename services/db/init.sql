@@ -9,7 +9,7 @@
 CREATE TABLE IF NOT EXISTS events (
   id          SERIAL PRIMARY KEY,
   seq         INT NOT NULL,                     -- PLC sequence number (1..32000)
-  msg_type    INT NOT NULL,                     -- 1=TASK_DISPATCHED, 2=LIFT
+  msg_type    INT NOT NULL,                     -- 1=TASK_DISPATCHED, 2=LIFT, 3=TASK_COMPLETE, 4=BATCH_ACTIVATED, 5=BATCH_COMPLETED
   plc_ts      TIMESTAMPTZ NOT NULL,             -- PLC-side unix timestamp
   f1          INT, f2  INT, f3  INT, f4  INT,
   f5          INT, f6  INT, f7  INT, f8  INT,
@@ -96,6 +96,36 @@ SELECT
   f12             AS total_s             -- kokonaisaika
 FROM events
 WHERE msg_type = 3;
+
+-- ============================================================
+-- VIEW: batch_activated
+-- msg_type = 4: Departure scheduler activates a batch
+-- Payload: f1=unit_id f2=batch_code f3=wait_time_s f4=fit_rounds
+-- ============================================================
+CREATE OR REPLACE VIEW batch_activated AS
+SELECT
+  id, seq, plc_ts, received_at,
+  f1              AS unit_id,
+  f2              AS batch_code,
+  f3              AS wait_time_s,       -- stage-0 wait before activation
+  f4              AS fit_rounds         -- scheduling fit iterations used
+FROM events
+WHERE msg_type = 4;
+
+-- ============================================================
+-- VIEW: batch_completed
+-- msg_type = 5: Batch marked PROCESSED after last treatment stage
+-- Payload: f1=unit_id f2=batch_code f3=stage_count f4=final_station
+-- ============================================================
+CREATE OR REPLACE VIEW batch_completed AS
+SELECT
+  id, seq, plc_ts, received_at,
+  f1              AS unit_id,
+  f2              AS batch_code,
+  f3              AS stage_count,       -- number of treatment steps
+  f4              AS final_station      -- last treatment station
+FROM events
+WHERE msg_type = 5;
 
 -- ============================================================
 -- TABLE: sim_log

@@ -7,7 +7,7 @@
       "physics_2D": {
         "x_acceleration_time_s": 1.5,
         "x_deceleration_time_s": 1.5,
-        "x_max_speed_mm_s": 500,
+        "x_max_speed_mm_s": 600,
         "z_total_distance_mm": 2500,
         "z_slow_distance_dry_mm": 300,
         "z_slow_distance_wet_mm": 1000,
@@ -73,7 +73,7 @@
       "physics_2D": {
         "x_acceleration_time_s": 1.5,
         "x_deceleration_time_s": 1.5,
-        "x_max_speed_mm_s": 500,
+        "x_max_speed_mm_s": 600,
         "z_total_distance_mm": 2500,
         "z_slow_distance_dry_mm": 300,
         "z_slow_distance_wet_mm": 1000,

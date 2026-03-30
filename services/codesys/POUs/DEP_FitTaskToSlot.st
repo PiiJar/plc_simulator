@@ -45,6 +45,7 @@ END_VAR
 VAR_EXTERNAL CONSTANT
     MAX_Transporters        : INT;
     DEP_MAX_IDLE_SLOTS      : INT;
+    SCH_DISPATCH_MARGIN_S   : REAL;
 END_VAR
 
 VAR_EXTERNAL
@@ -72,7 +73,6 @@ VAR
   overflow_best_delay       : REAL;
   overflow_best_slot        : INT;
   tmp_move                  : UDT_JC_MoveTimesType;
-  dispatch_margin_s         : REAL := 3.0;
   total_delay               : REAL;
 END_VAR
 
@@ -127,7 +127,7 @@ FOR si := 1 TO DEP_MAX_IDLE_SLOTS DO
   IF slot_end > LINT#9000000000 THEN
     latest := LINT#9000000000;
   ELSE
-    latest := slot_end - REAL_TO_LINT(travel_from + dispatch_margin_s);
+    latest := slot_end - REAL_TO_LINT(travel_from + SCH_DISPATCH_MARGIN_S);
   END_IF;
 
   IF earliest + task_dur <= latest THEN

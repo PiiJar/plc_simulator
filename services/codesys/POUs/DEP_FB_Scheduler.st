@@ -73,6 +73,13 @@ VAR_EXTERNAL CONSTANT
     DEP_MAX_IDLE_SLOTS      : INT;
     MIN_StationIndex        : INT;
     MAX_StationIndex        : INT;
+    SCH_DISPATCH_SCH_MARGIN_S   : REAL;
+    SCH_CONFLICT_MARGIN_S   : REAL;
+    SCH_FLEX_FACTOR         : REAL;
+    SCH_MARGIN_S            : REAL;
+    SCH_MAX_INIT_WAIT_S     : REAL;
+    SCH_END_DELAY_TICKS     : INT;
+    SCH_MAX_FIT_ROUNDS      : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -91,6 +98,9 @@ VAR_EXTERNAL
   g_tsk_stable              : BOOL;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   g_dep_waiting             : ARRAY[1..DEP_MAX_WAITING] OF INT;
+  g_event_pending           : UDT_JC_EventMsgType;
+  g_event_pending_valid     : BOOL;
+  g_time_s                  : LINT;
   g_dep_waiting_count       : INT;
   g_dep_wk_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   g_dep_wk_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
@@ -134,7 +144,6 @@ VAR
 
   (* ── Fit state ── *)
   fit_round                 : INT;
-  MAX_FIT_ROUNDS            : INT := 50;
   sched_base_time           : LINT;
 
   (* ── Delay recording ── *)
@@ -142,13 +151,7 @@ VAR
   delay_amount              : REAL;
   delay_target              : INT;
 
-  (* ── Constants ── *)
-  FLEX_FACTOR               : REAL := 0.5;
-  MARGIN_S                  : REAL := 5.0;
-  CONFLICT_MARGIN_S         : REAL := 1.0;
-  DISPATCH_MARGIN_S         : REAL := 3.0;
-  MAX_INIT_WAIT_S           : REAL := 120.0;
-  END_DELAY_TICKS           : INT := 100;
+  (* ── Constants — now in GVL_JC_Constants ── *)
 
   (* Sub-FB instances *)
   fb_find                   : STC_FindTransporter;
@@ -583,7 +586,7 @@ ELSIF phase = 3000 THEN
         END_IF;
 
         IF s0_to_stn > 0 THEN
-          s0_slot_end := s0_slot_end - REAL_TO_LINT(s0_travel_from + DISPATCH_MARGIN_S);
+          s0_slot_end := s0_slot_end - REAL_TO_LINT(s0_travel_from + SCH_DISPATCH_SCH_MARGIN_S);
         END_IF;
 
         (* Overlap check for stage 0 *)
@@ -593,7 +596,7 @@ ELSIF phase = 3000 THEN
           i_trans_id   := sched_trans,
           i_task_start := s0_earliest,
           i_task_end   := s0_earliest + s0_task_dur,
-          i_margin_s   := CONFLICT_MARGIN_S,
+          i_margin_s   := SCH_CONFLICT_MARGIN_S,
           io_task      := g_dep_wk_task,
           io_overlap   := g_dep_overlap
         );
@@ -605,7 +608,7 @@ ELSIF phase = 3000 THEN
           stage0_delay := LINT_TO_REAL(s0_earliest - sched_base_time);
   IF stage0_delay < 0.0 THEN stage0_delay := 0.0; END_IF;
 
-          IF stage0_delay <= MAX_INIT_WAIT_S THEN
+          IF stage0_delay <= SCH_MAX_INIT_WAIT_S THEN
             s0_slot_fitted := TRUE;
 
             (* Trim idle slot *)
@@ -616,7 +619,7 @@ ELSIF phase = 3000 THEN
 
             stage0_wait_time := stage0_delay;
 
-            IF stage0_delay > MARGIN_S THEN
+            IF stage0_delay > SCH_MARGIN_S THEN
               stage0_pending_delay := stage0_pending_delay + stage0_delay;
               sched_base_time := sched_base_time + REAL_TO_LINT(stage0_delay);
             END_IF;
@@ -632,7 +635,7 @@ ELSIF phase = 3000 THEN
     ELSE
       (* Determine first fit task index (skip stage 0 pickup task) *)
       fit_task_start := 1;
-      IF w_task_cnt >= 1 AND w_tasks[1].Stage = 0 THEN
+      IF w_task_cnt >= 1 AND w_tasks[1].SrcStage = 0 THEN
         fit_task_start := 2;
       END_IF;
 
@@ -665,7 +668,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
       i_trans_id   := ti,
       i_task_start := w_tasks[si].StartTime,
       i_task_end   := w_tasks[si].FinishTime,
-      i_margin_s   := CONFLICT_MARGIN_S,
+      i_margin_s   := SCH_CONFLICT_MARGIN_S,
       io_task      := g_dep_wk_task,
       io_overlap   := g_dep_overlap
     );
@@ -680,9 +683,9 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
       i_shift_s      := ovlp_delay_s,
       i_calc_time_s  := w_tasks[si].CalcTime,
       i_max_time_s   := w_tasks[si].MaxTime,
-      i_flex_factor  := FLEX_FACTOR,
-      i_margin_s     := MARGIN_S,
-      i_conflict_margin_s := CONFLICT_MARGIN_S,
+      i_flex_factor  := SCH_FLEX_FACTOR,
+      i_margin_s     := SCH_MARGIN_S,
+      i_conflict_margin_s := SCH_CONFLICT_MARGIN_S,
       io_idle_slot   := g_dep_idle_slot,
       o_result       := fit_result
     );
@@ -690,22 +693,21 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
     total_delay_s := ovlp_delay_s + DINT_TO_REAL(fit_result.DelayTime);
 
     IF fit_result.Fits THEN
-      IF total_delay_s > 0.0 THEN
-        prog_idx := w_tasks[si].SrcStage;
-        IF prog_idx >= 1 AND prog_idx <= 30 THEN
-          old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
-          max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
-          cur_flex_up := DINT_TO_REAL(max_cal - old_cal);
-          IF cur_flex_up < 0.0 THEN cur_flex_up := 0.0; END_IF;
-          cur_capped := cur_flex_up * FLEX_FACTOR;
-          cur_use_delay := total_delay_s;
-          IF cur_use_delay > cur_capped THEN cur_use_delay := cur_capped; END_IF;
-          new_cal := old_cal + REAL_TO_DINT(cur_use_delay);
-          IF new_cal > max_cal AND max_cal > 0 THEN
-            new_cal := max_cal;
-          END_IF;
-          g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
+      (* Persist delay into program CalTime — only for real stages (>= 1) *)
+      prog_idx := w_tasks[si].SrcStage;
+      IF total_delay_s > SCH_MARGIN_S AND prog_idx >= 1 AND prog_idx <= 30 THEN
+        old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
+        max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
+        cur_flex_up := DINT_TO_REAL(max_cal - old_cal);
+        IF cur_flex_up < 0.0 THEN cur_flex_up := 0.0; END_IF;
+        cur_capped := cur_flex_up * SCH_FLEX_FACTOR;
+        cur_use_delay := total_delay_s;
+        IF cur_use_delay > cur_capped THEN cur_use_delay := cur_capped; END_IF;
+        new_cal := old_cal + REAL_TO_DINT(cur_use_delay);
+        IF new_cal > max_cal AND max_cal > 0 THEN
+          new_cal := max_cal;
         END_IF;
+        g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
       END_IF;
 
       (* Trim idle slot after successful fit *)
@@ -716,10 +718,11 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
           w_tasks[si].SinkStationTarget;
       END_IF;
 
-      IF total_delay_s > 0.0 THEN
+      (* Recalc only when a real program step was delayed significantly *)
+      IF total_delay_s > SCH_MARGIN_S AND prog_idx >= 1 THEN
         fit_round := fit_round + 1;
         o_fit_round := fit_round;
-        IF fit_round > MAX_FIT_ROUNDS THEN
+        IF fit_round > SCH_MAX_FIT_ROUNDS THEN
           next_phase := 9000;
         ELSE
           next_phase := 1000;  (* RECALC with persisted successful fit *)
@@ -735,14 +738,14 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
         chain_ok := FALSE;
 
         FOR bk := si - 1 TO 1 BY -1 DO
-          IF remaining_need <= MARGIN_S THEN EXIT; END_IF;
+          IF remaining_need <= SCH_MARGIN_S THEN EXIT; END_IF;
           prev_flex_up := DINT_TO_REAL(w_tasks[bk].MaxTime - w_tasks[bk].CalcTime);
   IF prev_flex_up < 0.0 THEN prev_flex_up := 0.0; END_IF;
-          prev_capped := prev_flex_up * FLEX_FACTOR;
+          prev_capped := prev_flex_up * SCH_FLEX_FACTOR;
           use_delay := prev_capped;
   IF use_delay > remaining_need THEN use_delay := remaining_need; END_IF;
 
-          IF use_delay > MARGIN_S THEN
+          IF use_delay > SCH_MARGIN_S THEN
             chain_delay_cnt := chain_delay_cnt + 1;
             IF chain_delay_cnt <= 10 THEN
               chain_delays[chain_delay_cnt].Stage   := w_tasks[bk].SrcStage;
@@ -758,7 +761,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
           END_IF;
         END_FOR;
 
-  IF remaining_need <= MARGIN_S THEN chain_ok := TRUE; END_IF;
+  IF remaining_need <= SCH_MARGIN_S THEN chain_ok := TRUE; END_IF;
 
         IF chain_ok THEN
           (* Apply chain delays *)
@@ -782,14 +785,14 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
           END_FOR;
 
           (* Also apply current task's delay *)
-          IF total_delay_s > MARGIN_S THEN
+          IF total_delay_s > SCH_MARGIN_S THEN
             prog_idx := w_tasks[si].SrcStage;
             IF prog_idx >= 1 AND prog_idx <= 30 THEN
               old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
               max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
               cur_flex_up := DINT_TO_REAL(max_cal - old_cal);
               IF cur_flex_up < 0.0 THEN cur_flex_up := 0.0; END_IF;
-              cur_capped := cur_flex_up * FLEX_FACTOR;
+              cur_capped := cur_flex_up * SCH_FLEX_FACTOR;
               cur_use_delay := total_delay_s;
               IF cur_use_delay > cur_capped THEN cur_use_delay := cur_capped; END_IF;
               new_cal := old_cal + REAL_TO_DINT(cur_use_delay);
@@ -802,7 +805,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
 
           fit_round := fit_round + 1;
           o_fit_round := fit_round;
-          IF fit_round > MAX_FIT_ROUNDS THEN
+          IF fit_round > SCH_MAX_FIT_ROUNDS THEN
             next_phase := 9000;
           ELSE
             next_phase := 1000;  (* RECALC *)
@@ -832,11 +835,11 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
                 g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime
               - g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime);
   IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
-              border_capped := border_flex * FLEX_FACTOR;
+              border_capped := border_flex * SCH_FLEX_FACTOR;
               border_use := border_capped;
   IF border_use > widen_need THEN border_use := widen_need; END_IF;
 
-              IF border_use > MARGIN_S THEN
+              IF border_use > SCH_MARGIN_S THEN
                 old_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime;
                 max_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime;
                 new_cal := old_cal + REAL_TO_DINT(border_use);
@@ -847,7 +850,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
             END_IF;
 
             (* ── Advance LEFT border: find task whose FinishTime = slot StartTime ── *)
-            IF widen_need > MARGIN_S THEN
+            IF widen_need > SCH_MARGIN_S THEN
               border_unit := 0;
               FOR qi := 1 TO g_dep_wk_task[ti].Count DO
                 IF g_dep_wk_task[ti].Queue[qi].FinishTime = g_dep_idle_slot[ti].Slots[ov_slot_idx].StartTime THEN
@@ -864,11 +867,11 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
                   g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime
                 - g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime);
   IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
-                border_capped := border_flex * FLEX_FACTOR;
+                border_capped := border_flex * SCH_FLEX_FACTOR;
                 border_use := border_capped;
   IF border_use > widen_need THEN border_use := widen_need; END_IF;
 
-                IF border_use > MARGIN_S THEN
+                IF border_use > SCH_MARGIN_S THEN
                   old_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime;
                   min_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime;
                   new_cal := old_cal - REAL_TO_DINT(border_use);
@@ -879,14 +882,14 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
               END_IF;
             END_IF;
 
-  IF widen_need <= MARGIN_S THEN widen_ok := TRUE; END_IF;
+  IF widen_need <= SCH_MARGIN_S THEN widen_ok := TRUE; END_IF;
           END_IF;
 
           IF widen_ok THEN
             (* Slot widened → RECALC with modified IN_PROCESS programs *)
             fit_round := fit_round + 1;
             o_fit_round := fit_round;
-            IF fit_round > MAX_FIT_ROUNDS THEN
+            IF fit_round > SCH_MAX_FIT_ROUNDS THEN
               next_phase := 9000;
             ELSE
               next_phase := 1000;  (* RECALC *)
@@ -905,7 +908,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
 ELSIF phase = 4000 THEN
   fit_round := fit_round + 1;
   o_fit_round := fit_round;
-  IF fit_round > MAX_FIT_ROUNDS THEN
+  IF fit_round > SCH_MAX_FIT_ROUNDS THEN
     next_phase := 9000;
   ELSE
     IF delay_target = 1 THEN
@@ -915,7 +918,7 @@ ELSIF phase = 4000 THEN
         max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
         cur_flex_up := DINT_TO_REAL(max_cal - old_cal);
         IF cur_flex_up < 0.0 THEN cur_flex_up := 0.0; END_IF;
-        cur_capped := cur_flex_up * FLEX_FACTOR;
+        cur_capped := cur_flex_up * SCH_FLEX_FACTOR;
         cur_use_delay := delay_amount;
         IF cur_use_delay > cur_capped THEN cur_use_delay := cur_capped; END_IF;
         new_cal := old_cal + REAL_TO_DINT(cur_use_delay);
@@ -950,6 +953,26 @@ ELSIF phase = 8000 THEN
   g_dep_activated := TRUE;
   o_activated := TRUE;
 
+  (* ── Emit BATCH_ACTIVATED event (msg_type=4) ── *)
+  IF NOT g_event_pending_valid THEN
+    g_event_pending.MsgType := 4;
+    g_event_pending.TsHi := LINT_TO_INT(g_time_s / LINT#65536);
+    g_event_pending.TsLo := LINT_TO_INT(g_time_s MOD LINT#65536);
+    g_event_pending.Payload[1]  := cur_wait_unit;                       (* unit_id *)
+    g_event_pending.Payload[2]  := g_batch[cur_wait_unit].BatchCode;    (* batch_code *)
+    g_event_pending.Payload[3]  := REAL_TO_INT(stage0_wait_time);       (* wait_time_s *)
+    g_event_pending.Payload[4]  := fit_round;                           (* fit_rounds *)
+    g_event_pending.Payload[5]  := 0;
+    g_event_pending.Payload[6]  := 0;
+    g_event_pending.Payload[7]  := 0;
+    g_event_pending.Payload[8]  := 0;
+    g_event_pending.Payload[9]  := 0;
+    g_event_pending.Payload[10] := 0;
+    g_event_pending.Payload[11] := 0;
+    g_event_pending.Payload[12] := 0;
+    g_event_pending_valid := TRUE;
+  END_IF;
+
   next_phase := 8100;
 
 (* ════════════════════════════════════════════════════════════ *)
@@ -967,7 +990,7 @@ ELSIF phase = 8100 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase >= 8200 AND phase <= 8499 THEN
   idx := phase - 8200;
-  IF idx >= END_DELAY_TICKS THEN
+  IF idx >= SCH_END_DELAY_TICKS THEN
     next_phase := 8500;
   END_IF;
   (* else phase + 1 -> next tick *)

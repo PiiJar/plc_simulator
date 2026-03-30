@@ -12,6 +12,8 @@ const MSG_TYPE_NAMES = {
   1: 'TASK_DISPATCHED',
   2: 'LIFT',
   3: 'TASK_COMPLETE',
+  4: 'BATCH_ACTIVATED',
+  5: 'BATCH_COMPLETED',
 };
 
 let lastAckedSeq = 0;

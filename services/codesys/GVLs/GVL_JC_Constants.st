@@ -22,6 +22,15 @@ VAR_GLOBAL CONSTANT
   DEP_MAX_WAITING           : INT  := 5;  (* max waiting batches *)
   MIN_WorkingArea           : DINT := 20;  (* mm — TWA minimum working area *)
 
+  (* ===== Scheduler Timing Constants ===== *)
+  SCH_DISPATCH_MARGIN_S     : REAL := 3.0;  (* dispatch early-start margin (seconds) *)
+  SCH_CONFLICT_MARGIN_S     : REAL := 1.0;  (* conflict detection margin (seconds) *)
+  SCH_FLEX_FACTOR           : REAL := 0.5;  (* fraction of flex (max-cal) used by DEP *)
+  SCH_MARGIN_S              : REAL := 5.0;  (* DEP small-delay threshold (seconds) *)
+  SCH_MAX_INIT_WAIT_S       : REAL := 120.0;  (* max initial wait for stage0 pickup (seconds) *)
+  SCH_END_DELAY_TICKS       : INT  := 100;  (* stabilization ticks after DEP activate *)
+  SCH_MAX_FIT_ROUNDS        : INT  := 50;  (* max recalc rounds in DEP fit loop *)
+
   (* ===== Enumerated Constants ===== *)
 
   (* Unit status *)
