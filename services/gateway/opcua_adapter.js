@@ -777,7 +777,14 @@ class OpcuaAdapter extends PlcAdapter {
         console.log(`[OPC-UA] Wrote ${units.length} units`);
       }
 
-      // Step 6: Init command (cmd=2, param=station_count)
+      // Step 6: Write real unix time for PLC time sync
+      const unixSeconds = Math.floor(Date.now() / 1000);
+      await this._writeNodes([
+        { nodeId: nodes.CMD.time_sync, value: unixSeconds, dataType: DataType.Int64 },
+      ]);
+      console.log(`[OPC-UA] Wrote time_sync = ${unixSeconds} (${new Date(unixSeconds * 1000).toISOString()})`);
+
+      // Step 7: Init command (cmd=2, param=station_count)
       await this._sendCommand(2, stationCount || stations.length);
       console.log(`[OPC-UA] Sent INIT command (station_count=${stationCount || stations.length})`);
 

@@ -132,6 +132,9 @@ IF g_cmd_code <> 0 THEN
 
     init_done := TRUE;
 
+    (* Calculate time offset: real unix time - uptime *)
+    g_time_offset := g_time_sync - UDINT_TO_LINT(SysTimeGetMs()) / 1000;
+
     (* Build g_station_loc from g_unit[].location so SIM_FB_RunTasks
        can find units on stations via g_station_loc[stn].UnitId.
        Gateway writes g_unit[] but not g_station_loc[]. *)
@@ -160,10 +163,10 @@ IF init_done THEN
   (* ── Calculate transporter working areas (X-limits) every cycle ── *)
   twa_calc();
 
-  (* ── System time from runtime clock (SysTime library) ── *)
+  (* ── System time: uptime + offset = real unix seconds ── *)
   now_ms := UDINT_TO_LINT(SysTimeGetMs());
-  g_time_s := now_ms / 1000;      (* seconds *)
-  g_time_100ms := now_ms / 100;   (* 0.1s ticks *)
+  g_time_s := g_time_offset + now_ms / 1000;        (* seconds, unix epoch *)
+  g_time_100ms := g_time_offset * 10 + now_ms / 100; (* 0.1s ticks, unix epoch *)
 
   (* ── Execute transporter tasks (physics simulation) ── *)
   run_tasks(i_run := init_done);

@@ -255,6 +255,7 @@ const CMD = {
 
   // Time sync (LINT)
   time_s: S('g_time_s'),
+  time_sync: S('g_time_sync'),
 };
 
 // ═══════════════════════════════════════════════════════════════

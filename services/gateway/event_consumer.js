@@ -18,6 +18,7 @@ const MSG_TYPE_NAMES = {
 
 let lastAckedSeq = 0;
 let dbReady = false;
+let plcTimeOffset = null;   // unix_seconds - plc_g_time_s (computed once)
 
 /**
  * Verify database connectivity.

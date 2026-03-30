@@ -65,6 +65,8 @@ VAR_GLOBAL
   (* ===== Unix Time ===== *)
   g_time_s                      : LINT;  (* absolute time in unix seconds *)
   g_time_100ms                  : LINT;  (* absolute time in 0.1s ticks *)
+  g_time_sync                   : LINT;  (* gateway writes real unix seconds here at init *)
+  g_time_offset                 : LINT;  (* g_time_sync - uptime_s at init *)
 
   (* ===== Event Queue ===== *)
   g_event                       : UDT_JC_EventQueueType;  (* circular event buffer *)
