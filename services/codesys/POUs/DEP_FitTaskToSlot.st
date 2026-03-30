@@ -72,6 +72,8 @@ VAR
   overflow_best_delay       : REAL;
   overflow_best_slot        : INT;
   tmp_move                  : UDT_JC_MoveTimesType;
+  dispatch_margin_s         : REAL := 3.0;
+  total_delay               : REAL;
 END_VAR
 
 o_result.Fits         := FALSE;
@@ -125,14 +127,15 @@ FOR si := 1 TO DEP_MAX_IDLE_SLOTS DO
   IF slot_end > LINT#9000000000 THEN
     latest := LINT#9000000000;
   ELSE
-    latest := slot_end - REAL_TO_LINT(travel_from + i_conflict_margin_s);
+    latest := slot_end - REAL_TO_LINT(travel_from + dispatch_margin_s);
   END_IF;
 
   IF earliest + task_dur <= latest THEN
     delay := LINT_TO_REAL(earliest - i_task_start) - i_shift_s;
   IF delay < 0.0 THEN delay := 0.0; END_IF;
+    total_delay := i_shift_s + delay;
 
-    IF delay <= i_margin_s OR delay <= capped_flex + 1.0 THEN
+    IF total_delay <= i_margin_s OR total_delay <= capped_flex + 1.0 THEN
       IF delay < best_delay THEN
         best_delay := delay;
         best_slot  := si;
@@ -157,7 +160,7 @@ ELSE
   o_result.Fits := FALSE;
   IF overflow_best_delay < 1.0E8 THEN
     o_result.DelayTime     := REAL_TO_DINT(overflow_best_delay);
-    o_result.NeedExtraTime := REAL_TO_DINT(overflow_best_delay - capped_flex);
+    o_result.NeedExtraTime := REAL_TO_DINT(i_shift_s + overflow_best_delay - capped_flex);
   IF o_result.NeedExtraTime < 0 THEN o_result.NeedExtraTime := 0; END_IF;
     o_result.OverflowSlotIdx := overflow_best_slot;
   ELSE

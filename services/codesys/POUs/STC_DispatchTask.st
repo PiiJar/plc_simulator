@@ -287,6 +287,7 @@ FOR ti := 1 TO MAX_Transporters DO
           g_transporter[ti].TaskId      := t_start;
           g_transporter[ti].LiftStationTarget := t_lift;
           g_transporter[ti].SinkStationTarget := sink_stn;
+          g_transporter[ti].CurrentTaskFinishTime := g_task[ti].Queue[qi].FinishTime;
           g_station_loc[ti].UnitId      := t_unit;
           g_sim_trans[ti].TreatmentTime := t_calc_time;
           g_sim_trans[ti].MinTime := g_task[ti].Queue[qi].MinTime;

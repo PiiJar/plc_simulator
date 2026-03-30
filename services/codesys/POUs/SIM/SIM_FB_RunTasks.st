@@ -536,6 +536,7 @@ FOR i := 1 TO MAX_Transporters DO
       END_IF;
 
       g_transporter[i].Phase := 0;
+      g_transporter[i].CurrentTaskFinishTime := 0;
       STC_TrackMoveTimes(i_trans := i, i_prev := 4, i_new := 0);
       g_transporter[i].Status := 3;  (* auto_idle *)
 

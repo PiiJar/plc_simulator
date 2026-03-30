@@ -227,87 +227,97 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
     EXIT;
   END_IF;
 
-  IF cand_cnt = 1 THEN
-    chosen_stn := cand_arr[1];
-  ELSE
-    (* Estimate this batch's time window per candidate for overlap check *)
-    calc_s := DINT_TO_REAL(io_program[i_unit].Steps[stg].CalTime);
-    tmp_move := g_move[i_trans];
-
+  chosen_stn := 0;
+  IF is_first AND is_on_stn AND stg = cur_stage THEN
     FOR p := 1 TO cand_cnt DO
-      (* Calculate entry/exit per candidate station individually *)
-      xfer_t := STC_CalcTransferTime(
-        i_from_stn            := prev_stn,
-        i_to_stn              := cand_arr[p],
-        i_move                := tmp_move,
-        i_from_dropping_x10   := g_station[prev_stn].DrippingTime,
-        i_to_device_delay_x10 := g_station[cand_arr[p]].DeviceDelay,
-        i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
-      );
-      my_entry := exit_t + REAL_TO_LINT(xfer_t);
-      my_exit  := my_entry + REAL_TO_LINT(calc_s);
-
-      FOR uj := 1 TO MAX_Units DO
-        IF uj <> i_unit AND io_schedule[uj].StageCount > 0 THEN
-          FOR sj := 1 TO io_schedule[uj].StageCount DO
-            IF io_schedule[uj].Stages[sj].station = cand_arr[p] THEN
-              ov_start := my_entry;
-              IF io_schedule[uj].Stages[sj].EntryTime > ov_start THEN
-                ov_start := io_schedule[uj].Stages[sj].EntryTime;
-              END_IF;
-              ov_end := my_exit;
-              IF io_schedule[uj].Stages[sj].ExitTime < ov_end THEN
-                ov_end := io_schedule[uj].Stages[sj].ExitTime;
-              END_IF;
-              IF ov_end > ov_start THEN
-                sched_occupied[p] := TRUE;
-              END_IF;
-            END_IF;
-          END_FOR;
-        END_IF;
-      END_FOR;
-
-      FOR uj := 1 TO MAX_Units DO
-        IF g_unit[uj].location = cand_arr[p] AND g_unit[uj].Status = 1 THEN
-          phys_occupied[p] := TRUE;
-        END_IF;
-      END_FOR;
-    END_FOR;
-
-    chosen_stn := 0;
-    best_change_time := LINT#9999999999;
-    FOR p := 1 TO cand_cnt DO
-      IF NOT sched_occupied[p] AND NOT phys_occupied[p] THEN
-        IF cand_arr[p] >= MIN_StationIndex AND cand_arr[p] <= MAX_StationIndex THEN
-          IF g_station_loc[cand_arr[p]].ChangeTime < best_change_time THEN
-            best_change_time := g_station_loc[cand_arr[p]].ChangeTime;
-            chosen_stn := cand_arr[p];
-          END_IF;
-        END_IF;
+      IF cand_arr[p] = location THEN
+        chosen_stn := location;
       END_IF;
     END_FOR;
+  END_IF;
 
-    (* Pass 2: prefer physically free even if sched-occupied *)
-    IF chosen_stn = 0 THEN
-      FOR p := 1 TO cand_cnt DO
-        IF NOT phys_occupied[p] AND chosen_stn = 0 THEN
-          chosen_stn := cand_arr[p];
-        END_IF;
-      END_FOR;
-    END_IF;
-
-    (* Pass 3: prefer sched-free even if phys-occupied *)
-    IF chosen_stn = 0 THEN
-      FOR p := 1 TO cand_cnt DO
-        IF NOT sched_occupied[p] AND chosen_stn = 0 THEN
-          chosen_stn := cand_arr[p];
-        END_IF;
-      END_FOR;
-    END_IF;
-
-    (* Pass 4: all occupied — pick first candidate *)
-    IF chosen_stn = 0 THEN
+  IF chosen_stn = 0 THEN
+    IF cand_cnt = 1 THEN
       chosen_stn := cand_arr[1];
+    ELSE
+      (* Estimate this batch's time window per candidate for overlap check *)
+      calc_s := DINT_TO_REAL(io_program[i_unit].Steps[stg].CalTime);
+      tmp_move := g_move[i_trans];
+
+      FOR p := 1 TO cand_cnt DO
+        (* Calculate entry/exit per candidate station individually *)
+        xfer_t := STC_CalcTransferTime(
+          i_from_stn            := prev_stn,
+          i_to_stn              := cand_arr[p],
+          i_move                := tmp_move,
+          i_from_dropping_x10   := g_station[prev_stn].DrippingTime,
+          i_to_device_delay_x10 := g_station[cand_arr[p]].DeviceDelay,
+          i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
+        );
+        my_entry := exit_t + REAL_TO_LINT(xfer_t);
+        my_exit  := my_entry + REAL_TO_LINT(calc_s);
+
+        FOR uj := 1 TO MAX_Units DO
+          IF uj <> i_unit AND io_schedule[uj].StageCount > 0 THEN
+            FOR sj := 1 TO io_schedule[uj].StageCount DO
+              IF io_schedule[uj].Stages[sj].station = cand_arr[p] THEN
+                ov_start := my_entry;
+                IF io_schedule[uj].Stages[sj].EntryTime > ov_start THEN
+                  ov_start := io_schedule[uj].Stages[sj].EntryTime;
+                END_IF;
+                ov_end := my_exit;
+                IF io_schedule[uj].Stages[sj].ExitTime < ov_end THEN
+                  ov_end := io_schedule[uj].Stages[sj].ExitTime;
+                END_IF;
+                IF ov_end > ov_start THEN
+                  sched_occupied[p] := TRUE;
+                END_IF;
+              END_IF;
+            END_FOR;
+          END_IF;
+        END_FOR;
+
+        FOR uj := 1 TO MAX_Units DO
+          IF g_unit[uj].location = cand_arr[p] AND g_unit[uj].Status = 1 THEN
+            phys_occupied[p] := TRUE;
+          END_IF;
+        END_FOR;
+      END_FOR;
+
+      best_change_time := LINT#9999999999;
+      FOR p := 1 TO cand_cnt DO
+        IF NOT sched_occupied[p] AND NOT phys_occupied[p] THEN
+          IF cand_arr[p] >= MIN_StationIndex AND cand_arr[p] <= MAX_StationIndex THEN
+            IF g_station_loc[cand_arr[p]].ChangeTime < best_change_time THEN
+              best_change_time := g_station_loc[cand_arr[p]].ChangeTime;
+              chosen_stn := cand_arr[p];
+            END_IF;
+          END_IF;
+        END_IF;
+      END_FOR;
+
+      (* Pass 2: prefer physically free even if sched-occupied *)
+      IF chosen_stn = 0 THEN
+        FOR p := 1 TO cand_cnt DO
+          IF NOT phys_occupied[p] AND chosen_stn = 0 THEN
+            chosen_stn := cand_arr[p];
+          END_IF;
+        END_FOR;
+      END_IF;
+
+      (* Pass 3: prefer sched-free even if phys-occupied *)
+      IF chosen_stn = 0 THEN
+        FOR p := 1 TO cand_cnt DO
+          IF NOT sched_occupied[p] AND chosen_stn = 0 THEN
+            chosen_stn := cand_arr[p];
+          END_IF;
+        END_FOR;
+      END_IF;
+
+      (* Pass 4: all occupied — pick first candidate *)
+      IF chosen_stn = 0 THEN
+        chosen_stn := cand_arr[1];
+      END_IF;
     END_IF;
   END_IF;
 

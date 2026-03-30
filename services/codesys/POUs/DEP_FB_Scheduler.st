@@ -146,6 +146,7 @@ VAR
   FLEX_FACTOR               : REAL := 0.5;
   MARGIN_S                  : REAL := 5.0;
   CONFLICT_MARGIN_S         : REAL := 1.0;
+  DISPATCH_MARGIN_S         : REAL := 3.0;
   MAX_INIT_WAIT_S           : REAL := 120.0;
   END_DELAY_TICKS           : INT := 100;
 
@@ -175,6 +176,9 @@ VAR
   old_cal                   : DINT;
   new_cal                   : DINT;
   max_cal                   : DINT;
+  cur_flex_up               : REAL;
+  cur_capped                : REAL;
+  cur_use_delay             : REAL;
   est_finish                : LINT;
 
   (* ── Stage 0 inline fit variables ── *)
@@ -579,7 +583,7 @@ ELSIF phase = 3000 THEN
         END_IF;
 
         IF s0_to_stn > 0 THEN
-          s0_slot_end := s0_slot_end - REAL_TO_LINT(s0_travel_from + CONFLICT_MARGIN_S);
+          s0_slot_end := s0_slot_end - REAL_TO_LINT(s0_travel_from + DISPATCH_MARGIN_S);
         END_IF;
 
         (* Overlap check for stage 0 *)
@@ -686,6 +690,24 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
     total_delay_s := ovlp_delay_s + DINT_TO_REAL(fit_result.DelayTime);
 
     IF fit_result.Fits THEN
+      IF total_delay_s > 0.0 THEN
+        prog_idx := w_tasks[si].SrcStage;
+        IF prog_idx >= 1 AND prog_idx <= 30 THEN
+          old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
+          max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
+          cur_flex_up := DINT_TO_REAL(max_cal - old_cal);
+          IF cur_flex_up < 0.0 THEN cur_flex_up := 0.0; END_IF;
+          cur_capped := cur_flex_up * FLEX_FACTOR;
+          cur_use_delay := total_delay_s;
+          IF cur_use_delay > cur_capped THEN cur_use_delay := cur_capped; END_IF;
+          new_cal := old_cal + REAL_TO_DINT(cur_use_delay);
+          IF new_cal > max_cal AND max_cal > 0 THEN
+            new_cal := max_cal;
+          END_IF;
+          g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
+        END_IF;
+      END_IF;
+
       (* Trim idle slot after successful fit *)
       IF fit_result.SlotIdx >= 1 AND fit_result.SlotIdx <= DEP_MAX_IDLE_SLOTS THEN
         g_dep_idle_slot[ti].Slots[fit_result.SlotIdx].StartTime :=
@@ -694,10 +716,15 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
           w_tasks[si].SinkStationTarget;
       END_IF;
 
-      (* JS: when fits=true, accept and continue to next task.
-         Delay is within flex bounds (FitTaskToSlot already checks).
-         No recalc needed. phase + 1 -> next task. *)
-      ;
+      IF total_delay_s > 0.0 THEN
+        fit_round := fit_round + 1;
+        o_fit_round := fit_round;
+        IF fit_round > MAX_FIT_ROUNDS THEN
+          next_phase := 9000;
+        ELSE
+          next_phase := 1000;  (* RECALC with persisted successful fit *)
+        END_IF;
+      END_IF;
     ELSE
       (* Does not fit -> try backward chaining *)
       IF fit_result.NeedExtraTime <= 0 THEN
@@ -760,7 +787,12 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
             IF prog_idx >= 1 AND prog_idx <= 30 THEN
               old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
               max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
-              new_cal := old_cal + REAL_TO_DINT(total_delay_s);
+              cur_flex_up := DINT_TO_REAL(max_cal - old_cal);
+              IF cur_flex_up < 0.0 THEN cur_flex_up := 0.0; END_IF;
+              cur_capped := cur_flex_up * FLEX_FACTOR;
+              cur_use_delay := total_delay_s;
+              IF cur_use_delay > cur_capped THEN cur_use_delay := cur_capped; END_IF;
+              new_cal := old_cal + REAL_TO_DINT(cur_use_delay);
               IF new_cal > max_cal AND max_cal > 0 THEN
                 new_cal := max_cal;
               END_IF;
@@ -881,7 +913,12 @@ ELSIF phase = 4000 THEN
       IF prog_idx >= 1 AND prog_idx <= 30 THEN
         old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
         max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
-        new_cal := old_cal + REAL_TO_DINT(delay_amount);
+        cur_flex_up := DINT_TO_REAL(max_cal - old_cal);
+        IF cur_flex_up < 0.0 THEN cur_flex_up := 0.0; END_IF;
+        cur_capped := cur_flex_up * FLEX_FACTOR;
+        cur_use_delay := delay_amount;
+        IF cur_use_delay > cur_capped THEN cur_use_delay := cur_capped; END_IF;
+        new_cal := old_cal + REAL_TO_DINT(cur_use_delay);
         IF new_cal > max_cal AND max_cal > 0 THEN
           new_cal := max_cal;
         END_IF;

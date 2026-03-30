@@ -116,6 +116,9 @@ VAR
   ot_idle_ok                : BOOL;
   ot_idle_start             : LINT;
   ot_idle_end               : LINT;
+  ot_next_lift              : INT;
+  ot_dispatch_from          : INT;
+  ot_travel_to_next         : REAL;
 
   (* Idle-stretch for other transporter: widen idle gap by extending blocker CalTime --------*)
   ot_stretch_pending        : BOOL;
@@ -385,14 +388,41 @@ FOR ui := 1 TO MAX_Units DO
 
                 IF io_task[ot].Count = 0 AND g_transporter[ot].Phase = 0 THEN
                   ot_idle_ok := TRUE;
+                ELSIF io_task[ot].Count = 0
+                      AND g_transporter[ot].Phase >= 1
+                      AND g_transporter[ot].Phase <= 4 THEN
+                  (* Transporter executing task, nothing queued after.
+                     Idle starts at current task finish. *)
+                  ot_idle_start := g_transporter[ot].CurrentTaskFinishTime;
+                  IF ot_idle_start <= shared_entry THEN
+                    ot_idle_ok := TRUE;
+                  END_IF;
                 ELSE
                   IF io_task[ot].Count > 0 THEN
                     IF g_transporter[ot].Phase >= 1 AND g_transporter[ot].Phase <= 4 THEN
-                      ot_idle_start := io_task[ot].Queue[1].FinishTime;
+                      (* Idle gap: current task finish → next queued start *)
+                      ot_idle_start := g_transporter[ot].CurrentTaskFinishTime;
+                      ot_dispatch_from := g_transporter[ot].SinkStationTarget;
                     ELSE
                       ot_idle_start := task_start;
+                      ot_dispatch_from := g_transporter[ot].CurrentStation;
                     END_IF;
-                    ot_idle_end := io_task[ot].Queue[1].StartTime;
+                    ot_next_lift := io_task[ot].Queue[1].LiftStationTarget;
+                    ot_travel_to_next := 0.0;
+                    IF ot_dispatch_from > 0
+                       AND ot_next_lift > 0
+                       AND ot_dispatch_from <> ot_next_lift THEN
+                      ot_travel_to_next := STC_CalcHorizontalTravel(
+                        i_from_stn := ot_dispatch_from,
+                        i_to_stn   := ot_next_lift,
+                        i_move     := g_move[ot]);
+                    END_IF;
+                    ot_idle_end := io_task[ot].Queue[1].StartTime
+                                 - REAL_TO_LINT(ot_travel_to_next)
+                                 - LINT#3;
+                    IF ot_idle_end < ot_idle_start THEN
+                      ot_idle_end := ot_idle_start;
+                    END_IF;
                     IF ot_idle_start <= shared_entry
                        AND ot_idle_end >= shared_entry + REAL_TO_LINT(shared_time) THEN
                       ot_idle_ok := TRUE;
@@ -403,7 +433,23 @@ FOR ui := 1 TO MAX_Units DO
                     FOR oq := 1 TO io_task[ot].Count - 1 DO
                       IF NOT ot_idle_ok THEN
                         ot_idle_start := io_task[ot].Queue[oq].FinishTime;
-                        ot_idle_end   := io_task[ot].Queue[oq + 1].StartTime;
+                        ot_dispatch_from := io_task[ot].Queue[oq].SinkStationTarget;
+                        ot_next_lift := io_task[ot].Queue[oq + 1].LiftStationTarget;
+                        ot_travel_to_next := 0.0;
+                        IF ot_dispatch_from > 0
+                           AND ot_next_lift > 0
+                           AND ot_dispatch_from <> ot_next_lift THEN
+                          ot_travel_to_next := STC_CalcHorizontalTravel(
+                            i_from_stn := ot_dispatch_from,
+                            i_to_stn   := ot_next_lift,
+                            i_move     := g_move[ot]);
+                        END_IF;
+                        ot_idle_end := io_task[ot].Queue[oq + 1].StartTime
+                                     - REAL_TO_LINT(ot_travel_to_next)
+                                     - LINT#3;
+                        IF ot_idle_end < ot_idle_start THEN
+                          ot_idle_end := ot_idle_start;
+                        END_IF;
                         IF ot_idle_start <= shared_entry
                            AND ot_idle_end >= shared_entry + REAL_TO_LINT(shared_time) THEN
                           ot_idle_ok := TRUE;
@@ -431,11 +477,28 @@ FOR ui := 1 TO MAX_Units DO
                   IF io_task[ot].Count > 0
                      AND io_task[ot].Queue[1].Stage > 0 THEN
                     IF g_transporter[ot].Phase >= 1 AND g_transporter[ot].Phase <= 4 THEN
-                      ot_idle_start := io_task[ot].Queue[1].FinishTime;
+                      ot_idle_start := g_transporter[ot].CurrentTaskFinishTime;
+                      ot_dispatch_from := g_transporter[ot].SinkStationTarget;
                     ELSE
                       ot_idle_start := task_start;
+                      ot_dispatch_from := g_transporter[ot].CurrentStation;
                     END_IF;
-                    ot_idle_end := io_task[ot].Queue[1].StartTime;
+                    ot_next_lift := io_task[ot].Queue[1].LiftStationTarget;
+                    ot_travel_to_next := 0.0;
+                    IF ot_dispatch_from > 0
+                       AND ot_next_lift > 0
+                       AND ot_dispatch_from <> ot_next_lift THEN
+                      ot_travel_to_next := STC_CalcHorizontalTravel(
+                        i_from_stn := ot_dispatch_from,
+                        i_to_stn   := ot_next_lift,
+                        i_move     := g_move[ot]);
+                    END_IF;
+                    ot_idle_end := io_task[ot].Queue[1].StartTime
+                                 - REAL_TO_LINT(ot_travel_to_next)
+                                 - LINT#3;
+                    IF ot_idle_end < ot_idle_start THEN
+                      ot_idle_end := ot_idle_start;
+                    END_IF;
 
                     IF ot_idle_start <= shared_entry
                        AND ot_idle_end > shared_entry THEN
@@ -465,7 +528,23 @@ FOR ui := 1 TO MAX_Units DO
                       IF NOT ot_stretch_ok
                          AND io_task[ot].Queue[oq + 1].Stage > 0 THEN
                         ot_idle_start := io_task[ot].Queue[oq].FinishTime;
-                        ot_idle_end   := io_task[ot].Queue[oq + 1].StartTime;
+                        ot_dispatch_from := io_task[ot].Queue[oq].SinkStationTarget;
+                        ot_next_lift := io_task[ot].Queue[oq + 1].LiftStationTarget;
+                        ot_travel_to_next := 0.0;
+                        IF ot_dispatch_from > 0
+                           AND ot_next_lift > 0
+                           AND ot_dispatch_from <> ot_next_lift THEN
+                          ot_travel_to_next := STC_CalcHorizontalTravel(
+                            i_from_stn := ot_dispatch_from,
+                            i_to_stn   := ot_next_lift,
+                            i_move     := g_move[ot]);
+                        END_IF;
+                        ot_idle_end := io_task[ot].Queue[oq + 1].StartTime
+                                     - REAL_TO_LINT(ot_travel_to_next)
+                                     - LINT#3;
+                        IF ot_idle_end < ot_idle_start THEN
+                          ot_idle_end := ot_idle_start;
+                        END_IF;
 
                         IF ot_idle_start <= shared_entry
                            AND ot_idle_end > shared_entry THEN

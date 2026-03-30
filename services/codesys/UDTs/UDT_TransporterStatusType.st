@@ -41,5 +41,6 @@ STRUCT
     (* Additional status fields for FB_TransporterController *)
     IsActive                 : BOOL; (* Transporter is actively executing a task *)
     IsCarrying               : BOOL; (* Transporter is carrying product *)
+    CurrentTaskFinishTime    : LINT; (* Estimated finish of dispatched task (unix s) *)
 END_STRUCT;
 END_TYPE
