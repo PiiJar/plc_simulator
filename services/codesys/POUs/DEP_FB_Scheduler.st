@@ -73,7 +73,7 @@ VAR_EXTERNAL CONSTANT
     DEP_MAX_IDLE_SLOTS      : INT;
     MIN_StationIndex        : INT;
     MAX_StationIndex        : INT;
-    SCH_DISPATCH_SCH_MARGIN_S   : REAL;
+    SCH_DISPATCH_MARGIN_S       : REAL;
     SCH_CONFLICT_MARGIN_S   : REAL;
     SCH_FLEX_FACTOR         : REAL;
     SCH_MARGIN_S            : REAL;
@@ -586,7 +586,7 @@ ELSIF phase = 3000 THEN
         END_IF;
 
         IF s0_to_stn > 0 THEN
-          s0_slot_end := s0_slot_end - REAL_TO_LINT(s0_travel_from + SCH_DISPATCH_SCH_MARGIN_S);
+          s0_slot_end := s0_slot_end - REAL_TO_LINT(s0_travel_from + SCH_DISPATCH_MARGIN_S);
         END_IF;
 
         (* Overlap check for stage 0 *)
