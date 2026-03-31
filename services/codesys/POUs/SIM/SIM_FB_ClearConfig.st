@@ -179,7 +179,7 @@ END_FOR;
 (* --- Clear all schedules (g_schedule) --- *)
 FOR i := 1 TO MAX_Units DO
   g_schedule[i].StageCount := 0;
-  FOR j := 1 TO 30 DO
+  FOR j := 0 TO 30 DO
     g_schedule[i].Stages[j].station       := 0;
     g_schedule[i].Stages[j].EntryTime    := 0;
     g_schedule[i].Stages[j].ExitTime     := 0;

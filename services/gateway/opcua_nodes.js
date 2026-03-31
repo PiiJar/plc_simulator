@@ -145,7 +145,7 @@ function taskQueue(tid) {
 function schedule(uid) {
   const b = `g_schedule[${uid}]`;
   const nodes = { stage_count: S(`${b}.StageCount`) };
-  for (let s = 1; s <= 30; s++) {
+  for (let s = 0; s <= 30; s++) {
     const sb = `${b}.Stages[${s}]`;
     nodes[`stage_${s}`] = {
       station:    S(`${sb}.Station`),

@@ -118,10 +118,11 @@ FOR si := 1 TO DEP_MAX_IDLE_SLOTS DO
     travel_from := STC_CalcHorizontalTravel(i_from_stn := i_sink_stn, i_to_stn := to_stn, i_move := tmp_move);
   END_IF;
 
-  IF slot_start > (i_task_start + REAL_TO_LINT(i_shift_s)) THEN
+  (* earliest = max(transporter arrival, task readiness) + conflict margin *)
+  IF (slot_start + REAL_TO_LINT(travel_to)) > (i_task_start + REAL_TO_LINT(i_shift_s)) THEN
     earliest := slot_start + REAL_TO_LINT(travel_to + i_conflict_margin_s);
   ELSE
-    earliest := i_task_start + REAL_TO_LINT(i_shift_s + travel_to + i_conflict_margin_s);
+    earliest := i_task_start + REAL_TO_LINT(i_shift_s + i_conflict_margin_s);
   END_IF;
 
   IF slot_end > LINT#9000000000 THEN

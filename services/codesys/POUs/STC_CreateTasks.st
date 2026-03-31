@@ -61,9 +61,13 @@ STC_CreateTasks := FALSE;
 IF i_unit < 1 OR i_unit > MAX_Units THEN RETURN; END_IF;
 
 sc := io_schedule[i_unit].StageCount;
-IF sc < 2 THEN RETURN; END_IF;
+IF sc < 1 THEN RETURN; END_IF;
 
-FOR si := 1 TO sc - 1 DO
+(* Start from 0 if Stages[0] exists (prepend), else from 1 *)
+FOR si := 0 TO sc - 1 DO
+  IF io_schedule[i_unit].Stages[si].station = 0 THEN
+    (* Skip unused stage slot *)
+  ELSE
   lift_stn := io_schedule[i_unit].Stages[si].station;
   sink_stn := io_schedule[i_unit].Stages[si + 1].station;
 
@@ -98,6 +102,7 @@ FOR si := 1 TO sc - 1 DO
       END_IF;
     END_IF;
   END_IF;
+  END_IF; (* skip unused stage slot *)
 END_FOR;
 
 STC_CreateTasks := TRUE;

@@ -560,7 +560,7 @@ class OpcuaAdapter extends PlcAdapter {
       // node-opcua Int64 Variant error; read only non-LINT fields
       const sched = nodes.schedule(unitId);
       const readList = [{ key: 'stage_count', nodeId: sched.stage_count }];
-      for (let s = 1; s <= 30; s++) {
+      for (let s = 0; s <= 30; s++) {
         const st = sched[`stage_${s}`];
         for (const [k, nid] of Object.entries(st)) {
           if (k === 'entry_time' || k === 'exit_time') continue; // LINT fields
@@ -574,7 +574,7 @@ class OpcuaAdapter extends PlcAdapter {
       // Read LINT fields (entry_time, exit_time) separately using
       // individual reads with proper Int64 handling
       const lintReadList = [];
-      for (let s = 1; s <= Math.min(stageCount, 30); s++) {
+      for (let s = 0; s <= Math.min(stageCount, 30); s++) {
         const st = sched[`stage_${s}`];
         lintReadList.push({ key: `s${s}.entry_time`, nodeId: st.entry_time });
         lintReadList.push({ key: `s${s}.exit_time`, nodeId: st.exit_time });
@@ -582,7 +582,7 @@ class OpcuaAdapter extends PlcAdapter {
       const lv = await this._readLintNodes(lintReadList);
 
       const stages = [];
-      for (let s = 1; s <= Math.min(stageCount, 30); s++) {
+      for (let s = 0; s <= Math.min(stageCount, 30); s++) {
         stages.push({
           stage: s,
           station: Number(v[`s${s}.station`]) || 0,

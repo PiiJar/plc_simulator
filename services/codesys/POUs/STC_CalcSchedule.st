@@ -72,7 +72,6 @@ VAR
   is_first                  : BOOL;
   remain_s                  : REAL;
   elapsed_s                 : REAL;
-  out_count                 : INT;
   p                         : INT;
   chosen_stn                : INT;
   tmp_move                  : UDT_JC_MoveTimesType;
@@ -87,8 +86,6 @@ VAR
   ov_end                    : LINT;
   uj                        : INT;
   sj                        : INT;
-  pickup_wait               : REAL;   (* earliest pickup time for waiting batch *)
-  MIN_PICKUP_WAIT           : REAL := 5.0;  (* minimum pickup wait seconds *)
 END_VAR
 
 STC_CalcSchedule := FALSE;
@@ -98,10 +95,9 @@ IF i_trans < 1 OR i_trans > MAX_Transporters THEN RETURN; END_IF;
 cur_stage := io_batch[i_unit].CurStage;
 location  := g_unit[i_unit].location;
 is_on_stn := location >= 100;
-out_count := 0;
 
 (* Clear old schedule *)
-FOR stg := 1 TO 30 DO
+FOR stg := 0 TO 30 DO
   io_schedule[i_unit].Stages[stg].station := 0;
   io_schedule[i_unit].Stages[stg].ProgramStage := 0;
   io_schedule[i_unit].Stages[stg].EntryTime := 0;
@@ -111,6 +107,7 @@ FOR stg := 1 TO 30 DO
   io_schedule[i_unit].Stages[stg].MaxTime := 0;
   io_schedule[i_unit].Stages[stg].TransferTime := 0;
 END_FOR;
+io_schedule[i_unit].StageCount := 0;
 
 (* Waiting batch (state = NOT_PROCESSED): treat as stage 0 *)
 IF io_batch[i_unit].State = NOT_PROCESSED THEN
@@ -137,7 +134,7 @@ END_IF;
 exit_t := i_time_s;
 is_first := TRUE;
 
-(* Prepend current location when unit needs pre-positioning *)
+(* Prepend current location to Stages[0] when unit needs pre-positioning *)
 IF is_on_stn AND start_st >= 1 THEN
   stn_num := 0;
   FOR p := 0 TO 4 DO
@@ -146,11 +143,10 @@ IF is_on_stn AND start_st >= 1 THEN
     END_IF;
   END_FOR;
   IF stn_num = 0 THEN
-    out_count := out_count + 1;
-    io_schedule[i_unit].Stages[out_count].station       := location;
-    io_schedule[i_unit].Stages[out_count].ProgramStage := 0;
-    io_schedule[i_unit].Stages[out_count].EntryTime    := exit_t;
-    io_schedule[i_unit].Stages[out_count].TransferTime := 0;
+    io_schedule[i_unit].Stages[0].station       := location;
+    io_schedule[i_unit].Stages[0].ProgramStage := 0;
+    io_schedule[i_unit].Stages[0].EntryTime    := exit_t;
+    io_schedule[i_unit].Stages[0].TransferTime := 0;
 
     IF io_batch[i_unit].CurStage = 0 AND io_batch[i_unit].CalTime > 0 THEN
       IF io_batch[i_unit].StartTime > 0 AND io_batch[i_unit].StartTime < i_time_s THEN
@@ -161,49 +157,27 @@ IF is_on_stn AND start_st >= 1 THEN
       remain_s := DINT_TO_REAL(io_batch[i_unit].CalTime) - elapsed_s;
   IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
       exit_t := i_time_s + REAL_TO_LINT(remain_s);
-      io_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
-      io_schedule[i_unit].Stages[out_count].CalcTime  := REAL_TO_DINT(remain_s);
-      io_schedule[i_unit].Stages[out_count].MinTime   := io_batch[i_unit].MinTime;
-      io_schedule[i_unit].Stages[out_count].MaxTime   := io_batch[i_unit].MaxTime;
+      io_schedule[i_unit].Stages[0].ExitTime  := exit_t;
+      io_schedule[i_unit].Stages[0].CalcTime  := REAL_TO_DINT(remain_s);
+      io_schedule[i_unit].Stages[0].MinTime   := io_batch[i_unit].MinTime;
+      io_schedule[i_unit].Stages[0].MaxTime   := io_batch[i_unit].MaxTime;
     ELSE
-      (* Waiting batch (State=0, CalTime=0): calculate earliest pickup time.
-         Transporter must travel to the batch location before it can pick up. *)
-      IF io_batch[i_unit].State = NOT_PROCESSED THEN
-        tmp_move := g_move[i_trans];
-        pickup_wait := 0.0;
-
-        IF g_transporter[i_trans].Phase >= 1 AND g_transporter[i_trans].Phase <= 4 THEN
-          (* Transporter busy: finish current task + travel from sink to batch *)
-          pickup_wait := DINT_TO_REAL(g_transporter[i_trans].TaskRemainingTime);
-          IF g_transporter[i_trans].SinkStationTarget <> location THEN
-            pickup_wait := pickup_wait + STC_CalcHorizontalTravel(
-              i_from_stn := g_transporter[i_trans].SinkStationTarget,
-              i_to_stn   := location,
-              i_move     := tmp_move);
-          END_IF;
-        ELSE
-          (* Transporter idle: only travel time *)
-          IF g_transporter[i_trans].CurrentStation <> location THEN
-            pickup_wait := STC_CalcHorizontalTravel(
-              i_from_stn := g_transporter[i_trans].CurrentStation,
-              i_to_stn   := location,
-              i_move     := tmp_move);
-          END_IF;
-        END_IF;
-
-  IF pickup_wait < MIN_PICKUP_WAIT THEN pickup_wait := MIN_PICKUP_WAIT; END_IF;
-
-        exit_t := i_time_s + REAL_TO_LINT(pickup_wait);
-        io_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
-        io_schedule[i_unit].Stages[out_count].CalcTime  := REAL_TO_DINT(pickup_wait);
-        io_schedule[i_unit].Stages[out_count].MinTime   := REAL_TO_DINT(pickup_wait);
-        io_schedule[i_unit].Stages[out_count].MaxTime   := REAL_TO_DINT(pickup_wait * 2.0);
-      ELSE
-        io_schedule[i_unit].Stages[out_count].ExitTime  := exit_t;
-        io_schedule[i_unit].Stages[out_count].CalcTime  := 0;
-        io_schedule[i_unit].Stages[out_count].MinTime   := 0;
-        io_schedule[i_unit].Stages[out_count].MaxTime   := 0;
-      END_IF;
+      (* Pickup wait: transporter travel time to this station, min 5s *)
+      xfer_t := STC_CalcTransferTime(
+        i_from_stn            := g_transporter[i_trans].CurrentStation,
+        i_to_stn              := location,
+        i_move                := g_move[i_trans],
+        i_from_dropping_x10   := 0,
+        i_to_device_delay_x10 := 0,
+        i_drip_tray_delay_x10 := 0
+      );
+      calc_s := xfer_t;
+      IF calc_s < 5.0 THEN calc_s := 5.0; END_IF;
+      exit_t := i_time_s + REAL_TO_LINT(calc_s);
+      io_schedule[i_unit].Stages[0].ExitTime  := exit_t;
+      io_schedule[i_unit].Stages[0].CalcTime  := REAL_TO_DINT(calc_s);
+      io_schedule[i_unit].Stages[0].MinTime   := REAL_TO_DINT(calc_s);
+      io_schedule[i_unit].Stages[0].MaxTime   := REAL_TO_DINT(2.0 * calc_s);
     END_IF;
 
     is_first := FALSE;
@@ -261,7 +235,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
 
         FOR uj := 1 TO MAX_Units DO
           IF uj <> i_unit AND io_schedule[uj].StageCount > 0 THEN
-            FOR sj := 1 TO io_schedule[uj].StageCount DO
+            FOR sj := 0 TO io_schedule[uj].StageCount DO
               IF io_schedule[uj].Stages[sj].station = cand_arr[p] THEN
                 ov_start := my_entry;
                 IF io_schedule[uj].Stages[sj].EntryTime > ov_start THEN
@@ -380,16 +354,16 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
     exit_t  := entry_t + REAL_TO_LINT(calc_s);
   END_IF;
 
-  out_count := out_count + 1;
-  IF out_count <= 30 THEN
-    io_schedule[i_unit].Stages[out_count].station       := stn_num;
-    io_schedule[i_unit].Stages[out_count].ProgramStage := stg;
-    io_schedule[i_unit].Stages[out_count].EntryTime    := entry_t;
-    io_schedule[i_unit].Stages[out_count].ExitTime     := exit_t;
-    io_schedule[i_unit].Stages[out_count].MinTime      := REAL_TO_DINT(min_s);
-    io_schedule[i_unit].Stages[out_count].CalcTime     := REAL_TO_DINT(calc_s);
-    io_schedule[i_unit].Stages[out_count].MaxTime      := REAL_TO_DINT(max_s);
-    io_schedule[i_unit].Stages[out_count].TransferTime := REAL_TO_DINT(xfer_t);
+  IF stg <= 30 THEN
+    io_schedule[i_unit].Stages[stg].station       := stn_num;
+    io_schedule[i_unit].Stages[stg].ProgramStage := stg;
+    io_schedule[i_unit].Stages[stg].EntryTime    := entry_t;
+    io_schedule[i_unit].Stages[stg].ExitTime     := exit_t;
+    io_schedule[i_unit].Stages[stg].MinTime      := REAL_TO_DINT(min_s);
+    io_schedule[i_unit].Stages[stg].CalcTime     := REAL_TO_DINT(calc_s);
+    io_schedule[i_unit].Stages[stg].MaxTime      := REAL_TO_DINT(max_s);
+    io_schedule[i_unit].Stages[stg].TransferTime := REAL_TO_DINT(xfer_t);
+    io_schedule[i_unit].StageCount := stg;
   END_IF;
 
   prev_stn := stn_num;
@@ -397,7 +371,6 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
 
 END_FOR;
 
-io_schedule[i_unit].StageCount := out_count;
 STC_CalcSchedule := TRUE;
 
 END_FUNCTION

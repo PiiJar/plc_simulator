@@ -618,6 +618,7 @@
         let scheduleData = null;    // Cached schedule data
         let currentTimeSec = 0;     // Current simulation time
         let autoRefreshInterval = null;  // Auto-refresh timer
+        let lastKnownSchedules = new Map(); // last-valid cache keyed by batch_id — prevents flicker during PLC recalc
         let updateIntervalMs = 1000;  // Update interval in milliseconds (default 1s)
         let lastRenderedHtml = '';
         let lastRenderedMode = '';
@@ -895,7 +896,34 @@
                 
                 const schedules = schedulesData.schedules || [];
                 currentTimeSec = schedulesData.currentTimeSec || 0;
-                
+
+                // Update cache for every batch that arrived with fresh data
+                const freshIds = new Set();
+                for (const s of schedules) {
+                    lastKnownSchedules.set(s.batch_id, s);
+                    freshIds.add(s.batch_id);
+                }
+
+                // Remove batches from cache that are no longer in the system at all
+                // (disappeared from API for >1 consecutive poll = truly gone, not just recalculating)
+                // We keep them for 1 missed poll by marking stale, remove on second miss.
+                for (const [id, cached] of lastKnownSchedules) {
+                    if (!freshIds.has(id)) {
+                        if (cached._staleMissCount >= 1) {
+                            lastKnownSchedules.delete(id);
+                        } else {
+                            lastKnownSchedules.set(id, { ...cached, _stale: true, _staleMissCount: (cached._staleMissCount || 0) + 1 });
+                        }
+                    } else {
+                        // Reset stale state for batches that came back
+                        const fresh = lastKnownSchedules.get(id);
+                        if (fresh._stale) lastKnownSchedules.set(id, { ...fresh, _stale: false, _staleMissCount: 0 });
+                    }
+                }
+
+                // Compose: fresh batches as-is, missing ones from cache with _stale flag
+                const composedSchedules = [...lastKnownSchedules.values()];
+
                 // Fetch stations config
                 const stationsRes = await fetch(`${API_BASE}/api/config/stations`);
                 const stationsData = await stationsRes.json();
@@ -912,7 +940,7 @@
                 }
 
                 // Store data
-                scheduleData = { schedules, stations, firstConflict };
+                scheduleData = { schedules: composedSchedules, stations, firstConflict };
                 
                 // Auto-fit zoom on first load: find max exit time and set zoom to fit all bars
                 if (isFirstLoad && schedules.length > 0) {
@@ -1047,7 +1075,9 @@
                 // One row per batch
                 rows = schedules.map(sch => ({
                     id: sch.batch_id,
-                    label: `Batch ${sch.batch_code || sch.batch_id}`,
+                    label: sch._stale
+                        ? `Batch ${sch.batch_code || sch.batch_id} ⟳`
+                        : `Batch ${sch.batch_code || sch.batch_id}`,
                     type: 'batch',
                     schedule: sch
                 }));
@@ -1253,6 +1283,7 @@
                     if (sch && sch.stages) {
                         const color = getBatchColor(sch.batch_id);
                         const isWaiting = sch.batchState === 0;
+                        const isStale = !!sch._stale;  // True when cached during DEP recalc
                         // Odottava batch: käytä suhteellista aikaa stage0:sta
                         const stage0Entry = sch.stages[0]?.entry_time_s || currentTimeSec;
                         
@@ -1274,7 +1305,7 @@
                                 const endPx = (exitFromNow / secondsPerDiv) * pixelsPerDiv;
                                 const widthPx = endPx - startPx;
                                 
-                                const statusText = isWaiting ? ' (waiting)' : '';
+                                const statusText = isStale ? ' (waiting — recalculating…)' : isWaiting ? ' (waiting)' : '';
                                 
                                 const barId = `bar-${sch.batch_id}-${stage.stage}`;
                                 // Min time for extended bar display
@@ -1287,11 +1318,11 @@
                                 
                                 // Lighter color for extended portion
                                 const lightColor = lightenColor(color, 0.4);
-                                // Waiting batches: dashed border, no fill
+                                // Waiting batches: dashed border, no fill; stale: reduced opacity
                                 const barBaseStyle = isWaiting
                                     ? `left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: transparent; border: 2px dashed ${color}; box-sizing: border-box; color: ${color};`
                                     : `left: ${startPx}px; width: ${Math.max(widthPx, 5)}px; background: ${color};`;
-                                const barOpacity = isWaiting ? 'opacity: 0.7;' : '';
+                                const barOpacity = isStale ? 'opacity: 0.35;' : isWaiting ? 'opacity: 0.7;' : '';
                                 
                                 // Active stage: batch is currently at this station
                                 const isActiveStage = !isWaiting && entryFromNow < 0 && exitFromNow > 0;
