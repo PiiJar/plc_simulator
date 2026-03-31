@@ -42,6 +42,9 @@ VAR_EXTERNAL CONSTANT
     MAX_Units               : INT;
     MAX_TASK_QUEUE          : INT;
     SCH_DISPATCH_MARGIN_S   : REAL;
+    NOT_PROCESSED           : INT;
+    PROCESSED               : INT;
+    USED                    : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -138,7 +141,7 @@ FOR ui := 1 TO MAX_Units DO
 
   IF tgt >= 1 AND tgt <= 5 AND loc >= 100 THEN
 
-    IF tgt = 3 AND (g_batch[ui].BatchCode = 0 OR g_batch[ui].State <> 0) THEN
+    IF tgt = 3 AND (g_batch[ui].BatchCode = 0 OR g_batch[ui].State <> NOT_PROCESSED) THEN
       CONTINUE;
     END_IF;
 
@@ -180,7 +183,7 @@ FOR ui := 1 TO MAX_Units DO
 
         IF tgt = 2 THEN
           IF g_batch[ui].BatchCode = 0 THEN ntt_idx := 6;
-          ELSIF g_batch[ui].State = 2 THEN ntt_idx := 8;
+          ELSIF g_batch[ui].State = PROCESSED THEN ntt_idx := 8;
   ELSE ntt_idx := 7; END_IF;
         ELSIF tgt = 3 THEN ntt_idx := 7;
   ELSE ntt_idx := tgt; END_IF;
@@ -205,7 +208,7 @@ FOR ui := 1 TO MAX_Units DO
             IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
               stn_free := TRUE;
               FOR uj := 1 TO MAX_Units DO
-  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
               END_FOR;
   IF stn_free THEN primary_free := TRUE; END_IF;
             END_IF;
@@ -222,7 +225,7 @@ FOR ui := 1 TO MAX_Units DO
                 IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
                   stn_free := TRUE;
                   FOR uj := 1 TO MAX_Units DO
-  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
                   END_FOR;
   IF stn_free THEN dest_stn := station_idx; END_IF;
                 END_IF;
@@ -235,7 +238,7 @@ FOR ui := 1 TO MAX_Units DO
                 IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
                   stn_free := TRUE;
                   FOR uj := 1 TO MAX_Units DO
-  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
                   END_FOR;
   IF stn_free THEN dest_stn := station_idx; END_IF;
                 END_IF;
@@ -249,7 +252,7 @@ FOR ui := 1 TO MAX_Units DO
                   IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
                     stn_free := TRUE;
                     FOR uj := 1 TO MAX_Units DO
-  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = 1 THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
                     END_FOR;
   IF stn_free THEN dest_stn := station_idx; END_IF;
                   END_IF;

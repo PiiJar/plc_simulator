@@ -37,6 +37,7 @@ END_VAR
 VAR_EXTERNAL CONSTANT
     MAX_Transporters        : INT;
     MAX_Units               : INT;
+    IN_PROCESS              : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -79,7 +80,7 @@ FOR ti := t_start TO t_end DO
       tmp_ratio := 0.0;
       tmp_unit  := tmp_task.Unit;
       IF tmp_unit >= 1 AND tmp_unit <= MAX_Units THEN
-        IF io_batch[tmp_unit].State = 1
+        IF io_batch[tmp_unit].State = IN_PROCESS
            AND tmp_task.Stage >= 1 THEN
           IF io_batch[tmp_unit].CurStage = tmp_task.Stage
              AND g_unit[tmp_unit].location = tmp_task.LiftStationTarget
@@ -97,7 +98,7 @@ FOR ti := t_start TO t_end DO
         cur_ratio := 0.0;
         cur_unit  := io_task[ti].Queue[ins_j].Unit;
         IF cur_unit >= 1 AND cur_unit <= MAX_Units THEN
-          IF io_batch[cur_unit].State = 1
+          IF io_batch[cur_unit].State = IN_PROCESS
              AND io_task[ti].Queue[ins_j].Stage >= 1 THEN
             IF io_batch[cur_unit].CurStage = io_task[ti].Queue[ins_j].Stage
                AND g_unit[cur_unit].location = io_task[ti].Queue[ins_j].LiftStationTarget

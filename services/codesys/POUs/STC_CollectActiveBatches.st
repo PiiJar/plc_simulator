@@ -33,6 +33,10 @@ END_VAR
 VAR_EXTERNAL CONSTANT
     MAX_Units               : INT;
     MAX_StationIndex        : INT;
+    USED                    : INT;
+    TO_NONE                 : INT;
+    NOT_PROCESSED           : INT;
+    IN_PROCESS              : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -60,9 +64,9 @@ IF i_mode = 1 THEN
   (* ── Waiting batch: direct lookup at station 114 ── *)
   ui := g_station_loc[114].UnitId;
   IF ui >= 1 AND ui <= MAX_Units THEN
-    IF g_unit[ui].Status = 1
-       AND g_unit[ui].Target = 0
-       AND g_batch[ui].State = 0
+    IF g_unit[ui].Status = USED
+       AND g_unit[ui].Target = TO_NONE
+       AND g_batch[ui].State = NOT_PROCESSED
        AND g_batch[ui].ProgId = g_program[ui].ProgramId
        AND g_program[ui].ProgramId > 0 THEN
       cnt := 1;
@@ -75,12 +79,12 @@ END_IF;
 
 (* ── Mode 0: active batches — loop ── *)
 FOR ui := 1 TO MAX_Units DO
-  IF g_unit[ui].Status = 1
-     AND g_unit[ui].Target = 0
+  IF g_unit[ui].Status = USED
+     AND g_unit[ui].Target = TO_NONE
      AND g_batch[ui].ProgId = g_program[ui].ProgramId
      AND g_program[ui].ProgramId > 0 THEN
 
-    IF g_batch[ui].State = 1
+    IF g_batch[ui].State = IN_PROCESS
        AND g_batch[ui].CurStage >= 0
        AND g_batch[ui].CurStage <= 99 THEN
       cnt := cnt + 1;

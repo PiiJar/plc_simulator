@@ -42,6 +42,7 @@ VAR_EXTERNAL CONSTANT
     AVOID_Passable          : INT;
     AVOID_Block             : INT;
     MIN_WorkingArea         : DINT;
+    IN_PROCESS              : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -234,37 +235,30 @@ FOR i := 1 TO MAX_Transporters DO
 
   (* ── Priority (inline, replaces TWA_CalcPriority call) ──────
      IN_PROCESS batch boost: +100000 if the task serves an
-     IN_PROCESS batch. Phase 1 → check unit at LiftStation.
-     Phase 3 → check unit on transporter (at transporter loc).
+     IN_PROCESS batch. Phases 1-4 all check via LiftStation
+     unit lookup (unit stays associated throughout transfer).
      This ensures treatment tasks trump NTT/empty moves. ── *)
   i_phase := g_transporter[i].Phase;
   batch_boost := 0;
-  IF i_phase = 1 THEN
+  IF i_phase >= 1 AND i_phase <= 4 THEN
     lift_stn := g_transporter[i].LiftStationTarget;
     IF lift_stn >= 1 AND lift_stn <= MAX_StationIndex THEN
       lift_uid := g_station_loc[lift_stn].UnitId;
       IF lift_uid >= 1 AND lift_uid <= MAX_Units THEN
-        IF g_batch[lift_uid].State = 1 THEN
+        IF g_batch[lift_uid].State = IN_PROCESS THEN
           batch_boost := DINT#100000;
         END_IF;
-      END_IF;
-    END_IF;
-  ELSIF i_phase = 3 THEN
-    lift_uid := g_station_loc[i].UnitId;
-    IF lift_uid >= 1 AND lift_uid <= MAX_Units THEN
-      IF g_batch[lift_uid].State = 1 THEN
-        batch_boost := DINT#100000;
       END_IF;
     END_IF;
   END_IF;
 
   IF NOT can_evade[i] THEN
     priority[i] := DINT#100000;
-  ELSIF i_phase = 3 THEN
+  ELSIF i_phase = 3 OR i_phase = 4 THEN
     dist := ABS(current_x - g_transporter[i].XFinalTarget);
   IF dist > 99999 THEN dist := 99999; END_IF;
     priority[i] := DINT#200000 + batch_boost + (DINT#99999 - dist);
-  ELSIF i_phase = 1 THEN
+  ELSIF i_phase = 1 OR i_phase = 2 THEN
     dist := ABS(current_x - g_transporter[i].XFinalTarget);
   IF dist > 99999 THEN dist := 99999; END_IF;
     priority[i] := DINT#100000 + batch_boost + (DINT#99999 - dist);
@@ -325,7 +319,7 @@ FOR i := 1 TO MAX_Transporters DO
            moves to the other end of its task. *)
         i_lift_stn := g_transporter[i].LiftStationTarget;
         i_sink_stn := g_transporter[i].SinkStationTarget;
-        IF (i_phase = 1) OR (i_phase = 3) THEN
+        IF i_phase >= 1 AND i_phase <= 4 THEN
           lift_x := current_x;
           sink_x := current_x;
           IF i_lift_stn >= MIN_StationIndex

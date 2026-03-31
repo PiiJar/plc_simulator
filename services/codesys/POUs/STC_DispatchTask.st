@@ -36,6 +36,8 @@ VAR_EXTERNAL CONSTANT
     MIN_StationIndex        : INT;
     MAX_StationIndex        : INT;
     SCH_DISPATCH_MARGIN_S   : REAL;
+    USED                    : INT;
+    PROCESSED               : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -145,7 +147,7 @@ FOR ti := 1 TO MAX_Transporters DO
       IF sink_stn >= MIN_StationIndex AND sink_stn <= MAX_StationIndex THEN
         sink_free := TRUE;
         FOR uj := 1 TO MAX_Units DO
-          IF g_unit[uj].location = sink_stn AND g_unit[uj].Status = 1 THEN
+          IF g_unit[uj].location = sink_stn AND g_unit[uj].Status = USED THEN
             sink_free := FALSE;
           END_IF;
         END_FOR;
@@ -165,7 +167,7 @@ FOR ti := 1 TO MAX_Transporters DO
               IF cand_stn >= MIN_StationIndex AND cand_stn <= MAX_StationIndex THEN
                 cand_free := TRUE;
                 FOR uj := 1 TO MAX_Units DO
-                  IF g_unit[uj].location = cand_stn AND g_unit[uj].Status = 1 THEN
+                  IF g_unit[uj].location = cand_stn AND g_unit[uj].Status = USED THEN
                     cand_free := FALSE;
                   END_IF;
                 END_FOR;
@@ -187,7 +189,7 @@ FOR ti := 1 TO MAX_Transporters DO
             IF tgt = 2 THEN
               IF g_batch[t_unit].BatchCode = 0 THEN
                 ntt_idx := 6;
-              ELSIF g_batch[t_unit].State = 2 THEN
+              ELSIF g_batch[t_unit].State = PROCESSED THEN
                 ntt_idx := 8;
               ELSE
                 ntt_idx := 7;
@@ -204,7 +206,7 @@ FOR ti := 1 TO MAX_Transporters DO
                   IF cand_stn >= MIN_StationIndex AND cand_stn <= MAX_StationIndex THEN
                     cand_free := TRUE;
                     FOR uj := 1 TO MAX_Units DO
-                      IF g_unit[uj].location = cand_stn AND g_unit[uj].Status = 1 THEN
+                      IF g_unit[uj].location = cand_stn AND g_unit[uj].Status = USED THEN
                         cand_free := FALSE;
                       END_IF;
                     END_FOR;
@@ -227,7 +229,7 @@ FOR ti := 1 TO MAX_Transporters DO
                   IF cand_stn >= MIN_StationIndex AND cand_stn <= MAX_StationIndex THEN
                     cand_free := TRUE;
                     FOR uj := 1 TO MAX_Units DO
-                      IF g_unit[uj].location = cand_stn AND g_unit[uj].Status = 1 THEN
+                      IF g_unit[uj].location = cand_stn AND g_unit[uj].Status = USED THEN
                         cand_free := FALSE;
                       END_IF;
                     END_FOR;

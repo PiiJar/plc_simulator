@@ -42,6 +42,7 @@ VAR_EXTERNAL
   g_conflict_resolved       : BOOL;
   g_dep_pending             : UDT_JC_DepPendingWriteType;
   MAX_Units                 : INT;
+  NOT_PROCESSED             : INT;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   g_dep_wk_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
@@ -140,7 +141,7 @@ END_IF;
 
 (* ── Publish waiting batch schedules from DEP workspace for UI display ── *)
 FOR ui := 1 TO MAX_Units DO
-  IF g_batch[ui].State = 0 AND g_dep_wk_schedule[ui].StageCount > 0 THEN
+  IF g_batch[ui].State = NOT_PROCESSED AND g_dep_wk_schedule[ui].StageCount > 0 THEN
     g_schedule[ui] := g_dep_wk_schedule[ui];
   END_IF;
 END_FOR;

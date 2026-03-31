@@ -20,6 +20,7 @@ VAR_EXTERNAL CONSTANT
     MAX_StationIndex   : INT;
     MAX_Units           : INT;
     DEP_MAX_WAITING     : INT;
+    NOT_PROCESSED       : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -209,7 +210,7 @@ END_FOR;
 g_dep_pending.Valid := FALSE;
 g_dep_pending.BatchUnit  := 0;
 g_dep_pending.BatchStage := 0;
-g_dep_pending.BatchState := 0;
+g_dep_pending.BatchState := NOT_PROCESSED;
 
 (* --- Clear departure scheduler state (previously missing) --- *)
 g_dep_activated     := FALSE;

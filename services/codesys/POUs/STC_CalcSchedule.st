@@ -41,6 +41,8 @@ VAR_EXTERNAL CONSTANT
     MAX_StationIndex        : INT;
     MAX_Units               : INT;
     MAX_Transporters        : INT;
+    NOT_PROCESSED           : INT;
+    USED                    : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -111,7 +113,7 @@ FOR stg := 1 TO 30 DO
 END_FOR;
 
 (* Waiting batch (state = NOT_PROCESSED): treat as stage 0 *)
-IF io_batch[i_unit].State = 0 THEN
+IF io_batch[i_unit].State = NOT_PROCESSED THEN
   cur_stage := 0;
 END_IF;
 
@@ -166,7 +168,7 @@ IF is_on_stn AND start_st >= 1 THEN
     ELSE
       (* Waiting batch (State=0, CalTime=0): calculate earliest pickup time.
          Transporter must travel to the batch location before it can pick up. *)
-      IF io_batch[i_unit].State = 0 THEN
+      IF io_batch[i_unit].State = NOT_PROCESSED THEN
         tmp_move := g_move[i_trans];
         pickup_wait := 0.0;
 
@@ -278,7 +280,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
         END_FOR;
 
         FOR uj := 1 TO MAX_Units DO
-          IF g_unit[uj].location = cand_arr[p] AND g_unit[uj].Status = 1 THEN
+          IF g_unit[uj].location = cand_arr[p] AND g_unit[uj].Status = USED THEN
             phys_occupied[p] := TRUE;
           END_IF;
         END_FOR;

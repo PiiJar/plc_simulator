@@ -42,6 +42,8 @@ VAR_EXTERNAL CONSTANT
     MIN_StationIndex        : INT;
     MAX_StationIndex        : INT;
     IN_PROCESS              : INT;
+    USED                    : INT;
+    TO_NONE                 : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -81,7 +83,7 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
     IF (i_location >= MIN_StationIndex) THEN
 
     (* Advance batch stage if unit is USED with an active batch *)
-    IF (g_unit[i_unit].Status = 1)  (* USED *)
+    IF (g_unit[i_unit].Status = USED)  (* USED *)
        AND (g_batch[i_unit].BatchCode <> 0)
        AND (g_batch[i_unit].State = IN_PROCESS)
        AND (g_batch[i_unit].CurStage < MAX_STEPS_PER_PROGRAM) THEN
@@ -113,8 +115,8 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
 
     (* Clear unit target ONLY when i_ntt_primary = 1 (primary NTT destination).
        All other cases: keep target so NTT retries primary later. *)
-    IF g_unit[i_unit].Target <> 0 AND i_ntt_primary > 0 THEN
-      g_unit[i_unit].Target := 0;  (* primary reached → clear *)
+    IF g_unit[i_unit].Target <> TO_NONE AND i_ntt_primary > 0 THEN
+      g_unit[i_unit].Target := TO_NONE;  (* primary reached → clear *)
     END_IF;
 
     END_IF; (* i_location >= MIN_StationIndex — station-specific block *)
