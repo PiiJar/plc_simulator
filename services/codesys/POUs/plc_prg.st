@@ -121,6 +121,7 @@ IF g_cmd_code <> 0 THEN
       g_sim_trans[i].ZStage := 0;
       g_sim_trans[i].XVelocity := 0;
       g_sim_trans[i].ZTimer := 0.0;
+      g_sim_trans[i].IdleStartTime := g_time_s;  (* init move-away timer *)
       g_transporter[i].XMinDriveLimit := g_cfg[i].DrivePosMin;
       g_transporter[i].XMaxDriveLimit := g_cfg[i].DrivePosMax;
 

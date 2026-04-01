@@ -125,6 +125,7 @@ FOR i := 1 TO MAX_Transporters DO
   g_sim_trans[i].XVelocity           := 0;
   g_sim_trans[i].ZStage         := 0;
   g_sim_trans[i].ZTimer       := 0.0;
+  g_sim_trans[i].IdleStartTime := g_time_s;  (* prevent spurious move-away after clear *)
   g_transporter[i].XMinDriveLimit     := 0;
   g_transporter[i].XMaxDriveLimit     := 0;
 END_FOR;

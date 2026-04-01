@@ -658,6 +658,7 @@ class OpcuaAdapter extends PlcAdapter {
           { nodeId: sw.dripping_time, value: Math.round((st.dropping_time || 0) * 10), dataType: DataType.Int16 },
           { nodeId: sw.device_delay,  value: Math.round((st.device_delay || 0) * 10),  dataType: DataType.Int16 },
           { nodeId: sw.dry_wet,       value: st.kind || 0,                             dataType: DataType.Int16 },
+          { nodeId: sw.move_away,     value: st.move_away || 0,                        dataType: DataType.Int16 },
         ]);
       }
       console.log(`[OPC-UA] Wrote ${stations.length} stations`);

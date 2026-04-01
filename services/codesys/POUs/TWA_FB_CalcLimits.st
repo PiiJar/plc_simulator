@@ -259,9 +259,14 @@ FOR i := 1 TO MAX_Transporters DO
   IF dist > 99999 THEN dist := 99999; END_IF;
     priority[i] := DINT#200000 + batch_boost + (DINT#99999 - dist);
   ELSIF i_phase = 1 OR i_phase = 2 THEN
-    dist := ABS(current_x - g_transporter[i].XFinalTarget);
-  IF dist > 99999 THEN dist := 99999; END_IF;
-    priority[i] := DINT#100000 + batch_boost + (DINT#99999 - dist);
+    (* Move-away (Status=3, Phase=1) gets idle-class priority, not active-task priority *)
+    IF g_transporter[i].Status = 3 THEN
+      priority[i] := 2;  (* above stationary idle (1), below active tasks (100000+) *)
+    ELSE
+      dist := ABS(current_x - g_transporter[i].XFinalTarget);
+      IF dist > 99999 THEN dist := 99999; END_IF;
+      priority[i] := DINT#100000 + batch_boost + (DINT#99999 - dist);
+    END_IF;
   ELSE
     priority[i] := 1;
   END_IF;
@@ -303,7 +308,9 @@ FOR i := 1 TO MAX_Transporters DO
     j_phase := g_transporter[j].Phase;
 
     (* ── Priority restrictions: i restricts j if i wins ── *)
-    IF i_phase <> 0 THEN
+    (* Move-away (Status=3, Phase=1) participates in restrictions
+       so it can push stationary idle transporters out of its way *)
+    IF (i_phase <> 0) OR (g_transporter[i].Status = 3 AND i_phase = 1) THEN
       a_wins := FALSE;
       IF priority[i] > priority[j] THEN
         a_wins := TRUE;

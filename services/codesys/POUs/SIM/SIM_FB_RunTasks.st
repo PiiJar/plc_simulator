@@ -174,6 +174,13 @@ FOR i := 1 TO MAX_Transporters DO
                   AND (ABS(g_transporter[i].XPosition - g_transporter[i].XFinalTarget) <= 6);
     IF at_station THEN
       g_transporter[i].CurrentStation := g_transporter[i].LiftStationTarget;
+
+      (* ── Move-away arrival: Status=3 means idle repositioning, not a real task ── *)
+      IF g_transporter[i].Status = 3 THEN
+        g_transporter[i].Phase := 0;
+        g_sim_trans[i].IdleStartTime := g_time_s;
+        STC_TrackMoveTimes(i_trans := i, i_prev := 1, i_new := 0);
+      ELSE
       (* Record arrival at lift station (first time only) *)
       IF ts_at_lift[i] = LINT#0 THEN
         ts_at_lift[i] := g_time_s;
@@ -290,6 +297,7 @@ FOR i := 1 TO MAX_Transporters DO
         g_batch[pick_unit_id].MaxTime   := 600;
       END_IF;
       END_IF;  (* can_lift *)
+      END_IF;  (* Status=3 ELSE branch *)
     END_IF;
     (* If arrived_x but not at_station → at drive limit, wait for clearance *)
 
@@ -539,6 +547,7 @@ FOR i := 1 TO MAX_Transporters DO
       g_transporter[i].CurrentTaskFinishTime := 0;
       STC_TrackMoveTimes(i_trans := i, i_prev := 4, i_new := 0);
       g_transporter[i].Status := 3;  (* auto_idle *)
+      g_sim_trans[i].IdleStartTime := g_time_s;  (* move-away idle timer *)
 
     END_IF;
   END_IF;  (* ELSIF chain: phases 0→1→2→3→4 *)

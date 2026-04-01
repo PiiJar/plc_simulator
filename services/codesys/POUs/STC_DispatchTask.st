@@ -104,7 +104,9 @@ END_VAR
 FOR ti := 1 TO MAX_Transporters DO
 
   (* ── 1. Skip if not idle or queue empty ── *)
-  IF g_transporter[ti].Phase = 0 AND g_task[ti].Count >= 1 THEN
+  (* Accept idle (Phase=0) OR move-away in progress (Phase=1, Status=3) *)
+  IF (g_transporter[ti].Phase = 0 OR (g_transporter[ti].Phase = 1 AND g_transporter[ti].Status = 3))
+     AND g_task[ti].Count >= 1 THEN
 
     (* Try each queue position — skip blocked tasks, dispatch first feasible *)
     FOR qi := 1 TO g_task[ti].Count DO

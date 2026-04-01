@@ -12,5 +12,6 @@ STRUCT
     ZStage          : INT;  (* Z motion sub-phase *)
     ZTimer          : REAL; (* Z motion timer *)
     NttPrimary      : INT;  (* 1 = current task sink is NTT primary, 0 = otherwise *)
+    IdleStartTime   : LINT; (* unix seconds when transporter became idle (Phase 4→0) *)
 END_STRUCT;
 END_TYPE

@@ -71,4 +71,7 @@ VAR_GLOBAL CONSTANT
   AVOID_None                : INT  := 0;  (* station not avoided *)
   AVOID_Passable            : INT  := 1;  (* pass through allowed, no stop *)
   AVOID_Block               : INT  := 2;  (* hard block, cannot pass *)
+
+  (* Move-away constants *)
+  MOVE_AWAY_MIN_WAIT_S      : LINT := 60;  (* don't start move-away if next task on same station starts within this many seconds *)
 END_VAR

@@ -29,5 +29,8 @@ STRUCT
 
     (* Rotation parameters *)
     HasAutomaticRotation : BOOL; (* TRUE = chemical tank (sink at 45°), FALSE = loading/buffer (sink at 0° vertical) *)
+
+    (* Move-away configuration *)
+    MoveAway             : INT;  (* 0 = no move-away, >0 = max idle time (s) before forced move *)
 END_STRUCT;
 END_TYPE

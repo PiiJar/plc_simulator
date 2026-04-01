@@ -279,6 +279,7 @@ function stationWrite(stNum) {
     dripping_time:  P(`${b}.DrippingTime`),
     device_delay:   P(`${b}.DeviceDelay`),
     dry_wet:        P(`${b}.DryWet`),
+    move_away:      P(`${b}.MoveAway`),
   };
 }
 
