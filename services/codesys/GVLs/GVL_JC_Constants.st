@@ -73,5 +73,5 @@ VAR_GLOBAL CONSTANT
   AVOID_Block               : INT  := 2;  (* hard block, cannot pass *)
 
   (* Move-away constants *)
-  MOVE_AWAY_MIN_WAIT_S      : LINT := 60;  (* don't start move-away if next task on same station starts within this many seconds *)
+  MOVE_AWAY_MIN_WAIT_S      : INT  := 60;  (* do not start move-away if next task on same station starts within this many seconds *)
 END_VAR
