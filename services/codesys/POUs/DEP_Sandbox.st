@@ -34,7 +34,7 @@ VAR_INPUT
   i_cmd                     : INT;
 END_VAR
 
-VAR_IN_OUT
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_Units, 3=MAX_Transporters *)
   io_wk_schedule            : ARRAY[1..10] OF UDT_JC_TskScheduleType;
   io_wk_batch               : ARRAY[1..10] OF UDT_BatchType;
   io_wk_program             : ARRAY[1..10] OF UDT_TreatmentProgramType;

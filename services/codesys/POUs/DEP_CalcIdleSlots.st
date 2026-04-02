@@ -28,7 +28,7 @@ VAR_INPUT
   i_time_s                  : LINT;
 END_VAR
 
-VAR_IN_OUT
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
   io_idle_slot              : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
 END_VAR

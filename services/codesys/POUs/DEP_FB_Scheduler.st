@@ -86,6 +86,7 @@ VAR_EXTERNAL CONSTANT
     SCH_MAX_INIT_WAIT_S     : REAL;
     SCH_END_DELAY_TICKS     : INT;
     SCH_MAX_FIT_ROUNDS      : INT;
+    MAX_TASK_QUEUE          : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -356,7 +357,7 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
 ELSIF phase = 2000 THEN
   FOR ti := 1 TO MAX_Transporters DO
     g_dep_wk_task[ti].Count := 0;
-    FOR qi := 1 TO 30 DO
+    FOR qi := 1 TO MAX_TASK_QUEUE DO
       g_dep_wk_task[ti].Queue[qi].Unit := 0;
     END_FOR;
   END_FOR;

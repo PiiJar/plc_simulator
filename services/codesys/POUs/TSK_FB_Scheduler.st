@@ -37,9 +37,7 @@
  *  ------------------------------------------------------------------------------------------
  *
  *  Changes:
- *  25.03.2026 - Restructured: phase+1 default, idx from phase
- *  offset, removed batch_idx, removed 1000/1900
- *  staging phases.
+ *  25.03.2026 - Restructured: phase+1 default, idx from phase offset.
  *
  *
  *)
@@ -58,6 +56,7 @@ END_VAR
 VAR_EXTERNAL CONSTANT
     MAX_Transporters        : INT;
     MAX_Units               : INT;
+    MAX_LOCKS               : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -118,7 +117,7 @@ VAR
   (* Transporter assignment *)
   sched_trans               : INT;
   (* Locked stages — prevents oscillation in resolve loop *)
-  locks                     : ARRAY[1..50] OF UDT_JC_TskLockType;
+  locks                     : ARRAY[1..MAX_LOCKS] OF UDT_JC_TskLockType;
   lock_cnt                  : INT := 0;
   locks_initialized         : BOOL := FALSE;
   fb_find                   : STC_FindTransporter;
@@ -200,17 +199,14 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
   IF idx < batch_count THEN
     ui := batch_list[idx + 1];
 
-    (* justActivated normalization removed — STC_CalcSchedule already
-       computes remaining = CalTime - elapsed from the original StartTime.
-       Running it here every TSK cycle caused CalTime to shrink and
-       StartTime to reset, producing a sawtooth jump in the UI bar. *)
+    (* CalcSchedule handles elapsed-time normalisation — no pre-adjustment needed here. *)
 
-    IF g_unit[ui].location < 100 THEN
+    IF g_unit[ui].location < MIN_StationIndex THEN
       sched_trans := g_unit[ui].location;
     ELSE
       fb_find(i_lift_stn := g_unit[ui].location, i_sink_stn := 0);
       sched_trans := fb_find.o_trans;
-  IF sched_trans = 0 THEN sched_trans := 1; END_IF;
+      IF sched_trans = 0 THEN sched_trans := 1; END_IF;
     END_IF;
 
     STC_CalcSchedule(i_unit := ui, i_trans := sched_trans, i_time_s := i_time_s,
@@ -253,7 +249,7 @@ ELSIF phase = 2100 THEN
   STC_SortTasks(i_trans := 0, i_time_s := i_time_s, io_task := g_task, io_batch := g_batch);
   IF NOT locks_initialized THEN
     lock_cnt := 0;
-    FOR bi := 1 TO 50 DO
+    FOR bi := 1 TO MAX_LOCKS DO
       locks[bi].Unit := 0;
       locks[bi].Stage := 0;
       locks[bi].Direction := 0;

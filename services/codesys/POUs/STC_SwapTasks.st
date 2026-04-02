@@ -25,7 +25,7 @@ FUNCTION STC_SwapTasks : INT   (* returns swap count *)
 
 (* Introduction of Variables ----------------------------------------------------------------*)
 
-VAR_IN_OUT
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 

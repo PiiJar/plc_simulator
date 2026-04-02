@@ -104,9 +104,9 @@ CASE i_prev OF
                 lift_stn  := g_actual_move[t].LiftStation;
                 sink_stn  := g_actual_move[t].SinkStation;
                 start_stn := g_actual_move[t].StartStation;
-                li   := lift_stn  - 100;
-                si   := sink_stn  - 100;
-                st_i := start_stn - 100;
+                li   := lift_stn  - MIN_StationIndex;
+                si   := sink_stn  - MIN_StationIndex;
+                st_i := start_stn - MIN_StationIndex;
 
                 (* Mechanical delays in 0.1s ticks *)
                 drip_x10 := g_station[lift_stn].DrippingTime;

@@ -32,7 +32,7 @@ VAR_INPUT
   i_margin_s                : REAL;
 END_VAR
 
-VAR_IN_OUT
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
   io_overlap                : UDT_JC_DepOverlapType;
 END_VAR

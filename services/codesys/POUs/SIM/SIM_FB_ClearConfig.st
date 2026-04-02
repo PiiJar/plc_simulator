@@ -16,6 +16,8 @@ FUNCTION_BLOCK SIM_FB_ClearConfig
 VAR_EXTERNAL CONSTANT
     MAX_Transporters    : INT;
     MAX_STATIONS_PER_STEP       : INT;
+    MAX_STEPS_PER_PROGRAM       : INT;
+    MAX_TASK_QUEUE      : INT;
     MIN_StationIndex : INT;
     MAX_StationIndex   : INT;
     MAX_Units           : INT;
@@ -166,7 +168,7 @@ FOR i := 1 TO MAX_Units DO
   g_program[i].ProgramId := 0;
   g_program[i].ProgramName := '';
   g_program[i].StepCount := 0;
-  FOR j := 0 TO 30 DO
+  FOR j := 0 TO MAX_STEPS_PER_PROGRAM DO
     FOR k := 0 TO 4 DO
       g_program[i].Steps[j].Stations[k] := 0;
     END_FOR;
@@ -180,7 +182,7 @@ END_FOR;
 (* --- Clear all schedules (g_schedule) --- *)
 FOR i := 1 TO MAX_Units DO
   g_schedule[i].StageCount := 0;
-  FOR j := 0 TO 30 DO
+  FOR j := 0 TO MAX_STEPS_PER_PROGRAM DO
     g_schedule[i].Stages[j].station       := 0;
     g_schedule[i].Stages[j].EntryTime    := 0;
     g_schedule[i].Stages[j].ExitTime     := 0;
@@ -194,7 +196,7 @@ END_FOR;
 (* --- Clear all task queues (g_task) --- *)
 FOR i := 1 TO MAX_Transporters DO
   g_task[i].Count := 0;
-  FOR j := 1 TO 60 DO
+  FOR j := 1 TO MAX_TASK_QUEUE DO
     g_task[i].Queue[j].Unit         := 0;
     g_task[i].Queue[j].Stage        := 0;
     g_task[i].Queue[j].LiftStationTarget := 0;

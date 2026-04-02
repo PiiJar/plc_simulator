@@ -35,7 +35,7 @@ VAR_INPUT
   i_amount                  : REAL;    (* seconds to shift (+ = later, - = earlier) *)
 END_VAR
 
-VAR_IN_OUT
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_Units, 3=MAX_Transporters *)
   io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR

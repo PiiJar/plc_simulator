@@ -131,8 +131,8 @@ FOR ti := 1 TO MAX_Transporters DO
     travel_s := 0.0;
     IF g_transporter[ti].CurrentStation > 0 AND t_lift > 0
        AND g_transporter[ti].CurrentStation <> t_lift THEN
-      from_idx := g_transporter[ti].CurrentStation - 100;
-      to_idx   := t_lift - 100;
+      from_idx := g_transporter[ti].CurrentStation - MIN_StationIndex;
+      to_idx   := t_lift - MIN_StationIndex;
       IF from_idx >= 1 AND from_idx <= 30 AND to_idx >= 1 AND to_idx <= 30 THEN
         travel_s := INT_TO_REAL(g_move[ti].Travel[from_idx].ToTime[to_idx]) / 10.0;
       END_IF;

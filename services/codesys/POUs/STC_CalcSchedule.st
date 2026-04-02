@@ -30,7 +30,7 @@ VAR_INPUT
   i_time_s                  : LINT;
 END_VAR
 
-VAR_IN_OUT
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_Units *)
   io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
   io_batch                  : ARRAY[1..10] OF UDT_BatchType;
   io_program                : ARRAY[1..10] OF UDT_TreatmentProgramType;
@@ -41,6 +41,7 @@ VAR_EXTERNAL CONSTANT
     MAX_StationIndex        : INT;
     MAX_Units               : INT;
     MAX_Transporters        : INT;
+    MAX_STEPS_PER_PROGRAM   : INT;
     NOT_PROCESSED           : INT;
     USED                    : INT;
 END_VAR
@@ -94,10 +95,10 @@ IF i_trans < 1 OR i_trans > MAX_Transporters THEN RETURN; END_IF;
 
 cur_stage := io_batch[i_unit].CurStage;
 location  := g_unit[i_unit].location;
-is_on_stn := location >= 100;
+is_on_stn := location >= MIN_StationIndex;
 
 (* Clear old schedule *)
-FOR stg := 0 TO 30 DO
+FOR stg := 0 TO MAX_STEPS_PER_PROGRAM DO
   io_schedule[i_unit].Stages[stg].station := 0;
   io_schedule[i_unit].Stages[stg].ProgramStage := 0;
   io_schedule[i_unit].Stages[stg].EntryTime := 0;

@@ -27,7 +27,7 @@ FUNCTION TSK_Analyze : BOOL
 
 (* Introduction of Variables ----------------------------------------------------------------*)
 
-VAR_IN_OUT
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
@@ -201,8 +201,8 @@ END_FOR;
 FOR ti := 1 TO MAX_Transporters DO
   FOR qi := 1 TO io_task[ti].Count DO
     IF io_task[ti].Queue[qi].Unit > 0 THEN
-      l_idx := io_task[ti].Queue[qi].LiftStationTarget - 100;
-      s_idx := io_task[ti].Queue[qi].SinkStationTarget - 100;
+      l_idx := io_task[ti].Queue[qi].LiftStationTarget - MIN_StationIndex;
+      s_idx := io_task[ti].Queue[qi].SinkStationTarget - MIN_StationIndex;
       IF l_idx >= 1 AND l_idx <= 30 THEN
         lift_x := DINT_TO_REAL(g_station[io_task[ti].Queue[qi].LiftStationTarget].XPosition);
   ELSE lift_x := 0.0; END_IF;
@@ -217,8 +217,8 @@ FOR ti := 1 TO MAX_Transporters DO
       FOR tj := ti + 1 TO MAX_Transporters DO
         FOR qj := 1 TO io_task[tj].Count DO
           IF io_task[tj].Queue[qj].Unit > 0 THEN
-            l_idx2 := io_task[tj].Queue[qj].LiftStationTarget - 100;
-            s_idx2 := io_task[tj].Queue[qj].SinkStationTarget - 100;
+            l_idx2 := io_task[tj].Queue[qj].LiftStationTarget - MIN_StationIndex;
+            s_idx2 := io_task[tj].Queue[qj].SinkStationTarget - MIN_StationIndex;
             IF l_idx2 >= 1 AND l_idx2 <= 30 THEN
               lift_x2 := DINT_TO_REAL(g_station[io_task[tj].Queue[qj].LiftStationTarget].XPosition);
   ELSE lift_x2 := 0.0; END_IF;

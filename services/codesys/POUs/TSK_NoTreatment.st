@@ -30,7 +30,7 @@ VAR_INPUT
   i_time_s                  : LINT;
 END_VAR
 
-VAR_IN_OUT
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
@@ -139,7 +139,7 @@ FOR ui := 1 TO MAX_Units DO
   tgt := g_unit[ui].Target;
   loc := g_unit[ui].location;
 
-  IF tgt >= 1 AND tgt <= 5 AND loc >= 100 THEN
+  IF tgt >= 1 AND tgt <= 5 AND loc >= MIN_StationIndex THEN
 
     IF tgt = 3 AND (g_batch[ui].BatchCode = 0 OR g_batch[ui].State <> NOT_PROCESSED) THEN
       CONTINUE;
@@ -373,7 +373,7 @@ FOR ui := 1 TO MAX_Units DO
                   shared_entry := task_start;
                   shared_time  := xfer_s;
                 ELSE
-                  loc_idx := loc - 100;
+                  loc_idx := loc - MIN_StationIndex;
                   IF loc_idx >= 1 AND loc_idx <= 25 THEN
                     phase2_s := INT_TO_REAL(g_move[cov_t].LiftTime[loc_idx]) / 10.0
                               + INT_TO_REAL(g_station[loc].DrippingTime) / 10.0

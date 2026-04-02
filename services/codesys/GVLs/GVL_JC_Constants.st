@@ -14,9 +14,10 @@ VAR_GLOBAL CONSTANT
   MAX_Units                 : INT  := 10;  (* max units (lifting frames / hooks) *)
   MAX_STATIONS_PER_STEP     : INT  := 5;  (* max parallel stations per program stage *)
   MAX_STEPS_PER_PROGRAM     : INT  := 30;  (* max stages in a treatment program *)
-  MAX_TASK_QUEUE            : INT  := 60;  (* max tasks per transporter queue *)
+  MAX_TASK_QUEUE            : INT  := 30;  (* max tasks per transporter queue — must match UDT_JC_TskQueueType.Queue size *)
 
   (* ===== Algorithm / Scheduler Limits ===== *)
+  MAX_LOCKS                 : INT  := 50;  (* max locked stages in conflict resolution *)
   DEP_MAX_IDLE_SLOTS        : INT  := 20;  (* max idle slots per transporter *)
   DEP_MAX_DELAY_ACTS        : INT  := 20;  (* max delay actions per cycle *)
   DEP_MAX_WAITING           : INT  := 5;  (* max waiting batches *)

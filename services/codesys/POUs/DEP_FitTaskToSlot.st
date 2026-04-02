@@ -37,7 +37,7 @@ VAR_INPUT
   i_conflict_margin_s       : REAL;
 END_VAR
 
-VAR_IN_OUT
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
   io_idle_slot              : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
   o_result                  : UDT_JC_DepFitResultType;
 END_VAR

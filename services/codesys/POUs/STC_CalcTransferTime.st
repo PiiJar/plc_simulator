@@ -47,8 +47,8 @@ END_VAR
 
 STC_CalcTransferTime := 0.0;
 IF i_from_stn > 0 AND i_from_stn <> i_to_stn THEN
-  from_idx := i_from_stn - 100;
-  to_idx   := i_to_stn - 100;
+  from_idx := i_from_stn - MIN_StationIndex;
+  to_idx   := i_to_stn - MIN_StationIndex;
   IF from_idx >= 1 AND from_idx <= 25 AND to_idx >= 1 AND to_idx <= 25 THEN
     STC_CalcTransferTime :=
       (* Phase 2: lift + dropping + drip tray *)

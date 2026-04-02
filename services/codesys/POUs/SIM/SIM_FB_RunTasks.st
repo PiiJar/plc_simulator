@@ -37,7 +37,9 @@ END_VAR
 VAR_EXTERNAL
   g_transporter  : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_sim_trans    : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
-  g_station     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;    g_station_loc  : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;  g_cfg          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  g_station      : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  g_station_loc  : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_cfg          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_move         : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   g_actual_move  : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
   g_unit         : ARRAY[1..MAX_Units] OF UDT_UnitType;
