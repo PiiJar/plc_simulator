@@ -138,7 +138,6 @@ Asiakkaan integraatio (tai kehitysympäristön Gateway)
     │
     ▼ kirjoittaa globaaleihin
 g_station[], g_cfg[], g_unit[], g_batch[], g_program[]
-g_cmd_code, g_time_sync
     │
     ▼ kirjaston sisäinen laskenta
 STC_FB_MainScheduler

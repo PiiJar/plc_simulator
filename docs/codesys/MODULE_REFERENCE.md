@@ -125,7 +125,7 @@ Tiedostokohtainen hakuteos. Jokaisesta POU:sta: tyyppi, tarkoitus, rajapinta ja 
 | **Tarkoitus** | Odottavien erien optimaalinen sisääntulo sandbox-mallilla |
 
 **VAR_INPUT:** `i_run`, `i_time_s`, `i_tsk_phase`
-**VAR_OUTPUT:** `o_phase`, `o_batch_cnt`, `o_waiting_cnt`
+**VAR_OUTPUT:** `o_phase`, `o_wait_cnt`, `o_activated`, `o_reject_cnt`, `o_fit_round`, `o_cur_wait_unit`
 
 **Kutsuu:** DEP_Sandbox, DEP_CalcIdleSlots, DEP_FitTaskToSlot, DEP_CalcOverlap, DEP_OverlapDelay + kaikki STC-funktiot
 
@@ -155,7 +155,7 @@ Tiedostokohtainen hakuteos. Jokaisesta POU:sta: tyyppi, tarkoitus, rajapinta ja 
 | **Toimitus** | 🔒 KIRJASTO |
 | **Tarkoitus** | Tarkista mahtuuko odottava tehtävä idle-slotiin |
 
-**VAR_INPUT:** `i_task`, `i_slot_idx`, `i_trans`, `i_move`
+**VAR_INPUT:** `i_lift_stn`, `i_sink_stn`, `i_trans_id`, `i_task_start`, `i_task_end`, `i_shift_s`, `i_calc_time_s`, `i_max_time_s`, `i_flex_factor`, `i_margin_s`, `i_conflict_margin_s`
 **VAR_IN_OUT:** `io_idle_slot[1..3]`, `o_result : UDT_JC_DepFitResultType`
 
 ---
@@ -443,7 +443,7 @@ Tiedostokohtainen hakuteos. Jokaisesta POU:sta: tyyppi, tarkoitus, rajapinta ja 
 | **Tiedosto** | `POUs/SIM/SIM_FB_ZMotion.st` |
 | **Tyyppi** | FUNCTION_BLOCK |
 | **Toimitus** | 🧪 KEHITYS |
-| **Tarkoitus** | 8-alivaiheinen Z-nosto/lasku-simulaatio |
+| **Tarkoitus** | Z-liikesimulaatio: lift z_stage 2..5,9 ja sink z_stage 6..8 |
 
 ---
 
@@ -454,7 +454,7 @@ Tiedostokohtainen hakuteos. Jokaisesta POU:sta: tyyppi, tarkoitus, rajapinta ja 
 | **Tiedosto** | `POUs/SIM/SIM_FindStation.st` |
 | **Tyyppi** | FUNCTION |
 | **Toimitus** | 🧪 KEHITYS |
-| **Tarkoitus** | X-positio → lähin asema (toleranssilla) |
+| **Tarkoitus** | Asemanumerosta suora asemahaku: palauttaa XPosition ja asemaparametreja |
 
 ---
 

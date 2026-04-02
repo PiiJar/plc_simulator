@@ -149,7 +149,7 @@ Yksityiskohtainen kuvaus: [DEP_SCHEDULER.md](DEP_SCHEDULER.md)
   │
   200  BATCH_START ── Valmistele nykyinen odottava erä
   │
-  1000+i  CALC_SCHEDULE ── Laske aikataulut (aktiiviset + odottavat)
+  1000+i  CALC_SCHEDULE ── Laske aikataulut aktiivisille erille
   │
   2000  CLEAR_TASKS
   2001+i  CREATE_TASKS
@@ -158,7 +158,7 @@ Yksityiskohtainen kuvaus: [DEP_SCHEDULER.md](DEP_SCHEDULER.md)
   │
   2200  INJECT_IN_FLIGHT ── Meneillään olevan kuljetuksen pseudotehtävä
   2300  CALC_IDLE ── Laske tyhjät aikaikkunat per nostin
-  2400  CALC_WAIT_SCHEDULE ── Odottavan erän aikataulu
+  2400  CALC_WAIT_SCHEDULE ── Laske odottavan erän aikataulu erikseen
   2500  CREATE_WAIT_TASKS ── Muunna tehtäviksi
   2600  STATION_CONFLICT ── Asemavarausristiriidat
   │

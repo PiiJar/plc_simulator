@@ -16,7 +16,7 @@ Se mahdollistaa scheduler-algoritmin testauksen ilman fyysistä laitteistoa.
 | X-liike | Servomoottorit | SIM_FB_XMotion (trapetsiprofiili) |
 | Z-liike (nosto/lasku) | Hydrauliikka/pneumatiikka | SIM_FB_ZMotion (vaihetilakone) |
 | Siirtoajat | Mitattu antureilla | Laskettu fysiikkamalleilla |
-| Asemapaikannus | Fyysiset anturit | SIM_FindStation (X-positio → asema) |
+| Asemapaikannus | Fyysiset anturit | SIM_FindStation (asema → XPosition / DryWet / viiveet) |
 | Tapahtumat | PLC-ulostulot / Modbus | SIM_FB_EventQueue → OPC UA |
 | Liikkeen kalibrointi | Ei tarvita | g_move[] päivittyy automaattisesti |
 
@@ -36,7 +36,7 @@ Phase 1  TO_LIFT
     │  AtPosition=TRUE → tapahtuma ARRIVED_AT_LIFT
     ▼
 Phase 2  LIFTING
-    │  Z-nostosarja (SIM_FB_ZMotion, 8 alivaihetta)
+  │  Z-nostosarja (SIM_FB_ZMotion, z_stage 2..5,9)
     │  Tapahtuma: LIFTING_BEGIN, LIFTING_DONE
     ▼
 Phase 3  TO_SINK
@@ -44,7 +44,7 @@ Phase 3  TO_SINK
     │  AtPosition=TRUE → tapahtuma ARRIVED_AT_SINK
     ▼
 Phase 4  SINKING
-    │  Z-laskusarja (SIM_FB_ZMotion, 8 alivaihetta)
+  │  Z-laskusarja (SIM_FB_ZMotion, z_stage 6..8)
     │  Tapahtuma: TASK_COMPLETE
     │  Siirtoajan mittaus: STC_TrackMoveTimes
     ▼
@@ -79,22 +79,20 @@ Tulos: XPosition päivittyy, AtPosition kun kohteessa.
 **TWA-rajat:** `TWA_FB_CalcLimits` laskee joka jaksolla X-rajat törmäyksen estämiseksi.
 SIM_FB_XMotion ei ylitä rajoja vaan hidastaa/pysähtyy.
 
-### Phase 2: Z-nosto (8 alivaihetta)
+### Phase 2: Z-nosto
 
 ```
 ZStage-sekvenssi:
-  0 → Lukitus auki (kansi avautuu)
-  1 → Hidas nosto (ZPosDrip)
-  2 → Tippumisaika (DrippingTime)
-  3 → Tippumalusikan sulku (DripTrayDelay)
-  4 → Nopea nosto (ZPosUp)
-  5 → Stabilointi
-  6 → Lukitus kiinni
-  7 → Valmis → Phase 3
+  2 → Hidas alkunosto nesteestä
+  3 → Nopea nosto keskialueella
+  4 → Hidas loppunosto yläasentoon
+  5 → Valutusaika yläasemassa (DroppingTime)
+  9 → Tippakourun sulkuviive (DripTrayDelay)
+      → valmis, Phase 3
 ```
 
-Jokainen alivaihe käyttää `ZTimer`-laskuria ja konfiguroituja aikoja
-(`LiftWetSlowTime`, `LiftWetMidTime`, `LiftWetFastTime` jne.).
+Jokainen vaihe käyttää `z_timer_s`-ajastinta tai suoraa nopeusintegraatiota.
+Lift käyttää hitaita/nopeita Z-nopeuksia ja erottaa märkä- ja kuiva-asemien slow-zone-alueet.
 
 ### Phase 3: X-ajo laskuasemalle
 
@@ -102,7 +100,15 @@ Sama kuin Phase 1, mutta `XDriveTarget := g_station[SinkStationTarget].XPosition
 
 ### Phase 4: Z-lasku
 
-Vastaava 8-vaiheinen sekvenssi käänteisessä järjestyksessä.
+Lasku ei ole noston peilikuva, vaan erillinen 3-vaiheinen sekvenssi:
+
+```
+  6 → Alkuviive (device_delay + drip_delay)
+  7 → Nopea lasku
+  8 → Hidas loppulasku altaaseen
+      → valmis, Phase 0
+```
+
 Phase 4:n valmistuessa:
 - Päivitä `g_unit[unit].Location := SinkStationTarget`
 - Päivitä `g_station_loc[stn].UnitId`
@@ -134,9 +140,8 @@ d_decel = v² / (2 × decel)
 Jos |target - position| ≤ d_decel → aloita hidastus
 ```
 
-**Ryömintänopeus (crawl):**
-Konfiguraatio: `CrawlDistance_X`, `SpeedCrawl_X`. Loppumetreillä nopeus lasketaan
-ryömintätasolle tarkkuuden varmistamiseksi.
+Liike on toteutettu suorana accel/cruise/decel-profiilina. Erillistä crawl-vaihetta
+ei ole SIM_FB_XMotion-rajapinnassa.
 
 ## SIM_FB_ZMotion — Pystysuuntainen liike
 
@@ -145,20 +150,21 @@ Ei trapetsiprofiilia, vaan diskreetti vaihesarja:
 - Jokainen vaihe kestää konfiguidun ajan
 - `ZTimer` laskee aikaa alaspäin → siirtyy seuraavaan vaiheeseen
 
-## SIM_FindStation — Positio → asema
+## SIM_FindStation — Asemahaku
 
 ```
-FUNCTION SIM_FindStation : INT
+FUNCTION SIM_FindStation : DINT
   VAR_INPUT
-    i_x_pos  : DINT    (* X-positio mm *)
+    station_number : INT
   END_VAR
 
-  Lineaari-/binäärihaku g_station[]-taulukosta:
-  Palauttaa lähimmän aseman StationId:n
-  (toleranssi: g_cfg[trans].PosTolerance_X)
+  Suora haku g_station[]-taulukosta asemanumerolla.
+  Palauttaa aseman `XPosition`-arvon.
+  VAR_OUTPUT:n kautta saadaan lisäksi `skind`, `device_delay_s`
+  ja `dropping_time_s`.
 ```
 
-Käytetään Phase 1:ssä ja Phase 3:ssa `ARRIVED_AT`-tapahtuman laukaisuun.
+Käytetään SIM_FB_RunTasks:ssa kohdeaseman X-position ja asemaparametrien hakuun.
 
 ## STC_TrackMoveTimes — Siirtoaikojen mittaus ja oppiminen
 
@@ -166,12 +172,15 @@ Kutsu tapahtuu jokaisen vaihesiirtymän yhteydessä SIM_FB_RunTasks:ssa:
 
 ```
 Phase 0→1:  Tallenna StartStation, ts0
-Phase 1→2:  Tallenna ts1 (nostoasemalle saapuminen)
+Phase 1→2:  Tallenna ts1 (nosto alkaa)
 Phase 2→3:  Tallenna ts2 (nosto valmis)
 Phase 3→4:  Tallenna ts3 (laskuasemalle saapuminen)
 Phase 4→0:  Tallenna ts4 (lasku valmis)
             Laske mitatut kestot, päivitä g_move[]
 ```
+
+Varsinainen saapuminen nostoasemalle seurataan erillisellä `ts_at_lift`-muuttujalla
+SIM_FB_RunTasks:ssa, mutta sitä ei kirjata `g_actual_move.ts1`-kenttään.
 
 **Painotettu keskiarvo:**
 ```

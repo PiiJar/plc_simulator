@@ -97,17 +97,38 @@ Tämä on DEP:n ydinalgoritmi:
 Jokaiselle odottavan erän tehtävälle:
 
 ```
+ovlp_delay_s := DEP_OverlapDelay(
+  i_lift_stn   = w_tasks[i].LiftStationTarget,
+  i_sink_stn   = w_tasks[i].SinkStationTarget,
+  i_trans_id   = trans,
+  i_task_start = w_tasks[i].StartTime,
+  i_task_end   = w_tasks[i].FinishTime,
+  i_margin_s   = SCH_CONFLICT_MARGIN_S,
+  io_task      = g_dep_wk_task,
+  io_overlap   = g_dep_overlap
+)
+
 DEP_FitTaskToSlot(
-    i_task       = w_tasks[i],
-    i_idle_slots = g_dep_idle_slot[trans],
-    i_move       = g_move[trans]
+  i_lift_stn          = w_tasks[i].LiftStationTarget,
+  i_sink_stn          = w_tasks[i].SinkStationTarget,
+  i_trans_id          = trans,
+  i_task_start        = w_tasks[i].StartTime,
+  i_task_end          = w_tasks[i].FinishTime,
+  i_shift_s           = ovlp_delay_s,
+  i_calc_time_s       = w_tasks[i].CalcTime,
+  i_max_time_s        = w_tasks[i].MaxTime,
+  i_flex_factor       = SCH_FLEX_FACTOR,
+  i_margin_s          = SCH_MARGIN_S,
+  i_conflict_margin_s = SCH_CONFLICT_MARGIN_S,
+  io_idle_slot        = g_dep_idle_slot,
+  o_result            = fit_result
 ):
 
 1. Etsi paras idle-slot:
    └─ Jokaiselle slotille:
       ├─ travel_to   = CalcHorizontalTravel(slot.from_station, task.lift)
       ├─ travel_from = CalcHorizontalTravel(task.sink, slot.to_station)
-      ├─ earliest    = MAX(slot.start + travel_to, task.start)
+    ├─ earliest    = MAX(slot.start + travel_to, task.start + ovlp_delay_s)
       ├─ latest      = MIN(slot.end - travel_from, horizon)
       │
       ├─ Jos earliest + task_duration ≤ latest:
@@ -122,9 +143,17 @@ DEP_FitTaskToSlot(
 2. Tuloste:
    o_result.Fits          = TRUE/FALSE
    o_result.DelayTime     = tarvittava viive
+  o_result.NeedExtraTime = lisäaika joka ei mahtunut slotiin
+  o_result.TaskEndTime   = toteutuva loppuaika
    o_result.SlotIdx       = käytetty slot
    o_result.TransporterId = nostin
 ```
+
+Huomioita toteutuksesta:
+
+- `DEP_FitTaskToSlot` ei ota `i_move`-parametria, vaan lukee `g_move[i_trans_id]` globaalisti.
+- `DEP_OverlapDelay` ja `DEP_FitTaskToSlot` muodostavat yhdessä kokonaisviiveen:
+  `total_delay_s = ovlp_delay_s + fit_result.DelayTime`.
 
 ### 6. Idle-slotin levitys (backward-chaining)
 
