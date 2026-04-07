@@ -62,6 +62,11 @@ VAR_EXTERNAL
   (* --- Scheduler Debug --- *)
   g_sched_dbg_tsk_phase     : INT;
   g_sched_dbg_dep_phase     : INT;
+  (* --- UI snapshot --- *)
+  g_sim_ui_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_sim_ui_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_sim_ui_wait_unit        : INT;
+  g_sim_ui_wait_reason      : INT;
   g_sched_dbg_turn          : INT;
   g_conflict_resolved       : BOOL;
   g_sched_dbg_batch_cnt     : INT;
@@ -90,6 +95,9 @@ VAR
   evt_queue                 : SIM_FB_EventQueue;
   (* Time from SysTime library *)
   now_ms                    : LINT := 0;
+  (* UI snapshot edge detection *)
+  prev_tsk_phase            : INT := 0;
+  prev_dep_phase            : INT := 0;
 END_VAR
 
 (* ============================================================
@@ -179,6 +187,25 @@ END_IF;  (* init_done *)
    (during RESET), MainScheduler's i_run=FALSE path executes,
    properly resetting internal state of both TSK and DEP FBs. *)
 main_sched(i_run := init_done, i_time_s := g_time_s);
+
+(* ── UI schedule snapshot — copy stable data for gateway reads ── *)
+IF g_sched_dbg_tsk_phase = 10000 AND prev_tsk_phase <> 10000 THEN
+  (* TSK reached READY — snapshot active batch schedules + tasks *)
+  g_sim_ui_schedule := g_schedule;
+  g_sim_ui_task     := g_task;
+END_IF;
+IF g_sched_dbg_dep_phase = 8000 AND prev_dep_phase <> 8000 THEN
+  (* DEP activated a waiting batch — clear wait status *)
+  g_sim_ui_wait_unit   := 0;
+  g_sim_ui_wait_reason := 0;
+END_IF;
+IF g_sched_dbg_dep_phase = 9000 AND prev_dep_phase <> 9000 THEN
+  (* DEP rejected a waiting batch — record which unit and why *)
+  g_sim_ui_wait_unit   := g_sched_dbg_dep_cur_wait_unit;
+  g_sim_ui_wait_reason := 1;  (* TODO: differentiate reject reasons when DEP exposes them *)
+END_IF;
+prev_tsk_phase := g_sched_dbg_tsk_phase;
+prev_dep_phase := g_sched_dbg_dep_phase;
 
 (* ── Event queue — always runs, not gated by init_done ── *)
 evt_queue();

@@ -76,6 +76,12 @@ VAR_GLOBAL
   g_event_pending_valid         : BOOL;  (* TRUE = pending message ready to enqueue *)
   g_event_ack_seq               : INT;   (* Gateway writes ack_seq via OPC UA to consume head message *)
 
+  (* ===== UI Snapshot (SIM only — stable schedule for gateway reads) ===== *)
+  g_sim_ui_schedule             : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_sim_ui_task                 : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_sim_ui_wait_unit            : INT;   (* current waiting batch unit, 0 = none *)
+  g_sim_ui_wait_reason          : INT;   (* 0=pending, 1=NO_SLOT, 2=DELAY_TOO_LARGE, 3=STATION_CONFLICT, 4=MAX_ROUNDS *)
+
   (* ===== OPC UA Gateway Command Interface ===== *)
   (* Gateway writes g_cmd_code + g_cmd_param via OPC UA.
      PLC processes when g_cmd_code <> 0, then clears it.

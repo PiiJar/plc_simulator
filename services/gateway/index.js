@@ -92,6 +92,7 @@ let simRunning = false;
 let plcUnits = [];
 let depState = {};
 let schedulerDebug = {};
+let simUi = { wait_unit: 0, wait_reason: 0 };
 let prevSchedSnapshot = '';  // JSON string for change detection
 let twaLimits = { 1: { x_min: 0, x_max: 0 }, 2: { x_min: 0, x_max: 0 }, 3: { x_min: 0, x_max: 0 } };
 let plcTaskQueues = { 1: { count: 0, tasks: [] }, 2: { count: 0, tasks: [] }, 3: { count: 0, tasks: [] } };
@@ -151,6 +152,7 @@ function startPolling() {
       plcTaskQueues = state.taskQueues;
       depState = state.depState;
       schedulerDebug = state.schedulerDebug;
+      simUi = state.simUi || { wait_unit: 0, wait_reason: 0 };
       plcAlive = true;
 
       // ── Scheduler conflict debug log ──────────────────────
@@ -193,13 +195,9 @@ function startPolling() {
         console.log('[PLC] Init done, simulation running');
       }
 
-      // Schedule sliding window
-      // Skip reads while TSK is recalculating (phase 1–9999) to avoid
-      // seeing the transient cleared state → prevents UI flicker.
-      const tskPhase = schedulerDebug.tsk_phase || 0;
-      const tskRecalculating = tskPhase >= 1 && tskPhase < 10000;
+      // Schedule sliding window — reads from sim_ui snapshot (stable, no flicker)
       scheduleTickCounter++;
-      if (scheduleTickCounter >= SCHEDULE_POLL_TICKS && !tskRecalculating) {
+      if (scheduleTickCounter >= SCHEDULE_POLL_TICKS) {
         scheduleTickCounter = 0;
         schReqUnit = (schReqUnit % 10) + 1;
         const sched = await adapter.readScheduleWindow(schReqUnit);
@@ -261,7 +259,7 @@ app.use('/api', fileRoutes.router);
 // ── Initialize & mount dashboard API (real endpoints) ──
 dashboardApi.init({
   dbPool,
-  getState: () => ({ stationsConfig, twaLimits, plcMeta, plcUnits, adapter }),
+  getState: () => ({ stationsConfig, twaLimits, plcMeta, plcUnits, adapter, simUi }),
   getDispatcher: () => dispatcher,
 });
 app.use('/api', dashboardApi.router);

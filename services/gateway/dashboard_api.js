@@ -169,6 +169,10 @@ router.get('/scheduler/state', async (req, res) => {
       }
     }
 
+    // Waiting batch info from sim_ui snapshot
+    const stateData = _getState ? _getState() : {};
+    const waitInfo = stateData.simUi || { wait_unit: 0, wait_reason: 0 };
+
     res.json({
       success: true,
       state: {
@@ -176,6 +180,8 @@ router.get('/scheduler/state', async (req, res) => {
         dep: roundSummary(depRound),
         tickMs: TICK_MS,
         avgDepartureIntervalSec,
+        waitUnit: waitInfo.wait_unit,
+        waitReason: waitInfo.wait_reason,
       },
       productionStats,
     });

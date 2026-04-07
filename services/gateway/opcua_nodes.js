@@ -158,6 +158,52 @@ function schedule(uid) {
   return nodes;
 }
 
+/**
+ * UI snapshot schedule for unit uid (1..10)
+ * PLC variable: GVL_JC_Scheduler.g_sim_ui_schedule[uid]
+ * Stable copy written only at TSK phase 10000 rising edge.
+ */
+function simSchedule(uid) {
+  const b = `g_sim_ui_schedule[${uid}]`;
+  const nodes = { stage_count: S(`${b}.StageCount`) };
+  for (let s = 0; s <= 30; s++) {
+    const sb = `${b}.Stages[${s}]`;
+    nodes[`stage_${s}`] = {
+      station:    S(`${sb}.Station`),
+      entry_time: S(`${sb}.EntryTime`),
+      exit_time:  S(`${sb}.ExitTime`),
+      min_time:   S(`${sb}.MinTime`),
+      max_time:   S(`${sb}.MaxTime`),
+    };
+  }
+  return nodes;
+}
+
+/**
+ * UI snapshot task queue for transporter tid (1..3)
+ * PLC variable: GVL_JC_Scheduler.g_sim_ui_task[tid]
+ * Stable copy written only at TSK phase 10000 rising edge.
+ */
+function simTaskQueue(tid) {
+  const b = `g_sim_ui_task[${tid}]`;
+  const nodes = { count: S(`${b}.Count`) };
+  for (let q = 1; q <= 30; q++) {
+    const qb = `${b}.Queue[${q}]`;
+    nodes[`task_${q}`] = {
+      unit_id:      S(`${qb}.Unit`),
+      stage:        S(`${qb}.Stage`),
+      lift_station: S(`${qb}.LiftStationTarget`),
+      sink_station: S(`${qb}.SinkStationTarget`),
+      start_time:   S(`${qb}.StartTime`),
+      finish_time:  S(`${qb}.FinishTime`),
+      calc_time:    S(`${qb}.CalcTime`),
+      min_time:     S(`${qb}.MinTime`),
+      max_time:     S(`${qb}.MaxTime`),
+    };
+  }
+  return nodes;
+}
+
 // ── Scalar read nodes ────────────────────────────────────────
 
 const META = {
@@ -181,6 +227,12 @@ const DEP = {
 function depWaiting(idx) {
   return S(`g_dep_waiting[${idx}]`);
 }
+
+// UI snapshot scalar fields
+const SIM_UI = {
+  wait_unit:   S('g_sim_ui_wait_unit'),
+  wait_reason: S('g_sim_ui_wait_reason'),
+};
 
 const SCHED_DEBUG = {
   tsk_phase:          S('g_sched_dbg_tsk_phase'),
@@ -466,12 +518,12 @@ function buildReadList() {
     }
   }
 
-  // Task queues (1..3, count + 30 slots × fields)
+  // Task queues — read from sim_ui snapshot (stable copy)
   // NOTE: start_time, finish_time are LINT — skip them
   for (let t = 1; t <= 3; t++) {
-    add(`tq.${t}.count`, taskQueue(t).count);
+    add(`tq.${t}.count`, simTaskQueue(t).count);
     for (let q = 1; q <= 30; q++) {
-      const tq = taskQueue(t)[`task_${q}`];
+      const tq = simTaskQueue(t)[`task_${q}`];
       for (const [k, nid] of Object.entries(tq)) {
         if (k === 'start_time' || k === 'finish_time') continue; // LINT fields
         add(`tq.${t}.${q}.${k}`, nid);
@@ -482,6 +534,9 @@ function buildReadList() {
   // DEP state
   for (const [k, nid] of Object.entries(DEP)) add(`dep.${k}`, nid);
   for (let w = 1; w <= 5; w++) add(`dep.waiting.${w}`, depWaiting(w));
+
+  // UI snapshot scalars (wait status)
+  for (const [k, nid] of Object.entries(SIM_UI)) add(`sim_ui.${k}`, nid);
 
   // Scheduler debug
   for (const [k, nid] of Object.entries(SCHED_DEBUG)) add(`sched.${k}`, nid);
@@ -533,9 +588,12 @@ module.exports = {
   batch,
   taskQueue,
   schedule,
+  simSchedule,
+  simTaskQueue,
   META,
   DEP,
   depWaiting,
+  SIM_UI,
   SCHED_DEBUG,
   EVENT,
   eventMsg,

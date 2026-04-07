@@ -39,6 +39,10 @@ VAR_EXTERNAL
   g_avoid_status     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
   g_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   g_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_sim_ui_schedule  : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  g_sim_ui_task      : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_sim_ui_wait_unit : INT;
+  g_sim_ui_wait_reason : INT;
   g_dep_pending      : UDT_JC_DepPendingWriteType;
   g_dep_activated    : BOOL;
   g_tsk_stable       : BOOL;
@@ -208,6 +212,16 @@ FOR i := 1 TO MAX_Transporters DO
     g_task[i].Queue[j].MaxTime     := 0;
   END_FOR;
 END_FOR;
+
+(* --- Clear UI snapshot --- *)
+FOR i := 1 TO MAX_Units DO
+  g_sim_ui_schedule[i].StageCount := 0;
+END_FOR;
+FOR i := 1 TO MAX_Transporters DO
+  g_sim_ui_task[i].Count := 0;
+END_FOR;
+g_sim_ui_wait_unit := 0;
+g_sim_ui_wait_reason := 0;
 
 (* --- Clear departure pending write --- *)
 g_dep_pending.Valid := FALSE;

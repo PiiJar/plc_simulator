@@ -332,7 +332,7 @@ class OpcuaAdapter extends PlcAdapter {
         for (let t = 1; t <= 3; t++) {
           const count = toNum(v[`tq.${t}.count`]);
           if (count > 0) {
-            const tq = nodes.taskQueue(t);
+            const tq = nodes.simTaskQueue(t);
             for (let q = 1; q <= Math.min(count, 30); q++) {
               const slot = tq[`task_${q}`];
               tqLintList.push({ key: `tq.${t}.${q}.start_time`, nodeId: slot.start_time });
@@ -504,6 +504,12 @@ class OpcuaAdapter extends PlcAdapter {
         if (val !== 0) schedulerDebug.prog_cal[u] = val;
       }
 
+      // ── Parse sim_ui wait status ──────────────────────────
+      const simUi = {
+        wait_unit:   toNum(v['sim_ui.wait_unit']),
+        wait_reason: toNum(v['sim_ui.wait_reason']),
+      };
+
       // ── Parse events (for event consumer) ─────────────────
       const eventHead = {
         count: toNum(v['event.count']),
@@ -531,6 +537,7 @@ class OpcuaAdapter extends PlcAdapter {
         taskQueues,
         depState,
         schedulerDebug,
+        simUi,
         eventHead,
       };
     } catch (err) {
@@ -597,13 +604,8 @@ class OpcuaAdapter extends PlcAdapter {
     if (!this.connected || !this.session) return null;
 
     try {
-      // Schedule data is always available — PLC fills g_schedule[uid] continuously
-      // No request write needed (no sliding window protocol in CODESYS version)
-
-      // Read schedule for the requested unit
-      // NOTE: entry_time and exit_time are LINT — skip them to avoid
-      // node-opcua Int64 Variant error; read only non-LINT fields
-      const sched = nodes.schedule(unitId);
+      // Read schedule from sim_ui snapshot (stable copy, no mid-calculation flicker)
+      const sched = nodes.simSchedule(unitId);
       const readList = [{ key: 'stage_count', nodeId: sched.stage_count }];
       for (let s = 0; s <= 30; s++) {
         const st = sched[`stage_${s}`];
