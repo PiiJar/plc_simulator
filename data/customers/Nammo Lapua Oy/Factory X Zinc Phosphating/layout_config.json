@@ -32,7 +32,7 @@
     "transporters": {
       "heightMM": 1400,
       "widthScaleFactor": 0.8,
-      "showUtilizationPie": false,
+      "showUtilizationPie": true,
       "showDriveLimits": false
     },
     "cross-transporters": {

@@ -262,6 +262,7 @@ app.use('/api', fileRoutes.router);
 dashboardApi.init({
   dbPool,
   getState: () => ({ stationsConfig, twaLimits, plcMeta, plcUnits, adapter }),
+  getDispatcher: () => dispatcher,
 });
 app.use('/api', dashboardApi.router);
 

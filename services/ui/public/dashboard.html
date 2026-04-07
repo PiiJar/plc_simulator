@@ -261,12 +261,6 @@
             stroke: #2196f3;
             stroke-width: 1.5px;
         }
-
-        .line2 {
-            fill: none;
-            stroke: #ff9800;
-            stroke-width: 1.5px;
-        }
         
         .area {
             fill: #e3f2fd;
@@ -277,11 +271,6 @@
         .dep-line {
             fill: none;
             stroke: #4caf50;
-            stroke-width: 1.5px;
-        }
-        .dep-line2 {
-            fill: none;
-            stroke: #e91e63;
             stroke-width: 1.5px;
         }
         .dep-area {
@@ -306,33 +295,27 @@
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                             <span style="font-size:11px;font-weight:700;color:#1565c0;min-width:75px;">TASKS</span>
                             <div class="stat-grid" style="flex:1;margin-bottom:0;">
-                                <div class="stat-box"><div class="stat-label">Cycles</div><div class="stat-value" id="total-cycles">-</div></div>
-                                <div class="stat-box"><div class="stat-label">Longest</div><div class="stat-value" id="last-cycle">- ms</div></div>
-                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value" id="avg-cycle">- ms</div></div>
-                                <div class="stat-box"><div class="stat-label">Tick</div><div class="stat-value-orange" id="tick-period">- ms</div></div>
-                                <div class="stat-box"><div class="stat-label">Longest</div><div class="stat-value-orange" id="last-cycle-ticks">-</div></div>
-                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value-orange" id="avg-cycle-ticks">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Rounds</div><div class="stat-value" id="total-cycles">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value" id="avg-cycle">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Max</div><div class="stat-value" id="max-cycle">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Last</div><div class="stat-value" id="last-cycle">-</div></div>
                             </div>
                         </div>
                         <!-- DEPARTURE row -->
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                             <span style="font-size:11px;font-weight:700;color:#2e7d32;min-width:75px;">DEPARTURE</span>
                             <div class="stat-grid" style="flex:1;margin-bottom:0;">
-                                <div class="stat-box"><div class="stat-label">Cycles</div><div class="stat-value" style="color:#4caf50" id="dep-total-cycles">-</div></div>
-                                <div class="stat-box"><div class="stat-label">Longest</div><div class="stat-value" style="color:#4caf50" id="dep-last-cycle">- ms</div></div>
-                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value" style="color:#4caf50" id="dep-avg-cycle">- ms</div></div>
-                                <div class="stat-box"><div class="stat-label">Tick</div><div class="stat-value" style="color:#e91e63" id="dep-tick-period">- ms</div></div>
-                                <div class="stat-box"><div class="stat-label">Longest</div><div class="stat-value" style="color:#e91e63" id="dep-last-cycle-ticks">-</div></div>
-                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value" style="color:#e91e63" id="dep-avg-cycle-ticks">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Rounds</div><div class="stat-value" style="color:#4caf50" id="dep-total-cycles">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Average</div><div class="stat-value" style="color:#4caf50" id="dep-avg-cycle">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Max</div><div class="stat-value" style="color:#4caf50" id="dep-max-cycle">-</div></div>
+                                <div class="stat-box"><div class="stat-label">Last</div><div class="stat-value" style="color:#4caf50" id="dep-last-cycle">-</div></div>
                             </div>
                         </div>
 
-                        <h2>Cycle Time (Last 1000)</h2>
+                        <h2>Scheduler Round Time (Last 1000) — tick = 40 ms</h2>
                         <div class="legend" style="margin-bottom:6px;">
-                            <span class="legend-item"><span class="swatch" style="background:#2196f3"></span>Tasks wall</span>
-                            <span class="legend-item"><span class="swatch" style="background:#ff9800"></span>Tasks sim</span>
-                            <span class="legend-item"><span class="swatch" style="background:#4caf50"></span>Dep wall</span>
-                            <span class="legend-item"><span class="swatch" style="background:#e91e63"></span>Dep sim</span>
+                            <span class="legend-item"><span class="swatch" style="background:#2196f3"></span>TSK (ms)</span>
+                            <span class="legend-item"><span class="swatch" style="background:#4caf50"></span>DEP (ms)</span>
                         </div>
                         <div id="cycle-chart"></div>
                     </div>
@@ -394,7 +377,7 @@
 
     <script>
         let chartInitialized = false;
-        let svg, x, y, line, line2, depLine, depLine2, area, path, path2, depPath, depPath2, areaPath, depAreaPath, g;
+        let svg, x, y, line, depLine, area, path, depPath, areaPath, depAreaPath, g;
         // Tighter margins to keep chart fully inside its panel
         const margin = {top: 14, right: 14, bottom: 26, left: 44};
         let cycleChartSize = { width: 0, height: 0 };
@@ -423,72 +406,26 @@
                 
                 if (data.success && data.state) {
                     const s = data.state;
+                    const tsk = s.tsk || {};
+                    const dep = s.dep || {};
+                    const fmtMs = (ms) => ms > 0 ? (ms < 1000 ? ms + ' ms' : (ms/1000).toFixed(2) + ' s') : '-';
                     
                     // ── TASKS stats ──
-                    document.getElementById('total-cycles').textContent = s.totalCycles;
-                    document.getElementById('last-cycle').textContent = s.longestCycleTimeMs + ' ms';
-
-                    const tickPeriodMs = Number(s.cycleTickPeriodMs);
-                    document.getElementById('tick-period').textContent = (Number.isFinite(tickPeriodMs) && tickPeriodMs > 0)
-                        ? (Math.round(tickPeriodMs) + ' ms')
-                        : '-';
-
-                    const longestCycleTicks = Number(s.longestCycleTicks);
-                    document.getElementById('last-cycle-ticks').textContent = Number.isFinite(longestCycleTicks) && longestCycleTicks > 0
-                        ? String(longestCycleTicks)
-                        : '-';
-                    
-                    const history = s.cycleHistory || [];
-                    const simHistory = s.cycleSimTimeHistory || [];
-                    const tickHistory = s.cycleTickHistory || [];
-                    if (history.length > 0) {
-                        const last100 = history.slice(-100);
-                        const avg = Math.round(last100.reduce((a, b) => a + b, 0) / last100.length);
-                        document.getElementById('avg-cycle').textContent = avg + ' ms';
-
-                        if (tickHistory.length > 0) {
-                            const last100Ticks = tickHistory.slice(-100);
-                            const avgTicks = Math.round(last100Ticks.reduce((a, b) => a + b, 0) / last100Ticks.length);
-                            document.getElementById('avg-cycle-ticks').textContent = String(avgTicks);
-                        } else {
-                            document.getElementById('avg-cycle-ticks').textContent = '-';
-                        }
-                    }
+                    document.getElementById('total-cycles').textContent = tsk.count || 0;
+                    document.getElementById('avg-cycle').textContent = fmtMs(tsk.avgMs || 0);
+                    document.getElementById('max-cycle').textContent = fmtMs(tsk.maxMs || 0);
+                    document.getElementById('last-cycle').textContent = fmtMs(tsk.lastMs || 0);
 
                     // ── DEPARTURE stats ──
-                    const dep = s.departureCycles || {};
-                    document.getElementById('dep-total-cycles').textContent = dep.totalCycles || 0;
-                    document.getElementById('dep-last-cycle').textContent = (dep.longestCycleTimeMs || 0) + ' ms';
+                    document.getElementById('dep-total-cycles').textContent = dep.count || 0;
+                    document.getElementById('dep-avg-cycle').textContent = fmtMs(dep.avgMs || 0);
+                    document.getElementById('dep-max-cycle').textContent = fmtMs(dep.maxMs || 0);
+                    document.getElementById('dep-last-cycle').textContent = fmtMs(dep.lastMs || 0);
 
-                    const depTickMs = Number(dep.cycleTickPeriodMs);
-                    document.getElementById('dep-tick-period').textContent = (Number.isFinite(depTickMs) && depTickMs > 0)
-                        ? (Math.round(depTickMs) + ' ms')
-                        : '-';
-
-                    const depLongestTicks = Number(dep.longestCycleTicks);
-                    document.getElementById('dep-last-cycle-ticks').textContent = Number.isFinite(depLongestTicks) && depLongestTicks > 0
-                        ? String(depLongestTicks)
-                        : '-';
-
-                    const depHistory = dep.cycleHistory || [];
-                    const depSimHistory = dep.cycleSimTimeHistory || [];
-                    const depTickHistory = dep.cycleTickHistory || [];
-                    if (depHistory.length > 0) {
-                        const depLast100 = depHistory.slice(-100);
-                        const depAvg = Math.round(depLast100.reduce((a, b) => a + b, 0) / depLast100.length);
-                        document.getElementById('dep-avg-cycle').textContent = depAvg + ' ms';
-
-                        if (depTickHistory.length > 0) {
-                            const depLast100Ticks = depTickHistory.slice(-100);
-                            const depAvgTicks = Math.round(depLast100Ticks.reduce((a, b) => a + b, 0) / depLast100Ticks.length);
-                            document.getElementById('dep-avg-cycle-ticks').textContent = String(depAvgTicks);
-                        } else {
-                            document.getElementById('dep-avg-cycle-ticks').textContent = '-';
-                        }
-                    }
-
-                    // ── Combined chart update ──
-                    updateChart(history, simHistory, depHistory, depSimHistory);
+                    // ── Chart update: tick history in ms ──
+                    const tskHistory = (tsk.historyMs || []);
+                    const depHistory = (dep.historyMs || []);
+                    updateChart(tskHistory, depHistory);
                 }
 
                 // Update hoist X chart (uses sim time)
@@ -785,9 +722,7 @@
             y = d3.scaleLinear().range([height, 0]);
 
             line = d3.line().x((d, i) => x(i)).y(d => y(d));
-            line2 = d3.line().x((d, i) => x(i)).y(d => y(d));
             depLine = d3.line().x((d, i) => x(i)).y(d => y(d));
-            depLine2 = d3.line().x((d, i) => x(i)).y(d => y(d));
 
             area = d3.area().x((d, i) => x(i)).y0(height).y1(d => y(d));
 
@@ -800,14 +735,12 @@
             depAreaPath = g.append("path").attr("class", "dep-area");
             // Lines
             path = g.append("path").attr("class", "line");
-            path2 = g.append("path").attr("class", "line2");
             depPath = g.append("path").attr("class", "dep-line");
-            depPath2 = g.append("path").attr("class", "dep-line2");
 
             chartInitialized = true;
         }
 
-        function updateChart(tasksWall, tasksSim, depWall, depSim) {
+        function updateChart(tskMs, depMs) {
             const container = document.getElementById('cycle-chart');
             const width = container.clientWidth - margin.left - margin.right;
             const height = container.clientHeight - margin.top - margin.bottom;
@@ -818,33 +751,27 @@
                 initChart();
             }
 
-            const sA = Array.isArray(tasksWall) ? tasksWall : [];
-            const sB = Array.isArray(tasksSim) ? tasksSim : [];
-            const sC = Array.isArray(depWall) ? depWall : [];
-            const sD = Array.isArray(depSim) ? depSim : [];
-            const maxLen = Math.max(sA.length, sB.length, sC.length, sD.length);
+            const sA = Array.isArray(tskMs) ? tskMs : [];
+            const sC = Array.isArray(depMs) ? depMs : [];
+            const maxLen = Math.max(sA.length, sC.length);
 
             x.domain([0, Math.max(0, maxLen - 1)]);
             const maxY = Math.max(
                 50,
                 (sA.length ? d3.max(sA) : 0) * 1.1,
-                (sB.length ? d3.max(sB) : 0) * 1.1,
-                (sC.length ? d3.max(sC) : 0) * 1.1,
-                (sD.length ? d3.max(sD) : 0) * 1.1
+                (sC.length ? d3.max(sC) : 0) * 1.1
             );
             y.domain([0, maxY]);
 
             svg.select(".x.axis").call(d3.axisBottom(x).ticks(5));
-            svg.select(".y.axis").call(d3.axisLeft(y).ticks(5));
+            svg.select(".y.axis").call(d3.axisLeft(y).ticks(5).tickFormat(d => d >= 1000 ? (d/1000).toFixed(1) + 's' : d + 'ms'));
 
-            // Tasks
+            // TSK
             areaPath.datum(sA).attr("d", area);
             path.datum(sA).attr("d", line);
-            path2.datum(sB).attr("d", line2);
-            // Departure
+            // DEP
             depAreaPath.datum(sC).attr("d", d3.area().x((d,i)=>x(i)).y0(height).y1(d=>y(d)));
             depPath.datum(sC).attr("d", depLine);
-            depPath2.datum(sD).attr("d", depLine2);
         }
 
         // ═══════════════════════════════════════════════════════════════════════════════════════

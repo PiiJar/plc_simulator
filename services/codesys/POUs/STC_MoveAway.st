@@ -104,6 +104,7 @@ FOR ti := 1 TO MAX_Transporters DO
 
   g_transporter[ti].Phase := 1;
   g_transporter[ti].LiftStationTarget := target_station;
+  g_transporter[ti].SinkStationTarget := 0;
   g_transporter[ti].XDriveTarget := g_station[target_station].XPosition;
   g_transporter[ti].XFinalTarget := g_station[target_station].XPosition;
 

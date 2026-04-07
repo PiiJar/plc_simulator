@@ -87,6 +87,8 @@ VAR
   slot_end                  : LINT;
   latest_end                : LINT;
   travel_from_sink          : REAL;
+  travel_to_lift_s          : REAL;
+  trans_pos                 : INT;
   ntt_duration              : LINT;
   slot_ok                   : BOOL;
   sh                        : INT;
@@ -271,7 +273,21 @@ FOR ui := 1 TO MAX_Units DO
               i_to_device_delay_x10 := g_station[dest_stn].DeviceDelay,
               i_drip_tray_delay_x10 := g_cfg[cov_t].DripTrayDelay);
 
-            task_start := i_time_s;
+            (* ── Travel-to: time for transporter to reach lift station ── *)
+            travel_to_lift_s := 0.0;
+            IF g_transporter[cov_t].Phase = 0 THEN
+              trans_pos := g_transporter[cov_t].CurrentStation;
+            ELSE
+              trans_pos := g_transporter[cov_t].SinkStationTarget;
+            END_IF;
+            IF trans_pos > 0 AND trans_pos <> loc THEN
+              travel_to_lift_s := STC_CalcHorizontalTravel(
+                i_from_stn := trans_pos,
+                i_to_stn   := loc,
+                i_move     := tmp_move);
+            END_IF;
+
+            task_start := i_time_s + REAL_TO_LINT(travel_to_lift_s);
             task_end   := task_start + REAL_TO_LINT(xfer_s);
             ntt_duration := task_end - task_start;
 

@@ -17,6 +17,7 @@ const router = express.Router();
 // ── Dependencies (injected via init()) ──────────────────────────
 let _dbPool = null;
 let _getState = null;   // () => { plcState, plcMeta, schedulerDebug, twaLimits, stationsConfig }
+let _getDispatcher = null;  // () => dispatcher
 
 // ═══════════════════════════════════════════════════════════════════════
 // 1. TRANSPORTER X-POSITION RING BUFFER
@@ -48,88 +49,56 @@ function sampleHoistPositions(transporters, simTimeMs) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// 2. SCHEDULER CYCLE-TIME TRACKING
+// 2. SCHEDULER ROUND-TIME TRACKING (PLC tick-based)
+//    PLC reports round_ticks for TSK and DEP via OPC UA.
+//    Each scheduler tick = 40 ms (20 ms PLC cycle × 2 alternation).
 // ═══════════════════════════════════════════════════════════════════════
-const MAX_CYCLE_HISTORY = 1000;
-const TSK_READY_PHASE = 10000;
-const DEP_DONE_PHASE = 9000;
+const MAX_ROUND_HISTORY = 1000;
+const TICK_MS = 40; // TSK/DEP each execute every other PLC cycle
 
-function freshStats() {
+function freshRoundStats() {
+  return { history: [], prevTicks: 0 };
+}
+
+const tskRound = freshRoundStats();
+const depRound = freshRoundStats();
+
+function pushRound(stats, ticks) {
+  if (ticks <= 0) return;
+  stats.history.push(ticks);
+  while (stats.history.length > MAX_ROUND_HISTORY) stats.history.shift();
+}
+
+function roundSummary(stats) {
+  const h = stats.history;
+  if (h.length === 0) return { count: 0, avgMs: 0, maxMs: 0, lastMs: 0, avgTicks: 0, maxTicks: 0, historyMs: [] };
+  const sum = h.reduce((a, b) => a + b, 0);
+  const max = Math.max(...h);
+  const last = h[h.length - 1];
   return {
-    total: 0, longest: 0,
-    history: [], simHistory: [], tickHistory: [],
-    startWall: 0, startTick: 0, startSimMs: 0,
-    inCycle: false,
+    count: h.length,
+    avgMs: Math.round((sum / h.length) * TICK_MS),
+    maxMs: max * TICK_MS,
+    lastMs: last * TICK_MS,
+    avgTicks: +(sum / h.length).toFixed(1),
+    maxTicks: max,
+    historyMs: h.map(t => t * TICK_MS),
   };
 }
 
-const tskStats = freshStats();
-const depStats = freshStats();
-let prevTskPhase = -1;
-let prevDepPhase = -1;
-const tickPeriodMs = { tsk: 0, dep: 0 };
-const longestTicks = { tsk: 0, dep: 0 };
-
-function recordCycle(stats, wallMs, ticks, simDeltaMs, key) {
-  stats.total++;
-  if (wallMs > stats.longest) stats.longest = wallMs;
-  stats.history.push(wallMs);
-  stats.simHistory.push(simDeltaMs);
-  stats.tickHistory.push(ticks);
-  while (stats.history.length > MAX_CYCLE_HISTORY) {
-    stats.history.shift();
-    stats.simHistory.shift();
-    stats.tickHistory.shift();
-  }
-  if (ticks > longestTicks[key]) longestTicks[key] = ticks;
-  // Estimate tick period from last N completed cycles
-  const n = Math.min(10, stats.history.length);
-  const sumW = stats.history.slice(-n).reduce((a, b) => a + b, 0);
-  const sumT = stats.tickHistory.slice(-n).reduce((a, b) => a + b, 0);
-  tickPeriodMs[key] = sumT > 0 ? Math.round(sumW / sumT) : 0;
-}
-
-function detectCycleEdge(stats, key, prevPhase, curPhase, readyPhase, now, cycleCount, simMs) {
-  // Cycle start: phase drops from >= ready to < ready (scheduler restarted)
-  if (prevPhase >= readyPhase && curPhase < readyPhase && curPhase > 0) {
-    stats.startWall = now;
-    stats.startTick = cycleCount;
-    stats.startSimMs = simMs;
-    stats.inCycle = true;
-  }
-  // First-ever start: 0 → >0
-  if (prevPhase === 0 && curPhase > 0 && curPhase < readyPhase) {
-    stats.startWall = now;
-    stats.startTick = cycleCount;
-    stats.startSimMs = simMs;
-    stats.inCycle = true;
-  }
-  // Cycle complete: phase reaches ready
-  if (curPhase >= readyPhase && prevPhase < readyPhase && stats.inCycle) {
-    const wallMs = now - stats.startWall;
-    const ticks = cycleCount - stats.startTick;
-    const simDelta = simMs - stats.startSimMs;
-    if (wallMs > 0) recordCycle(stats, wallMs, ticks, simDelta, key);
-    stats.inCycle = false;
-  }
-}
-
-function trackSchedulerPhases(schedulerDebug, cycleCount, timeS) {
+function trackRoundTicks(schedulerDebug) {
   if (!schedulerDebug) return;
-  const tskPhase = schedulerDebug.tsk_phase || 0;
-  const depPhase = schedulerDebug.dep_phase || 0;
-  const now = Date.now();
-  const simMs = (timeS || 0) * 1000;
-
-  if (prevTskPhase >= 0) {
-    detectCycleEdge(tskStats, 'tsk', prevTskPhase, tskPhase, TSK_READY_PHASE, now, cycleCount, simMs);
+  const tskTicks = schedulerDebug.tsk_round_ticks || 0;
+  const depTicks = schedulerDebug.dep_round_ticks || 0;
+  // PLC updates round_ticks at RESTART; value changes = new round completed
+  if (tskTicks > 0 && tskTicks !== tskRound.prevTicks) {
+    pushRound(tskRound, tskTicks);
+    tskRound.prevTicks = tskTicks;
   }
-  if (prevDepPhase >= 0) {
-    detectCycleEdge(depStats, 'dep', prevDepPhase, depPhase, DEP_DONE_PHASE, now, cycleCount, simMs);
+  if (depTicks > 0 && depTicks !== depRound.prevTicks) {
+    pushRound(depRound, depTicks);
+    depRound.prevTicks = depTicks;
   }
-
-  prevTskPhase = tskPhase;
-  prevDepPhase = depPhase;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -138,44 +107,82 @@ function trackSchedulerPhases(schedulerDebug, cycleCount, timeS) {
 function tick({ transporters, meta, schedulerDebug }) {
   const simMs = (meta.time_s || 0) * 1000;
   sampleHoistPositions(transporters || [], simMs);
-  trackSchedulerPhases(schedulerDebug, meta.cycle_count || 0, meta.time_s || 0);
+  trackRoundTicks(schedulerDebug);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
 // init()
 // ═══════════════════════════════════════════════════════════════════════
-function init({ dbPool, getState }) {
+function init({ dbPool, getState, getDispatcher }) {
   _dbPool = dbPool;
   _getState = getState;
+  _getDispatcher = getDispatcher || null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
 // ROUTES
 // ═══════════════════════════════════════════════════════════════════════
 
-// ── GET /api/scheduler/state — TSK + DEP cycle-time stats ──────────
-router.get('/scheduler/state', (req, res) => {
-  res.json({
-    success: true,
-    state: {
-      totalCycles: tskStats.total,
-      longestCycleTimeMs: tskStats.longest,
-      cycleTickPeriodMs: tickPeriodMs.tsk,
-      longestCycleTicks: longestTicks.tsk,
-      cycleHistory: tskStats.history,
-      cycleSimTimeHistory: tskStats.simHistory,
-      cycleTickHistory: tskStats.tickHistory,
-      departureCycles: {
-        totalCycles: depStats.total,
-        longestCycleTimeMs: depStats.longest,
-        cycleTickPeriodMs: tickPeriodMs.dep,
-        longestCycleTicks: longestTicks.dep,
-        cycleHistory: depStats.history,
-        cycleSimTimeHistory: depStats.simHistory,
-        cycleTickHistory: depStats.tickHistory,
+// ── GET /api/scheduler/state — TSK + DEP cycle-time stats + production ─
+router.get('/scheduler/state', async (req, res) => {
+  try {
+    // Production stats from dispatcher + DB
+    let productionStats = null;
+    let avgDepartureIntervalSec = 0;
+    const dp = _getDispatcher ? _getDispatcher() : null;
+    if (dp) {
+      const st = dp.getStatus();
+      const total = st.total || 0;
+      const dispatched = (st.dispatched || []).length;
+
+      let completed = 0;
+      let prodStartTs = null;
+      if (_dbPool && total > 0) {
+        // Find current production run start
+        const ps = await _dbPool.query(
+          `SELECT created_at FROM sim_log WHERE event = 'PRODUCTION_START' ORDER BY created_at DESC LIMIT 1`);
+        prodStartTs = ps.rows.length > 0 ? ps.rows[0].created_at : null;
+
+        const r = await _dbPool.query(
+          `SELECT COUNT(DISTINCT batch_code) AS n FROM batch_completed WHERE ($1::timestamptz IS NULL OR received_at >= $1)`,
+          [prodStartTs]);
+        completed = parseInt(r.rows[0].n, 10) || 0;
+      }
+
+      const inProgress = Math.max(0, dispatched - completed);
+
+      productionStats = {
+        totalBatches: total,
+        inProgressCount: inProgress,
+        completedCount: completed,
+        queueLength: Math.max(0, total - completed - inProgress),
+      };
+
+      // Average cycle time from batch_activated timestamps (current run only)
+      if (_dbPool && dispatched >= 2) {
+        const r2 = await _dbPool.query(
+          `SELECT EXTRACT(EPOCH FROM (MAX(plc_ts) - MIN(plc_ts))) / NULLIF(COUNT(*) - 1, 0) AS avg_s
+           FROM batch_activated
+           WHERE ($1::timestamptz IS NULL OR received_at >= $1)`,
+          [prodStartTs]);
+        avgDepartureIntervalSec = parseFloat(r2.rows[0].avg_s) || 0;
+      }
+    }
+
+    res.json({
+      success: true,
+      state: {
+        tsk: roundSummary(tskRound),
+        dep: roundSummary(depRound),
+        tickMs: TICK_MS,
+        avgDepartureIntervalSec,
       },
-    },
-  });
+      productionStats,
+    });
+  } catch (err) {
+    console.error('[dashboard] /scheduler/state error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ── GET /api/dashboard/hoist-x?line=100 — Transporter X timeline ───

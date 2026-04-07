@@ -399,8 +399,7 @@ function Transporter2D({
       {/* Batch on transporter - only in production view */}
       {!isProcessView && renderBatchOnTransporter()}
 
-      {/* DEBUG: batch timing info */}
-      {!isProcessView && renderBatchDebug()}
+
 
       {/* Unit target indicator — rendered AFTER batch so it appears on top */}
       {!isProcessView && hasUnit && unit.target && unit.target !== 'none' && unit.target !== 'empty' && (

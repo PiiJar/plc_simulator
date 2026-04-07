@@ -44,6 +44,8 @@ VAR_GLOBAL
   g_sched_dbg_dep_cur_wait_unit : INT;  (* DEP current waiting batch unit *)
   g_sched_dbg_dep_wait_cnt      : INT;  (* DEP waiting batch count *)
   g_sched_dbg_batch_cnt         : INT;  (* TSK active batch count *)
+  g_sched_dbg_tsk_round_ticks    : INT;  (* TSK ticks consumed by last completed round *)
+  g_sched_dbg_dep_round_ticks    : INT;  (* DEP ticks consumed by last completed round *)
 
 
   (* ===== TSK Conflict Debug (non-LINT for OPC UA) ===== *)

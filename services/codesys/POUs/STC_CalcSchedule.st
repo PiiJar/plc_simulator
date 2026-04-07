@@ -163,16 +163,11 @@ IF is_on_stn AND start_st >= 1 THEN
       io_schedule[i_unit].Stages[0].MinTime   := io_batch[i_unit].MinTime;
       io_schedule[i_unit].Stages[0].MaxTime   := io_batch[i_unit].MaxTime;
     ELSE
-      (* Pickup wait: transporter travel time to this station, min 5s *)
-      xfer_t := STC_CalcTransferTime(
-        i_from_stn            := g_transporter[i_trans].CurrentStation,
-        i_to_stn              := location,
-        i_move                := g_move[i_trans],
-        i_from_dropping_x10   := 0,
-        i_to_device_delay_x10 := 0,
-        i_drip_tray_delay_x10 := 0
-      );
-      calc_s := xfer_t;
+      (* Pickup wait: transporter horizontal travel time to this station, min 5s *)
+      calc_s := STC_CalcHorizontalTravel(
+        i_from_stn := g_transporter[i_trans].CurrentStation,
+        i_to_stn   := location,
+        i_move     := g_move[i_trans]);
       IF calc_s < 5.0 THEN calc_s := 5.0; END_IF;
       exit_t := i_time_s + REAL_TO_LINT(calc_s);
       io_schedule[i_unit].Stages[0].ExitTime  := exit_t;

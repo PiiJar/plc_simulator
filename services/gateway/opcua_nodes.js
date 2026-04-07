@@ -203,8 +203,8 @@ const SCHED_DEBUG = {
   deficit:            S('g_dbg_tsk_deficit'),
   stretch_cnt:        S('g_dbg_tsk_stretch_cnt'),
   total_adv:          S('g_dbg_tsk_total_adv'),
-  total_delay:        S('g_dbg_tsk_total_delay'),
-};
+  total_delay:        S('g_dbg_tsk_total_delay'),  tsk_round_ticks:      S('g_sched_dbg_tsk_round_ticks'),
+  dep_round_ticks:      S('g_sched_dbg_dep_round_ticks'),};
 
 // Program CalTime snapshot per unit (DINT, safe for OPC UA batch read)
 function progCalDebug(uid) {

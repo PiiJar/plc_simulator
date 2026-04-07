@@ -43,6 +43,7 @@ class OpcuaAdapter extends PlcAdapter {
     this.session = null;
     this._reconnecting = false;
     this._readList = null;  // cached read list
+    this._pollCount = 0;    // monotonic poll counter (used as cycle_count)
     // Persistent phase stats accumulators (survive across polls)
     this._phaseStats = { 1: null, 2: null, 3: null };
   }
@@ -436,7 +437,7 @@ class OpcuaAdapter extends PlcAdapter {
       const meta = {
         station_count: toNum(v['meta.station_count']),
         init_done: toNum(v['meta.station_count']) > 0,  // inferred from station_count
-        cycle_count: 0,  // Not needed with OPC UA (use subscription heartbeat)
+        cycle_count: ++this._pollCount,
         production_queue: toNum(v['meta.production_queue']),
         time_s: toNum(v['meta.time_seconds']),  // PLC system time (seconds)
       };

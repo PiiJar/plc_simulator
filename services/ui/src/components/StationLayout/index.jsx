@@ -124,24 +124,6 @@ function StationLayout({
           return null;
         })}
 
-        {/* Toggle button for view mode */}
-        <foreignObject x={width - 180} y={10} width="170" height="40">
-          <button
-            onClick={() => setViewMode(m => m === 'production' ? 'process' : 'production')}
-            style={{
-              padding: '8px 16px',
-              fontSize: '12px',
-              cursor: 'pointer',
-              background: '#0066cc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px'
-            }}
-          >
-            View: {viewMode}
-          </button>
-        </foreignObject>
-
         {/* Tanks from tanks.json */}
         {tanks.map(tank => (
           <Tank

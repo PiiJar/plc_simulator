@@ -119,6 +119,7 @@ VAR_OUTPUT
   o_reject_cnt              : INT;
   o_fit_round               : INT;
   o_cur_wait_unit           : INT;
+  o_round_ticks             : INT;     (* ticks consumed by last completed round *)
 END_VAR
 
 VAR
@@ -220,7 +221,7 @@ VAR
   cap_conflict              : BOOL;
   cap_margin                : LINT := 2;
 
-
+  round_ticks               : INT := 0;  (* ticks since last RESTART *)
 END_VAR
 
 IF NOT i_run THEN
@@ -967,6 +968,8 @@ ELSIF phase >= 8200 AND phase <= 8499 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 8500 THEN
   g_dep_activated := FALSE;
+  o_round_ticks := round_ticks;
+  round_ticks := 0;
   next_phase := 1;
 
 (* ════════════════════════════════════════════════════════════ *)

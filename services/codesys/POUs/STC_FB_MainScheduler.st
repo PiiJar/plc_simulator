@@ -56,6 +56,8 @@ VAR_EXTERNAL
   g_sched_dbg_dep_cur_wait_unit : INT;
   g_sched_dbg_dep_wait_cnt  : INT;
   g_sched_dbg_batch_cnt     : INT;
+  g_sched_dbg_tsk_round_ticks : INT;
+  g_sched_dbg_dep_round_ticks : INT;
 END_VAR
 
 VAR_OUTPUT
@@ -162,5 +164,7 @@ g_sched_dbg_dep_fit_round    := dep_sched.o_fit_round;
 g_sched_dbg_dep_cur_wait_unit := dep_sched.o_cur_wait_unit;
 g_sched_dbg_dep_wait_cnt     := dep_sched.o_wait_cnt;
 g_sched_dbg_batch_cnt        := tsk_sched.o_batch_cnt;
+g_sched_dbg_tsk_round_ticks  := tsk_sched.o_round_ticks;
+g_sched_dbg_dep_round_ticks  := dep_sched.o_round_ticks;
 
 END_FUNCTION_BLOCK

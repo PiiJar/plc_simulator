@@ -90,6 +90,7 @@ VAR_OUTPUT
   o_task_cnt                : INT;
   o_cycle_cnt               : INT;
   o_conflict                : BOOL;
+  o_round_ticks             : INT;     (* ticks consumed by last completed round *)
 END_VAR
 
 VAR
@@ -133,6 +134,7 @@ VAR
   bi                        : INT;
   total_tasks               : INT;
   cycle_count               : INT := 0;
+  round_ticks               : INT := 0;  (* ticks since last RESTART *)
 END_VAR
 
 IF NOT i_run THEN
@@ -147,6 +149,7 @@ IF NOT i_run THEN
 END_IF;
 
 next_phase := 0;
+round_ticks := round_ticks + 1;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 0: STOPPED                                             *)
@@ -439,6 +442,8 @@ ELSIF phase = 10001 THEN
 ELSIF phase = 10002 THEN
   cycle_count := cycle_count + 1;
   o_cycle_cnt := cycle_count;
+  o_round_ticks := round_ticks;
+  round_ticks := 0;
   next_phase := 1;
 
 (* ══════════════════════════════════════════════════════════════ *)
