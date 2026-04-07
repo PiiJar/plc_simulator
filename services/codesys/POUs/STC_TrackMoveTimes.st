@@ -97,10 +97,6 @@ END_CASE;
 
 (* ── Invalidate on anomaly (checked at every phase transition) ── *)
 IF i_new > 0 THEN
-    (* Collision avoidance active: drive target limited *)
-    IF g_transporter[t].XDriveTarget <> g_transporter[t].XFinalTarget THEN
-        g_actual_move[t].Invalidated := TRUE;
-    END_IF;
     (* Not in automatic mode: task interrupted *)
     IF g_transporter[t].Status < 4 THEN
         g_actual_move[t].Invalidated := TRUE;
@@ -167,13 +163,7 @@ IF i_prev = 4 AND i_new = 0 THEN
                     g_move[t].SinkTime[si] :=
                         (g_move[t].SinkTime[si] * 4 + raw_sink) / 5;
 
-                    (* Travel: start → lift (both directions) *)
-                    g_move[t].Travel[st_i].ToTime[li] :=
-                        (g_move[t].Travel[st_i].ToTime[li] * 4 + raw_trav1) / 5;
-                    g_move[t].Travel[li].ToTime[st_i] :=
-                        (g_move[t].Travel[li].ToTime[st_i] * 4 + raw_trav1) / 5;
-
-                    (* Travel: lift → sink (both directions) *)
+                    (* Travel: lift → sink (both directions) — phase 3 is always exact station-to-station *)
                     g_move[t].Travel[li].ToTime[si] :=
                         (g_move[t].Travel[li].ToTime[si] * 4 + raw_trav2) / 5;
                     g_move[t].Travel[si].ToTime[li] :=

@@ -115,9 +115,9 @@ FOR i := 1 TO MAX_Transporters DO
      AND (g_transporter[i].TaskId <> g_sim_trans[i].RunningTaskId) THEN
     g_sim_trans[i].RunningTaskId := g_transporter[i].TaskId;
     g_transporter[i].XFinalTarget := SIM_FindStation(station_number := g_transporter[i].LiftStationTarget);
+    g_transporter[i].Status := 4;  (* auto_run — must be set before TrackMoveTimes *)
     g_transporter[i].Phase := 1;
     STC_TrackMoveTimes(i_trans := i, i_prev := 0, i_new := 1);
-    g_transporter[i].Status := 4;  (* auto_run *)
     g_sim_trans[i].ZStage := 0;
     g_sim_trans[i].ZTimer := 0.0;
     (* Record task start timestamp *)
