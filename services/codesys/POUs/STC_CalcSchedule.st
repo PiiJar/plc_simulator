@@ -79,7 +79,6 @@ VAR
   cand_arr                  : ARRAY[1..5] OF INT;
   cand_cnt                  : INT;
   sched_occupied            : ARRAY[1..5] OF BOOL;
-  phys_occupied             : ARRAY[1..5] OF BOOL;
   best_change_time          : LINT;
   my_entry                  : LINT;
   my_exit                   : LINT;
@@ -191,7 +190,6 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
       cand_cnt := cand_cnt + 1;
       cand_arr[cand_cnt] := io_program[i_unit].Steps[stg].Stations[p];
       sched_occupied[cand_cnt] := FALSE;
-      phys_occupied[cand_cnt] := FALSE;
     END_IF;
   END_FOR;
 
@@ -249,16 +247,12 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
           END_IF;
         END_FOR;
 
-        FOR uj := 1 TO MAX_Units DO
-          IF g_unit[uj].location = cand_arr[p] AND g_unit[uj].Status = USED THEN
-            phys_occupied[p] := TRUE;
-          END_IF;
-        END_FOR;
       END_FOR;
 
+      (* Pass 1: prefer schedule-free station, pick earliest ChangeTime *)
       best_change_time := LINT#9999999999;
       FOR p := 1 TO cand_cnt DO
-        IF NOT sched_occupied[p] AND NOT phys_occupied[p] THEN
+        IF NOT sched_occupied[p] THEN
           IF cand_arr[p] >= MIN_StationIndex AND cand_arr[p] <= MAX_StationIndex THEN
             IF g_station_loc[cand_arr[p]].ChangeTime < best_change_time THEN
               best_change_time := g_station_loc[cand_arr[p]].ChangeTime;
@@ -268,25 +262,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
         END_IF;
       END_FOR;
 
-      (* Pass 2: prefer physically free even if sched-occupied *)
-      IF chosen_stn = 0 THEN
-        FOR p := 1 TO cand_cnt DO
-          IF NOT phys_occupied[p] AND chosen_stn = 0 THEN
-            chosen_stn := cand_arr[p];
-          END_IF;
-        END_FOR;
-      END_IF;
-
-      (* Pass 3: prefer sched-free even if phys-occupied *)
-      IF chosen_stn = 0 THEN
-        FOR p := 1 TO cand_cnt DO
-          IF NOT sched_occupied[p] AND chosen_stn = 0 THEN
-            chosen_stn := cand_arr[p];
-          END_IF;
-        END_FOR;
-      END_IF;
-
-      (* Pass 4: all occupied — pick first candidate *)
+      (* Pass 2: all sched-occupied — pick first candidate *)
       IF chosen_stn = 0 THEN
         chosen_stn := cand_arr[1];
       END_IF;
