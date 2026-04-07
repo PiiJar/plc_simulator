@@ -7,7 +7,8 @@ RUN npm install --production
 
 COPY index.js plc_adapter.js opcua_adapter.js opcua_nodes.js \
      db.js event_consumer.js file_routes.js legacy_stubs.js \
-     production_dispatcher.js dashboard_api.js ./
+     production_dispatcher.js dashboard_api.js \
+     export_movement_times.js ./
 
 EXPOSE 3001
 

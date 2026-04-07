@@ -474,9 +474,10 @@ app.post('/api/reset', async (req, res) => {
       return res.status(503).json({ success: false, error: 'PLC not connected' });
     }
 
-    // Pause poll loop
+    // Pause poll loop and reset phase stats
     pausePolling = true;
     while (polling) await new Promise(r => setTimeout(r, 10));
+    adapter.resetPhaseStats();
 
     // Load NTT data
     const nttFile = path.join(plantPath, 'no_treatment_tasks.json');

@@ -78,6 +78,7 @@ CASE i_prev OF
             g_actual_move[t].LiftStation  := g_transporter[t].LiftStationTarget;
             g_actual_move[t].SinkStation  := g_transporter[t].SinkStationTarget;
             g_actual_move[t].ts0 := g_time_100ms;
+            g_actual_move[t].Invalidated := FALSE;
         END_IF;
     1: (* 1→2 : nosto alkaa *)
         IF i_new = 2 THEN
@@ -91,16 +92,36 @@ CASE i_prev OF
         IF i_new = 4 THEN
             g_actual_move[t].ts3 := g_time_100ms;
         END_IF;
-    4: (* 4→0 : lasku päättyy — calculate and update g_move *)
-        IF i_new = 0 THEN
-            g_actual_move[t].ts4 := g_time_100ms;
+    4: (* 4→0 : handled after CASE — see below *)
+END_CASE;
 
-            (* Only update if all timestamps are valid *)
-            IF g_actual_move[t].ts0 > 0
-               AND g_actual_move[t].ts1 > 0
-               AND g_actual_move[t].ts2 > 0
-               AND g_actual_move[t].ts3 > 0
-            THEN
+(* ── Invalidate on anomaly (checked at every phase transition) ── *)
+IF i_new > 0 THEN
+    (* Collision avoidance active: drive target limited *)
+    IF g_transporter[t].XDriveTarget <> g_transporter[t].XFinalTarget THEN
+        g_actual_move[t].Invalidated := TRUE;
+    END_IF;
+    (* Not in automatic mode: task interrupted *)
+    IF g_transporter[t].Status < 4 THEN
+        g_actual_move[t].Invalidated := TRUE;
+    END_IF;
+    (* Transporter fault active *)
+    IF g_transporter[t].Fault THEN
+        g_actual_move[t].Invalidated := TRUE;
+    END_IF;
+END_IF;
+
+(* ── 4→0 completion: calculate and update g_move ── *)
+IF i_prev = 4 AND i_new = 0 THEN
+    g_actual_move[t].ts4 := g_time_100ms;
+
+    (* Only update if all timestamps are valid and transfer was normal *)
+    IF g_actual_move[t].ts0 > 0
+       AND g_actual_move[t].ts1 > 0
+       AND g_actual_move[t].ts2 > 0
+       AND g_actual_move[t].ts3 > 0
+       AND NOT g_actual_move[t].Invalidated
+    THEN
                 lift_stn  := g_actual_move[t].LiftStation;
                 sink_stn  := g_actual_move[t].SinkStation;
                 start_stn := g_actual_move[t].StartStation;
@@ -159,8 +180,7 @@ CASE i_prev OF
                         (g_move[t].Travel[si].ToTime[li] * 4 + raw_trav2) / 5;
                 END_IF;
             END_IF;
-        END_IF;
-END_CASE;
+END_IF;
 
 STC_TrackMoveTimes := TRUE;
 

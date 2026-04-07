@@ -11,7 +11,7 @@ const path = require('path');
 const { OPCUAClient, AttributeIds } = require('node-opcua-client');
 
 // ─── Config ──────────────────────────────────────────────────────────────
-const OPCUA_URL = process.env.OPCUA_URL || 'opc.tcp://localhost:4840';
+const OPCUA_URL = process.env.OPCUA_ENDPOINT || process.env.OPCUA_URL || 'opc.tcp://localhost:4840';
 const NS = parseInt(process.env.OPCUA_NS || '4');
 const DEVICE = process.env.OPCUA_DEVICE || 'CODESYS Control for Linux SL';
 const MAX_TRANSPORTERS = 3;
@@ -99,7 +99,22 @@ async function readInt(session, nid) {
     }
 
     result[key] = { id: tid, lift_s, sink_s, travel };
-    console.log(`  transporter ${tid}: ${Object.keys(lift_s).length} lift, ${Object.keys(sink_s).length} sink, ${Object.keys(travel).length} travel rows`);
+
+    // Read last transfer status from g_actual_move[tid]
+    const amBase = `g_actual_move[${tid}]`;
+    const lastStartStn = await readInt(session, S(`${amBase}.StartStation`));
+    const lastLiftStn  = await readInt(session, S(`${amBase}.LiftStation`));
+    const lastSinkStn  = await readInt(session, S(`${amBase}.SinkStation`));
+    const invalidated  = await readInt(session, S(`${amBase}.Invalidated`));
+    result[key].last_transfer = {
+      start_station: lastStartStn,
+      lift_station: lastLiftStn,
+      sink_station: lastSinkStn,
+      invalidated: !!invalidated,
+    };
+
+    console.log(`  transporter ${tid}: ${Object.keys(lift_s).length} lift, ${Object.keys(sink_s).length} sink, ${Object.keys(travel).length} travel rows, last_invalidated=${!!invalidated}`);
+
   }
 
   await session.close();

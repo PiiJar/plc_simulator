@@ -43,6 +43,46 @@ class OpcuaAdapter extends PlcAdapter {
     this.session = null;
     this._reconnecting = false;
     this._readList = null;  // cached read list
+    // Persistent phase stats accumulators (survive across polls)
+    this._phaseStats = { 1: null, 2: null, 3: null };
+  }
+
+  /** Reset phase stats accumulators (call on /api/reset) */
+  resetPhaseStats() {
+    this._phaseStats = { 1: null, 2: null, 3: null };
+  }
+
+  /**
+   * Accumulate phase duration into the correct bucket.
+   * Called once per transporter per poll cycle.
+   * @param {number} tid - Transporter id (1..3)
+   * @param {number} currentPhase - Current PLC phase (0..4)
+   * @param {number} nowMs - Current wall-clock time (ms)
+   * @returns {object} The accumulated stats for this transporter
+   */
+  _updatePhaseStats(tid, currentPhase, nowMs) {
+    let s = this._phaseStats[tid];
+    if (!s) {
+      s = this._phaseStats[tid] = {
+        idle_ms: 0, move_to_lift_ms: 0, lifting_ms: 0,
+        move_to_sink_ms: 0, sinking_ms: 0,
+        lastPhase: currentPhase, lastTime: nowMs,
+      };
+      return s;
+    }
+    const elapsed = nowMs - s.lastTime;
+    if (elapsed > 0 && elapsed < 10000) { // ignore gaps > 10 s (restart/pause)
+      switch (s.lastPhase) {
+        case 0: s.idle_ms += elapsed; break;
+        case 1: s.move_to_lift_ms += elapsed; break;
+        case 2: s.lifting_ms += elapsed; break;
+        case 3: s.move_to_sink_ms += elapsed; break;
+        case 4: s.sinking_ms += elapsed; break;
+      }
+    }
+    s.lastPhase = currentPhase;
+    s.lastTime = nowMs;
+    return s;
   }
 
   // ── Connection lifecycle ──────────────────────────────────────
@@ -318,6 +358,10 @@ class OpcuaAdapter extends PlcAdapter {
         const status = !isActive ? 0 : (phase > 0 ? 4 : 3);
         const zStage = toNum(v[`sim.${t}.z_stage`]);
 
+        // Accumulate phase stats for this transporter
+        const nowMs = Date.now();
+        const ps = isActive ? this._updatePhaseStats(t, phase, nowMs) : null;
+
         transporters.push({
           id: t,
           model: '2D',
@@ -355,13 +399,13 @@ class OpcuaAdapter extends PlcAdapter {
             y_max_drive_limit: 0,
             z_min_drive_limit: 0,
             z_max_drive_limit: 2500,
-            phase_stats_idle_ms: 0,
-            phase_stats_move_to_lift_ms: 0,
-            phase_stats_lifting_ms: 0,
-            phase_stats_move_to_sink_ms: 0,
-            phase_stats_sinking_ms: 0,
+            phase_stats_idle_ms: ps ? ps.idle_ms : 0,
+            phase_stats_move_to_lift_ms: ps ? ps.move_to_lift_ms : 0,
+            phase_stats_lifting_ms: ps ? ps.lifting_ms : 0,
+            phase_stats_move_to_sink_ms: ps ? ps.move_to_sink_ms : 0,
+            phase_stats_sinking_ms: ps ? ps.sinking_ms : 0,
             phase_stats_last_phase: phase,
-            phase_stats_last_time_ms: Date.now(),
+            phase_stats_last_time_ms: nowMs,
           },
         });
       }
