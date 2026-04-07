@@ -110,6 +110,8 @@ VAR_EXTERNAL
   g_dep_wk_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
   g_dep_wk_program          : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_dep_wk_batch            : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_event_pending           : UDT_JC_EventMsgType;
+  g_event_pending_valid     : BOOL;
 END_VAR
 
 VAR_OUTPUT
@@ -940,6 +942,19 @@ ELSIF phase = 8000 THEN
 
   g_dep_activated := TRUE;
   o_activated := TRUE;
+
+  (* ── Emit BATCH_ACTIVATED event (msg_type=4) ── *)
+  IF NOT g_event_pending_valid THEN
+    g_event_pending.MsgType := 4;
+    g_event_pending.TsHi := LINT_TO_INT(i_time_s / LINT#65536);
+    g_event_pending.TsLo := LINT_TO_INT(i_time_s MOD LINT#65536);
+    g_event_pending.Payload[1]  := cur_wait_unit;                        (* unit_id *)
+    g_event_pending.Payload[2]  := g_batch[cur_wait_unit].BatchCode;     (* batch_code *)
+    g_event_pending.Payload[3]  := g_batch[cur_wait_unit].ProgId;        (* program_id *)
+    g_event_pending.Payload[4]  := g_program[cur_wait_unit].StepCount;   (* stages_count *)
+    g_event_pending.Payload[5]  := g_dep_wk_schedule[cur_wait_unit].Stages[0].Station; (* start_station *)
+    g_event_pending_valid := TRUE;
+  END_IF;
 
   next_phase := 8100;
 

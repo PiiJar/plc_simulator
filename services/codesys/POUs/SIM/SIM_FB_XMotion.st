@@ -28,6 +28,7 @@ VAR_IN_OUT
 END_VAR
 VAR_OUTPUT
   arrived : BOOL;
+  x_drive : DINT;      (* actual drive target after limit clamping *)
 END_VAR
 VAR
   (* Internal REAL copies for physics integration *)
@@ -75,6 +76,8 @@ END_VAR
   ELSE
     drive_target := r_target;
   END_IF;
+
+  x_drive := REAL_TO_DINT(drive_target);
 
   arrived := ABS(r_pos - drive_target) <= 3.0;
   IF arrived THEN

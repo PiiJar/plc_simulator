@@ -162,7 +162,7 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 0.0,
-      "move_away": 0,
+      "move_away": 1,
       "start_station": false
     },
     {
@@ -177,7 +177,7 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 3.0,
-      "move_away": 0,
+      "move_away": 1,
       "start_station": false
     },
     {
@@ -207,7 +207,7 @@
       "kind": 0,
       "operation": 32,
       "device_delay": 0.0,
-      "move_away": 0,
+      "move_away": 1,
       "start_station": false
     },
     {

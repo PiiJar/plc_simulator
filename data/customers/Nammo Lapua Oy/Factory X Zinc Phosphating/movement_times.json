@@ -515,6 +515,12 @@
         "119": 7.2,
         "120": 4.3
       }
+    },
+    "last_transfer": {
+      "start_station": 109,
+      "lift_station": 101,
+      "sink_station": 103,
+      "invalidated": true
     }
   },
   "transporter_2": {
@@ -1034,12 +1040,24 @@
         "119": 7.2,
         "120": 4.3
       }
+    },
+    "last_transfer": {
+      "start_station": 118,
+      "lift_station": 118,
+      "sink_station": 113,
+      "invalidated": true
     }
   },
   "transporter_3": {
     "id": 3,
     "lift_s": {},
     "sink_s": {},
-    "travel": {}
+    "travel": {},
+    "last_transfer": {
+      "start_station": 0,
+      "lift_station": 0,
+      "sink_station": 0,
+      "invalidated": false
+    }
   }
 }

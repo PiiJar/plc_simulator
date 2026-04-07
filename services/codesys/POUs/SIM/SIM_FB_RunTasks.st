@@ -141,6 +141,7 @@ FOR i := 1 TO MAX_Transporters DO
         v_x      := tmp_vx
       );
       arrived_x := fb_x1.arrived;
+      g_transporter[i].XDriveTarget := fb_x1.x_drive;
     ELSIF i = 2 THEN
       fb_x2(
         delta_t  := 0.02,
@@ -154,6 +155,7 @@ FOR i := 1 TO MAX_Transporters DO
         v_x      := tmp_vx
       );
       arrived_x := fb_x2.arrived;
+      g_transporter[i].XDriveTarget := fb_x2.x_drive;
     ELSIF i = 3 THEN
       fb_x3(
         delta_t  := 0.02,
@@ -167,6 +169,7 @@ FOR i := 1 TO MAX_Transporters DO
         v_x      := tmp_vx
       );
       arrived_x := fb_x3.arrived;
+      g_transporter[i].XDriveTarget := fb_x3.x_drive;
     END_IF;
     g_transporter[i].XPosition  := tmp_x;
     g_sim_trans[i].XVelocity := tmp_vx;
@@ -392,6 +395,7 @@ FOR i := 1 TO MAX_Transporters DO
         v_x      := tmp_vx
       );
       arrived_x := fb_x1.arrived;
+      g_transporter[i].XDriveTarget := fb_x1.x_drive;
     ELSIF i = 2 THEN
       fb_x2(
         delta_t  := 0.02,
@@ -405,6 +409,7 @@ FOR i := 1 TO MAX_Transporters DO
         v_x      := tmp_vx
       );
       arrived_x := fb_x2.arrived;
+      g_transporter[i].XDriveTarget := fb_x2.x_drive;
     ELSIF i = 3 THEN
       fb_x3(
         delta_t  := 0.02,
@@ -418,6 +423,7 @@ FOR i := 1 TO MAX_Transporters DO
         v_x      := tmp_vx
       );
       arrived_x := fb_x3.arrived;
+      g_transporter[i].XDriveTarget := fb_x3.x_drive;
     END_IF;
     g_transporter[i].XPosition  := tmp_x;
     g_sim_trans[i].XVelocity := tmp_vx;
