@@ -6,7 +6,7 @@
  *   ns=<NS>;s=|var|<DEVICE>.Application.<GVL>.<Var>
  *
  * Actual PLC variable naming (IEC ST style):
- *   GVL_Parameters: g_transporter[1..3], g_unit[1..10], g_batch[1..10],
+ *   GVL_JC_Parameters: g_transporter[1..3], g_unit[1..10], g_batch[1..10],
  *                   Stations[100..130], g_avoid_status[100..130], CountStations
  *   GVL_JC_Scheduler: g_sim_trans[1..3], g_task[1..3], g_schedule[1..10],
  *                     g_move[1..3], g_event, g_cmd_code, g_cmd_param, etc.
@@ -26,7 +26,7 @@ function nodeId(gvl, varPath) {
 }
 
 // Shorthand GVL references
-const P = (v) => nodeId('GVL_Parameters', v);
+const P = (v) => nodeId('GVL_JC_Parameters', v);
 const S = (v) => nodeId('GVL_JC_Scheduler', v);
 
 // ═══════════════════════════════════════════════════════════════
@@ -35,7 +35,7 @@ const S = (v) => nodeId('GVL_JC_Scheduler', v);
 
 /**
  * Transporter status fields for transporter tid (1..3)
- * PLC variable: GVL_Parameters.g_transporter[tid]
+ * PLC variable: GVL_JC_Parameters.g_transporter[tid]
  */
 function transporterStatus(tid) {
   const b = `g_transporter[${tid}]`;
@@ -84,7 +84,7 @@ function simTransporter(tid) {
 
 /**
  * Unit fields for unit uid (1..10)
- * PLC variable: GVL_Parameters.g_unit[uid]
+ * PLC variable: GVL_JC_Parameters.g_unit[uid]
  */
 function unit(uid) {
   const b = `g_unit[${uid}]`;
@@ -97,7 +97,7 @@ function unit(uid) {
 
 /**
  * Batch fields for unit uid (1..10)
- * PLC variable: GVL_Parameters.g_batch[uid]
+ * PLC variable: GVL_JC_Parameters.g_batch[uid]
  */
 function batch(uid) {
   const b = `g_batch[${uid}]`;
@@ -316,7 +316,7 @@ const CMD = {
 
 /**
  * Station config write targets  (Stations[stNum])
- * PLC variable: GVL_Parameters.Stations[100..130]
+ * PLC variable: GVL_JC_Parameters.Stations[100..130]
  */
 function stationWrite(stNum) {
   const b = `Stations[${stNum}]`;
@@ -340,7 +340,7 @@ function stationWrite(stNum) {
 
 /**
  * Transporter config write targets (Transporters[tid])
- * PLC variable: GVL_Parameters.Transporters[1..3]
+ * PLC variable: GVL_JC_Parameters.Transporters[1..3]
  */
 function cfgWrite(tid) {
   const b = `Transporters[${tid}]`;
@@ -388,7 +388,7 @@ function cfgWrite(tid) {
 
 /**
  * Unit write targets (g_unit[uid])
- * PLC variable: GVL_Parameters.g_unit[1..10]
+ * PLC variable: GVL_JC_Parameters.g_unit[1..10]
  */
 function unitWrite(uid) {
   const b = `g_unit[${uid}]`;
@@ -401,7 +401,7 @@ function unitWrite(uid) {
 
 /**
  * Batch write targets (g_batch[uid])
- * PLC variable: GVL_Parameters.g_batch[1..10]
+ * PLC variable: GVL_JC_Parameters.g_batch[1..10]
  */
 function batchWrite(uid) {
   const b = `g_batch[${uid}]`;
@@ -419,7 +419,7 @@ function batchWrite(uid) {
 
 /**
  * Treatment program write targets (TreatmentPrograms[uid])
- * PLC variable: GVL_Parameters.TreatmentPrograms[1..10]
+ * PLC variable: GVL_JC_Parameters.TreatmentPrograms[1..10]
  */
 function programWrite(uid) {
   const b = `TreatmentPrograms[${uid}]`;
