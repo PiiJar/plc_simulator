@@ -1,5 +1,4 @@
-(* GVL_JC_Constants — Global constants *)
-(* Identical names to globals.st VAR_GLOBAL CONSTANT — no renaming needed *)
+(* Scheduler GVL_JC_Constants — Global constants *)
 VAR_GLOBAL CONSTANT
 
   (* ===== Layout Hierarchy Limits ===== *)
