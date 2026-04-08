@@ -70,6 +70,7 @@ END_VAR
 VAR
   tsk_sched                 : TSK_FB_Scheduler;
   dep_sched                 : DEP_FB_Scheduler;
+  twa_calc                  : TWA_FB_CalcLimits;
   (* dispatch — now FC STC_DispatchTask, no instance needed *)
   turn                      : INT := 0;   (* 0=init, 1=TSK, 2=DEP *)
   skip_cnt                  : INT := 0;
@@ -88,6 +89,9 @@ IF NOT i_run THEN
   o_turn := 0;
   RETURN;
 END_IF;
+
+(* ── Calculate transporter working areas (X-limits) every cycle ── *)
+twa_calc();
 
 (* ── Dispatch tasks to idle transporters (every scan) ── *)
 STC_DispatchTask();
