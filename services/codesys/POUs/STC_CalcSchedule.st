@@ -48,9 +48,9 @@ END_VAR
 
 VAR_EXTERNAL
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_station_count           : INT;
+  CountStations              : INT;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
@@ -220,8 +220,8 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
           i_from_stn            := prev_stn,
           i_to_stn              := cand_arr[p],
           i_move                := tmp_move,
-          i_from_dropping_x10   := g_station[prev_stn].DrippingTime,
-          i_to_device_delay_x10 := g_station[cand_arr[p]].DeviceDelay,
+          i_from_dropping_x10   := Stations[prev_stn].DrippingTime,
+          i_to_device_delay_x10 := Stations[cand_arr[p]].DeviceDelay,
           i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
         );
         my_entry := exit_t + REAL_TO_LINT(xfer_t);
@@ -278,16 +278,16 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
   tmp_move := g_move[i_trans];
   IF prev_stn >= MIN_StationIndex AND prev_stn <= MAX_StationIndex
      AND stn_num >= MIN_StationIndex AND stn_num <= MAX_StationIndex THEN
-    IF g_station[prev_stn].Crosstransport > 0
-       AND g_station[prev_stn].ChangeStation > 0
-       AND g_station[prev_stn].YPosition <> g_station[stn_num].YPosition THEN
-      xfer_t := INT_TO_REAL(g_station[prev_stn].CrossTransportTime)
+    IF Stations[prev_stn].Crosstransport > 0
+       AND Stations[prev_stn].ChangeStation > 0
+       AND Stations[prev_stn].YPosition <> Stations[stn_num].YPosition THEN
+      xfer_t := INT_TO_REAL(Stations[prev_stn].CrossTransportTime)
               + STC_CalcTransferTime(
-                  i_from_stn            := g_station[prev_stn].ChangeStation,
+                  i_from_stn            := Stations[prev_stn].ChangeStation,
                   i_to_stn              := stn_num,
                   i_move                := tmp_move,
-                  i_from_dropping_x10   := g_station[g_station[prev_stn].ChangeStation].DrippingTime,
-                  i_to_device_delay_x10 := g_station[stn_num].DeviceDelay,
+                  i_from_dropping_x10   := Stations[Stations[prev_stn].ChangeStation].DrippingTime,
+                  i_to_device_delay_x10 := Stations[stn_num].DeviceDelay,
                   i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
                 );
     ELSE
@@ -295,8 +295,8 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
         i_from_stn            := prev_stn,
         i_to_stn              := stn_num,
         i_move                := tmp_move,
-        i_from_dropping_x10   := g_station[prev_stn].DrippingTime,
-        i_to_device_delay_x10 := g_station[stn_num].DeviceDelay,
+        i_from_dropping_x10   := Stations[prev_stn].DrippingTime,
+        i_to_device_delay_x10 := Stations[stn_num].DeviceDelay,
         i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
       );
     END_IF;

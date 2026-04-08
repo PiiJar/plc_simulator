@@ -43,7 +43,7 @@ END_VAR
 
 VAR_EXTERNAL
   g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
 END_VAR
 
 VAR
@@ -75,10 +75,10 @@ FOR si := 0 TO sc - 1 DO
       eff_lift_stn := lift_stn;
       IF lift_stn >= MIN_StationIndex AND lift_stn <= MAX_StationIndex
          AND sink_stn >= MIN_StationIndex AND sink_stn <= MAX_StationIndex THEN
-        IF g_station[lift_stn].Crosstransport > 0
-           AND g_station[lift_stn].ChangeStation > 0
-           AND g_station[lift_stn].YPosition <> g_station[sink_stn].YPosition THEN
-          eff_lift_stn := g_station[lift_stn].ChangeStation;
+        IF Stations[lift_stn].Crosstransport > 0
+           AND Stations[lift_stn].ChangeStation > 0
+           AND Stations[lift_stn].YPosition <> Stations[sink_stn].YPosition THEN
+          eff_lift_stn := Stations[lift_stn].ChangeStation;
         END_IF;
       END_IF;
 

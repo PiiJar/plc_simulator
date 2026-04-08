@@ -52,7 +52,7 @@ VAR_EXTERNAL
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_time_s                  : LINT;
   g_production_queue        : INT;
@@ -99,7 +99,7 @@ END_VAR
     snap[u].OnStation := snap[u].Location >= MIN_StationIndex
                           AND snap[u].Location <= MAX_StationIndex;
     IF snap[u].OnStation THEN
-      snap[u].LocationOp    := g_station[snap[u].Location].StationType;
+      snap[u].LocationOp    := Stations[snap[u].Location].StationType;
       snap[u].InBuffer := snap[u].LocationOp >= OP_BUFFER AND snap[u].LocationOp <= OP_BUFFER_PROCESSED;
       IF g_station_loc[snap[u].Location].ChangeTime > 0 THEN
         snap[u].Elapsed := g_time_s - g_station_loc[snap[u].Location].ChangeTime;
@@ -242,7 +242,7 @@ END_VAR
     (* Check if any loading station is free *)
     load_free := FALSE;
     FOR stk := MIN_StationIndex TO MAX_StationIndex DO
-      op := g_station[stk].StationType;
+      op := Stations[stk].StationType;
       IF (op = OP_LOADING OR op = OP_LOADING_UNLOADING)
          AND g_station_loc[stk].UnitId = 0 THEN
         load_free := TRUE;

@@ -37,7 +37,7 @@ END_VAR
 VAR_EXTERNAL
   g_transporter  : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_sim_trans    : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
-  g_station      : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations      : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc  : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_cfg          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_move         : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
@@ -241,8 +241,8 @@ FOR i := 1 TO MAX_Transporters DO
         i_from_stn            := g_transporter[i].LiftStationTarget,
         i_to_stn              := g_transporter[i].SinkStationTarget,
         i_move                := g_move[i],
-        i_from_dropping_x10   := g_station[g_transporter[i].LiftStationTarget].DrippingTime,
-        i_to_device_delay_x10 := g_station[g_transporter[i].SinkStationTarget].DeviceDelay,
+        i_from_dropping_x10   := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
+        i_to_device_delay_x10 := Stations[g_transporter[i].SinkStationTarget].DeviceDelay,
         i_drip_tray_delay_x10 := g_cfg[i].DripTrayDelay
       );
       IF xfer_total < 1.0 THEN
@@ -324,7 +324,7 @@ FOR i := 1 TO MAX_Transporters DO
         SpeedLiftSlow_Z := g_cfg[i].SpeedLiftSlow_Z,
         SpeedLiftFast_Z := g_cfg[i].SpeedLiftFast_Z,
         DripTrayDelay   := g_cfg[i].DripTrayDelay,
-        DroppingTime    := g_station[g_transporter[i].LiftStationTarget].DrippingTime,
+        DroppingTime    := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
         z_timer_s     := tmp_zt
@@ -342,7 +342,7 @@ FOR i := 1 TO MAX_Transporters DO
         SpeedLiftSlow_Z := g_cfg[i].SpeedLiftSlow_Z,
         SpeedLiftFast_Z := g_cfg[i].SpeedLiftFast_Z,
         DripTrayDelay   := g_cfg[i].DripTrayDelay,
-        DroppingTime    := g_station[g_transporter[i].LiftStationTarget].DrippingTime,
+        DroppingTime    := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
         z_timer_s     := tmp_zt
@@ -360,7 +360,7 @@ FOR i := 1 TO MAX_Transporters DO
         SpeedLiftSlow_Z := g_cfg[i].SpeedLiftSlow_Z,
         SpeedLiftFast_Z := g_cfg[i].SpeedLiftFast_Z,
         DripTrayDelay   := g_cfg[i].DripTrayDelay,
-        DroppingTime    := g_station[g_transporter[i].LiftStationTarget].DrippingTime,
+        DroppingTime    := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
         z_timer_s     := tmp_zt
@@ -610,8 +610,8 @@ FOR i := 1 TO MAX_Transporters DO
   min_dist := 999999999;
   nearest_num := g_transporter[i].CurrentStation;
   FOR idx := MIN_StationIndex TO MAX_StationIndex DO
-    IF g_station[idx].TankId <> 0 THEN
-      dx := g_station[idx].XPosition - g_transporter[i].XPosition;
+    IF Stations[idx].TankId <> 0 THEN
+      dx := Stations[idx].XPosition - g_transporter[i].XPosition;
       IF ABS(dx) < min_dist THEN
         min_dist := ABS(dx);
         nearest_num := idx;

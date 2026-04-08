@@ -1,8 +1,8 @@
 (* GVL_Parameters — Production process data arrays *)
 (* Identical names to globals.st VAR_GLOBAL — no renaming needed *)
 VAR_GLOBAL
-  g_station_count               : INT;  (* configured station count *)
-  g_station                     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;  (* station configuration *)
+  CountStations                  : INT;  (* configured station count *)
+  Stations                     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;  (* station configuration *)
   g_station_loc                 : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;  (* unit location per station *)
   g_cfg                         : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;  (* transporter configuration *)
   g_transporter                 : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;  (* transporter runtime status *)

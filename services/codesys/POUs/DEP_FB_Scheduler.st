@@ -95,7 +95,7 @@ VAR_EXTERNAL
   g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_dep_idle_slot           : ARRAY[1..MAX_Transporters] OF UDT_JC_DepIdleSlotSetType;

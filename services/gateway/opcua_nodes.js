@@ -7,7 +7,7 @@
  *
  * Actual PLC variable naming (IEC ST style):
  *   GVL_Parameters: g_transporter[1..3], g_unit[1..10], g_batch[1..10],
- *                   g_station[100..130], g_avoid_status[100..130], g_station_count
+ *                   Stations[100..130], g_avoid_status[100..130], CountStations
  *   GVL_JC_Scheduler: g_sim_trans[1..3], g_task[1..3], g_schedule[1..10],
  *                     g_move[1..3], g_event, g_cmd_code, g_cmd_param, etc.
  *
@@ -207,7 +207,7 @@ function simTaskQueue(tid) {
 // ── Scalar read nodes ────────────────────────────────────────
 
 const META = {
-  station_count:    P('g_station_count'),
+  station_count:    P('CountStations'),
   production_queue: S('g_production_queue'),
   time_seconds:     S('g_time_s'),
 };
@@ -315,11 +315,11 @@ const CMD = {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Station config write targets  (g_station[stNum])
- * PLC variable: GVL_Parameters.g_station[100..130]
+ * Station config write targets  (Stations[stNum])
+ * PLC variable: GVL_Parameters.Stations[100..130]
  */
 function stationWrite(stNum) {
-  const b = `g_station[${stNum}]`;
+  const b = `Stations[${stNum}]`;
   return {
     station_id:     P(`${b}.StationId`),
     tank_id:        P(`${b}.TankId`),

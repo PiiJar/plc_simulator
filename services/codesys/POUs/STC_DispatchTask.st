@@ -44,7 +44,7 @@ VAR_EXTERNAL
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_sim_trans               : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
   g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
   g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
@@ -305,8 +305,8 @@ FOR ti := 1 TO MAX_Transporters DO
             i_from_stn            := t_lift,
             i_to_stn              := sink_stn,
             i_move                := g_move[ti],
-            i_from_dropping_x10   := g_station[t_lift].DrippingTime,
-            i_to_device_delay_x10 := g_station[sink_stn].DeviceDelay,
+            i_from_dropping_x10   := Stations[t_lift].DrippingTime,
+            i_to_device_delay_x10 := Stations[sink_stn].DeviceDelay,
             i_drip_tray_delay_x10 := g_cfg[ti].DripTrayDelay
           );
           IF xfer_total < 1.0 THEN
@@ -335,11 +335,11 @@ FOR ti := 1 TO MAX_Transporters DO
 
           (* Copy station-specific timing from config *)
           IF t_lift >= MIN_StationIndex AND t_lift <= MAX_StationIndex THEN
-            g_transporter[ti].DrippingTime := g_station[t_lift].DrippingTime;
-            g_sim_trans[ti].LiftDeviceDelay := g_station[t_lift].DeviceDelay;
+            g_transporter[ti].DrippingTime := Stations[t_lift].DrippingTime;
+            g_sim_trans[ti].LiftDeviceDelay := Stations[t_lift].DeviceDelay;
           END_IF;
           IF sink_stn >= MIN_StationIndex AND sink_stn <= MAX_StationIndex THEN
-            g_sim_trans[ti].SinkDeviceDelay := g_station[sink_stn].DeviceDelay;
+            g_sim_trans[ti].SinkDeviceDelay := Stations[sink_stn].DeviceDelay;
           END_IF;
 
           (* Shift queue: remove position qi, move rest up *)

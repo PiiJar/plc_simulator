@@ -48,7 +48,7 @@ END_VAR
 
 VAR_EXTERNAL
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;

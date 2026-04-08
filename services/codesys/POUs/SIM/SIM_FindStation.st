@@ -5,7 +5,7 @@
    Author  : Jarmo Piipponen
    Created : 25.03.2026
    ============================================================
-   Direct lookup in g_station[] by station number.
+   Direct lookup in Stations[] by station number.
    Returns x_mm (DINT); other fields via VAR_OUTPUT.
    ------------------------------------------------------------
    Changes:
@@ -26,7 +26,7 @@ VAR_EXTERNAL CONSTANT
     MAX_StationIndex : INT;
 END_VAR
 VAR_EXTERNAL
-  g_station : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
 END_VAR
 VAR
   stn_data : UDT_StationType;
@@ -34,7 +34,7 @@ END_VAR
 
   (* Direct lookup by station number — no loop needed *)
   IF (station_number >= MIN_StationIndex) AND (station_number <= MAX_StationIndex) THEN
-    stn_data := g_station[station_number];
+    stn_data := Stations[station_number];
     IF stn_data.TankId <> 0 THEN
       found := TRUE;
       SIM_FindStation := stn_data.XPosition;

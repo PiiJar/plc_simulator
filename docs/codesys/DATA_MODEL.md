@@ -61,7 +61,7 @@ Kirjasto lukee ne ja kirjoittaa laskentatulokset takaisin.
 
 | Muuttuja | Tyyppi | Suunta |
 |----------|--------|--------|
-| `g_station[100..130]` | UDT_StationType | Asiakas → kirjasto |
+| `Stations[100..130]` | UDT_StationType | Asiakas → kirjasto |
 | `g_cfg[1..3]` | UDT_TransporterType | Asiakas → kirjasto |
 | `g_transporter[1..3]` | UDT_TransporterStatusType | Kirjasto → asiakas |
 | `g_unit[1..10]` | UDT_UnitType | Asiakas ↔ kirjasto |
@@ -303,6 +303,6 @@ Seuraavat koot ovat sidottuja GVL_JC_Constants-vakioihin:
 | `ARRAY[0..30]` | MAX_STEPS_PER_PROGRAM | Stages (UDT_JC_TskScheduleType), Steps (Program) |
 | `ARRAY[1..50]` | MAX_LOCKS | locks (TSK_FB_Scheduler) |
 | `ARRAY[1..20]` | DEP_MAX_IDLE_SLOTS | Slots (UDT_JC_DepIdleSlotSetType) |
-| `ARRAY[100..130]` | MIN..MAX_StationIndex | g_station |
+| `ARRAY[100..130]` | MIN..MAX_StationIndex | Stations |
 
 **Huom:** `VAR_IN_OUT`-parametreissa taulukkokoot on kirjoitettu numeerisina literaaleina (IEC 61131-3 rajoitus). Nämä on dokumentoitu kommenteilla kunkin POU:n VAR_IN_OUT-lohkossa.

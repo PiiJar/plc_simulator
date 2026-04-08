@@ -39,7 +39,7 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
 END_VAR
 
@@ -204,10 +204,10 @@ FOR ti := 1 TO MAX_Transporters DO
       l_idx := io_task[ti].Queue[qi].LiftStationTarget - MIN_StationIndex;
       s_idx := io_task[ti].Queue[qi].SinkStationTarget - MIN_StationIndex;
       IF l_idx >= 1 AND l_idx <= 30 THEN
-        lift_x := DINT_TO_REAL(g_station[io_task[ti].Queue[qi].LiftStationTarget].XPosition);
+        lift_x := DINT_TO_REAL(Stations[io_task[ti].Queue[qi].LiftStationTarget].XPosition);
   ELSE lift_x := 0.0; END_IF;
       IF s_idx >= 1 AND s_idx <= 30 THEN
-        sink_x := DINT_TO_REAL(g_station[io_task[ti].Queue[qi].SinkStationTarget].XPosition);
+        sink_x := DINT_TO_REAL(Stations[io_task[ti].Queue[qi].SinkStationTarget].XPosition);
   ELSE sink_x := 0.0; END_IF;
   IF lift_x < sink_x THEN x1_min := lift_x;
   x1_max := sink_x;
@@ -220,10 +220,10 @@ FOR ti := 1 TO MAX_Transporters DO
             l_idx2 := io_task[tj].Queue[qj].LiftStationTarget - MIN_StationIndex;
             s_idx2 := io_task[tj].Queue[qj].SinkStationTarget - MIN_StationIndex;
             IF l_idx2 >= 1 AND l_idx2 <= 30 THEN
-              lift_x2 := DINT_TO_REAL(g_station[io_task[tj].Queue[qj].LiftStationTarget].XPosition);
+              lift_x2 := DINT_TO_REAL(Stations[io_task[tj].Queue[qj].LiftStationTarget].XPosition);
   ELSE lift_x2 := 0.0; END_IF;
             IF s_idx2 >= 1 AND s_idx2 <= 30 THEN
-              sink_x2 := DINT_TO_REAL(g_station[io_task[tj].Queue[qj].SinkStationTarget].XPosition);
+              sink_x2 := DINT_TO_REAL(Stations[io_task[tj].Queue[qj].SinkStationTarget].XPosition);
   ELSE sink_x2 := 0.0; END_IF;
   IF lift_x2 < sink_x2 THEN x2_min := lift_x2;
   x2_max := sink_x2;

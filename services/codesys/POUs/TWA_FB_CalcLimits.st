@@ -48,8 +48,8 @@ END_VAR
 VAR_EXTERNAL
   g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_count           : INT;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  CountStations              : INT;
   g_avoid_status            : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
@@ -153,7 +153,7 @@ FOR i := 1 TO MAX_Transporters DO
   near_right_stn := 0;
 
   FOR stn_num := MIN_StationIndex TO MAX_StationIndex DO
-    IF g_station[stn_num].TankId = 0 THEN CONTINUE; END_IF;
+    IF Stations[stn_num].TankId = 0 THEN CONTINUE; END_IF;
 
     avoid_st := g_avoid_status[stn_num];
     IF avoid_st = 0 THEN CONTINUE; END_IF;  (* AVOID_None *)
@@ -166,7 +166,7 @@ FOR i := 1 TO MAX_Transporters DO
     END_IF;
 
     (* Station is Block or Passable+target → track nearest per side *)
-    stn_x := g_station[stn_num].XPosition;
+    stn_x := Stations[stn_num].XPosition;
 
     IF stn_x < current_x THEN
       IF NOT has_left OR stn_x > near_left_x THEN
@@ -185,11 +185,11 @@ FOR i := 1 TO MAX_Transporters DO
 
   (* Apply station restrictions using station-specific AvoidDistance *)
   IF has_left THEN
-    new_val := near_left_x + g_station[near_left_stn].AvoidDistance;
+    new_val := near_left_x + Stations[near_left_stn].AvoidDistance;
     IF new_val > min_x THEN min_x := new_val; END_IF;
   END_IF;
   IF has_right THEN
-    new_val := near_right_x - g_station[near_right_stn].AvoidDistance;
+    new_val := near_right_x - Stations[near_right_stn].AvoidDistance;
     IF new_val < max_x THEN max_x := new_val; END_IF;
   END_IF;
 
@@ -337,11 +337,11 @@ FOR i := 1 TO MAX_Transporters DO
           sink_x := current_x;
           IF i_lift_stn >= MIN_StationIndex
              AND i_lift_stn <= MAX_StationIndex THEN
-            lift_x := g_station[i_lift_stn].XPosition;
+            lift_x := Stations[i_lift_stn].XPosition;
           END_IF;
           IF i_sink_stn >= MIN_StationIndex
              AND i_sink_stn <= MAX_StationIndex THEN
-            sink_x := g_station[i_sink_stn].XPosition;
+            sink_x := Stations[i_sink_stn].XPosition;
           END_IF;
           IF current_x < other_x THEN
             (* i LEFT of j → use rightmost extent *)

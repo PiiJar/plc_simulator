@@ -28,12 +28,12 @@ Datapolku järjestelmässä:
 ```
 data/customers/<Asiakas>/<Laitos>/stations.json   ← lähde (käyttäjän konfiguroima)
   → Gateway lukee käynnistyksessä
-    → OPC UA write: g_station[stn].MoveAway
+    → OPC UA write: Stations[stn].MoveAway
       → PLC käyttää STC_MoveAway-funktiossa
 ```
 
 Käytännössä Gateway lukee `stations.json`-tiedoston `move_away`-kentän ja
-kirjoittaa sen OPC UA:n kautta PLC:n `g_station[stn].MoveAway`-kenttään
+kirjoittaa sen OPC UA:n kautta PLC:n `Stations[stn].MoveAway`-kenttään
 samalla kun muukin asemakonfiguraatio (XPosition, DeviceDelay, jne.) lähetetään.
 
 ### stations.json -kenttä
@@ -84,7 +84,7 @@ MoveAway : INT;   (* 0 = no move-away, >0 = max idle time (s) before forced move
 ### OPC UA -kirjoitus (Gateway → PLC)
 
 `opcua_nodes.js`: Lisätään `move_away` node per asema.
-`opcua_adapter.js`: Kirjoitetaan `g_station[stn].MoveAway` konfiguraatiovaiheessa.
+`opcua_adapter.js`: Kirjoitetaan `Stations[stn].MoveAway` konfiguraatiovaiheessa.
 
 ---
 
@@ -132,7 +132,7 @@ FOR ti := 1 TO MAX_Transporters DO
   stn := g_transporter[ti].CurrentStation;
   IF stn < MIN_StationIndex OR stn > MAX_StationIndex THEN CONTINUE; END_IF;
 
-  move_away := g_station[stn].MoveAway;
+  move_away := Stations[stn].MoveAway;
   IF move_away = 0 THEN CONTINUE; END_IF;
 
   (* Laske idle-aika: aika edellisen aktiivisen tehtävän päättymisestä *)
@@ -155,7 +155,7 @@ FOR ti := 1 TO MAX_Transporters DO
 
   IF g_task[ti].Count > 0 THEN
     (* Seuraava tehtävä jonossa → suunta kohti sen alkuasemaa *)
-    next_lift_x := g_station[ g_task[ti].Queue[1].LiftStationTarget ].XPosition;
+    next_lift_x := Stations[ g_task[ti].Queue[1].LiftStationTarget ].XPosition;
     IF next_lift_x > current_x THEN
       dir := 1;
     ELSE
@@ -193,7 +193,7 @@ FOR ti := 1 TO MAX_Transporters DO
 
   (* Jos kohdeasemalla on myös MoveAway, jatka samaan suuntaan yksi asema kerrallaan *)
   WHILE (dest_stn >= MIN_StationIndex) AND (dest_stn <= MAX_StationIndex)
-        AND (g_station[dest_stn].MoveAway > 0) DO
+        AND (Stations[dest_stn].MoveAway > 0) DO
     next_stn := find_station_offset(
       i_trans := ti,
       i_from_stn := dest_stn,
@@ -254,7 +254,7 @@ Suunta valitaan kuten aiemmin:
 
 ```
 IF g_task[ti].Count > 0 THEN
-  next_lift_x := g_station[ g_task[ti].Queue[1].LiftStationTarget ].XPosition;
+  next_lift_x := Stations[ g_task[ti].Queue[1].LiftStationTarget ].XPosition;
   IF next_lift_x > current_x THEN
     dir := 1;
   ELSE
@@ -309,7 +309,7 @@ Jos valitulla kohdeasemalla on myös `MoveAway > 0`, jatketaan samaan suuntaan
 yksi asema kerrallaan, kunnes löytyy asema jolla `MoveAway = 0`.
 
 ```
-WHILE g_station[dest_stn].MoveAway > 0 DO
+WHILE Stations[dest_stn].MoveAway > 0 DO
   next_stn := find_station_offset(
     i_trans := ti,
     i_from_stn := dest_stn,
@@ -425,7 +425,7 @@ Poissiirto-tilan tunnistus:
 - `Status = 4` ja `Phase = 1` → oikea tuotantotehtävä
 
 Kohdeasema on `LiftStationTarget`, joka asetetaan normaalisti `STC_MoveAway`:ssa.
-Kohde-X saadaan suoraan `g_station[LiftStationTarget].XPosition`.
+Kohde-X saadaan suoraan `Stations[LiftStationTarget].XPosition`.
 
 ---
 
@@ -523,7 +523,7 @@ mutta se ei ole toteutuksen edellytys.
 | **PLC_PRG.st** | Init (cmd=2): `IdleStartTime := g_time_s` käytössä oleville nostimille |
 | **SIM_FB_ClearConfig.st** | Clear (cmd=3): Phase:=0, Status:=3, IdleStartTime:=g_time_s |
 | **opcua_nodes.js** | `move_away` node per asema stationWrite()-funktioon |
-| **opcua_adapter.js** | Kirjoita `g_station[stn].MoveAway` konfiguraatiossa |
+| **opcua_adapter.js** | Kirjoita `Stations[stn].MoveAway` konfiguraatiossa |
 | **stations.json** (kaikki templateit) | Lisää `move_away: 0` per asema |
 
 **Huomio UI:lle**: nostin näkyy UI:ssa idle-tilassa (Status=3) myös move awayn aikana,
@@ -561,7 +561,7 @@ identtisesti kuin ennenkin.
 
 Tämä vaihe kytkee move awayn PLC:n ohjausketjuun. Vaiheen jälkeen
 move away toimii PLC:ssä, mutta Gateway ei vielä kirjoita `MoveAway`-arvoja
-asemille (joten kaikki `g_station[stn].MoveAway = 0` → mitään ei tapahdu).
+asemille (joten kaikki `Stations[stn].MoveAway = 0` → mitään ei tapahdu).
 
 | Askel | Tiedosto | Toimenpide | Rivit (nyk.) |
 |-------|----------|------------|--------------|
@@ -578,7 +578,7 @@ asemille (joten kaikki `g_station[stn].MoveAway = 0` → mitään ei tapahdu).
 - `python3 build_codesys_xml.py` → buildaa onnistuneesti
 - CODESYS Import → Compile → 0 errors
 - `docker compose restart codesys` + Gateway init (cmd=2):
-  - Nostimet käynnistyvät normaalisti, koska `g_station[].MoveAway = 0` kaikkialla
+  - Nostimet käynnistyvät normaalisti, koska `Stations[].MoveAway = 0` kaikkialla
   - Scheduler-kierros etenee vaiheiden 2200 → 2201 → 2202 → 10000 läpi (uusi vaihe ei tee mitään koska MoveAway=0)
 - Aja tuotantoerä normaalisti → varmista, että kaikki tehtävät suoritetaan identtisesti kuin aiemmin
 - Tarkista OPC UA:lla `IdleStartTime` -arvo: se päivittyy Phase 4→0 siirtymässä
@@ -590,7 +590,7 @@ Vaiheen jälkeen move away on täysin toiminnallinen.
 
 | Askel | Tiedosto | Toimenpide |
 |-------|----------|------------|
-| 3.1 | `services/gateway/opcua_nodes.js` | Lisää `stationWrite()`-funktioon `move_away` node (tyyppi INT, polku `g_station[stn].MoveAway`) |
+| 3.1 | `services/gateway/opcua_nodes.js` | Lisää `stationWrite()`-funktioon `move_away` node (tyyppi INT, polku `Stations[stn].MoveAway`) |
 | 3.2 | `services/gateway/opcua_adapter.js` | Kirjoita `move_away` → `MoveAway` konfiguraatiokirjoituksessa |
 | 3.3 | `data/plant_templates/*/stations.json` | Lisää `"move_away": 0` kaikkiin asemiin templateissa |
 

@@ -127,7 +127,7 @@ Payload[7..12] = 0    (varattu)
 
 | Code | Kuvaus | val1 | val2 | val3 | val4 |
 |------|--------|------|------|------|------|
-| 1 | `g_station_count` = 0 tai > MAX | station_count | — | — | — |
+| 1 | `CountStations` = 0 tai > MAX | station_count | — | — | — |
 | 2 | Transportterin nopeus = 0 | trans_id | axis¹ | — | — |
 | 3 | Working area alku > loppu | trans_id | start | end | — |
 | 4 | Working area ei kata yhtään asemaa | trans_id | — | — | — |
@@ -324,7 +324,7 @@ END_VAR
 
 | # | Tarkistus | Mode:Code | Vakavuus |
 |---|-----------|-----------|----------|
-| 1 | `g_station_count > 0` ja `≤ MAX_Stations` | 1:1 | FATAL |
+| 1 | `CountStations > 0` ja `≤ MAX_Stations` | 1:1 | FATAL |
 | 2 | Jokaisella transportterilla `Speed_X > 0` ja `Speed_Z > 0` | 1:2 | FATAL |
 | 3 | Jokaisella asemalla `XPosition` on uniikki | 1:6 | FATAL |
 | 4 | Treatment program: jokainen asemavaihe viittaa olemassa olevaan asemaan | 1:5 | FATAL |
@@ -734,11 +734,11 @@ CREATE TABLE IF NOT EXISTS diag_codes (
 
 INSERT INTO diag_codes (mode, code, mode_name, severity, description, hint, val_labels) VALUES
   -- Mode 1: CONFIG (fataali)
-  (1, 1, 'CONFIG', 'FATAL', 'g_station_count = 0 or > MAX',                   'Set via gateway before INIT',                        'station_count, -, -, -'),
+  (1, 1, 'CONFIG', 'FATAL', 'CountStations = 0 or > MAX',                     'Set via gateway before INIT',                        'station_count, -, -, -'),
   (1, 2, 'CONFIG', 'FATAL', 'Transporter speed = 0',                          'Set Speed_X/Z > 0 in g_cfg',                         'trans_id, axis(1=X 2=Z), -, -'),
   (1, 3, 'CONFIG', 'FATAL', 'Working area start > end',                       'Swap WorkingArea_Start and _End',                     'trans_id, start, end, -'),
   (1, 4, 'CONFIG', 'FATAL', 'Working area covers no stations',                'Extend working area or add stations',                 'trans_id, -, -, -'),
-  (1, 5, 'CONFIG', 'FATAL', 'Treatment program references unknown station',   'Check station exists in g_station',                   'program_id, step, station_id, -'),
+  (1, 5, 'CONFIG', 'FATAL', 'Treatment program references unknown station',   'Check station exists in Stations',                   'program_id, step, station_id, -'),
   (1, 6, 'CONFIG', 'FATAL', 'Duplicate XPosition on stations',                'Each station needs unique X coordinate',               'stn_id_1, stn_id_2, x_pos, -'),
   (1, 7, 'CONFIG', 'FATAL', 'MinTime > MaxTime in program step',              'Fix treatment program timing',                        'program_id, step, min_time, max_time'),
   (1, 8, 'CONFIG', 'FATAL', 'MaxTime < CalTime in program step',              'Increase MaxTime or decrease CalTime',                'program_id, step, max_time, cal_time'),
@@ -878,7 +878,7 @@ kuluttajaintegraatio tehdään simulaattoriin.
 >
 > **[CONFIG 1:5]** FATAL — Treatment program references unknown station
 > → program_id=2, step=4, station_id=15
-> → *Hint: Check station exists in g_station*
+> → *Hint: Check station exists in Stations*
 >
 > **[CONFIG 1:9]** WARNING — Move time = 0 for used station pair
 > → lift_stn=105, sink_stn=108

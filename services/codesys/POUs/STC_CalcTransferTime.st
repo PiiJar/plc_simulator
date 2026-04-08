@@ -35,8 +35,8 @@ VAR_INPUT
   i_from_stn                : INT;     (* source station, e.g. 105 *)
   i_to_stn                  : INT;     (* destination station, e.g. 112 *)
   i_move                    : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
-  i_from_dropping_x10       : INT;     (* g_station[from].DrippingTime — tenths of second *)
-  i_to_device_delay_x10     : INT;     (* g_station[to].DeviceDelay   — tenths of second *)
+  i_from_dropping_x10       : INT;     (* Stations[from].DrippingTime — tenths of second *)
+  i_to_device_delay_x10     : INT;     (* Stations[to].DeviceDelay   — tenths of second *)
   i_drip_tray_delay_x10     : INT;     (* g_cfg[trans].DripTrayDelay  — tenths of second *)
 END_VAR
 

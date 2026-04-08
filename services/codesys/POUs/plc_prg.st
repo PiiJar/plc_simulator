@@ -37,8 +37,8 @@ END_VAR
 
 VAR_EXTERNAL
   (* --- Shared data arrays — written by Gateway via OPC UA --- *)
-  g_station_count           : INT;
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  CountStations              : INT;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
@@ -111,11 +111,11 @@ IF g_cmd_code <> 0 THEN
     (* ── Clear all config data ── *)
     clear_cfg();
     init_done := FALSE;
-    g_station_count := 0;
+    CountStations := 0;
 
   ELSIF g_cmd_code = 2 THEN
     (* ── Finish init: all config already uploaded via OPC UA ── *)
-    g_station_count := g_cmd_param;
+    CountStations := g_cmd_param;
 
     FOR i := 1 TO MAX_Transporters DO
       IF g_cfg[i].TaskArea[1].MinLift > 0 THEN

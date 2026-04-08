@@ -689,7 +689,7 @@ class OpcuaAdapter extends PlcAdapter {
       await this._sendCommand(3, 0);
       console.log('[OPC-UA] Sent CLEAR command');
 
-      // Step 2: Write station config directly to g_station[n]
+      // Step 2: Write station config directly to Stations[n]
       for (const st of stations) {
         const stNum = st.number;
         if (stNum < 100 || stNum > 130) continue;

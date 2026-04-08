@@ -3,9 +3,7 @@
 VAR_GLOBAL CONSTANT
 
   (* ===== Layout Hierarchy Limits ===== *)
-  MAX_LINES                 : INT  := 1;  (* max production lines in a plant *)
   MAX_STATIONS_PER_LINE     : INT  := 30;  (* max stations per line *)
-  MAX_Transporters_PER_LINE : INT  := 3;  (* max transporters per line *)
   MIN_StationIndex          : INT  := 100;  (* first valid station index *)
   MAX_StationIndex          : INT  := 130;  (* MaxLines*100 + MaxStationsPerLine *)
 
@@ -38,10 +36,6 @@ VAR_GLOBAL CONSTANT
   USED                      : INT  := 1;  (* unit in use *)
   NOT_USED                  : INT  := 0;  (* unit not in use *)
 
-  (* Unit state *)
-  EMPTY                     : INT  := 0;  (* unit is empty *)
-  FULL                      : INT  := 1;  (* unit is full *)
-
   (* Unit target *)
   TO_NONE                   : INT  := 0;  (* no target *)
   TO_LOADING                : INT  := 1;  (* target: loading station *)
@@ -56,11 +50,8 @@ VAR_GLOBAL CONSTANT
 
   (* Station operation — logistics *)
   OP_BUFFER                 : INT  := 30;  (* buffer station *)
-  OP_BUFFER_EMPTY           : INT  := 31;  (* empty buffer station *)
-  OP_BUFFER_LOADED          : INT  := 32;  (* loaded buffer station *)
   OP_BUFFER_PROCESSED       : INT  := 33;  (* processed buffer station *)
   OP_LOADING                : INT  := 40;  (* loading operation *)
-  OP_UNLOADING              : INT  := 41;  (* unloading operation *)
   OP_LOADING_UNLOADING      : INT  := 42;  (* combined loading/unloading *)
 
   (* Batch state *)
@@ -73,6 +64,6 @@ VAR_GLOBAL CONSTANT
   AVOID_Passable            : INT  := 1;  (* pass through allowed, no stop *)
   AVOID_Block               : INT  := 2;  (* hard block, cannot pass *)
 
-  (* Move-away constants *)
-  MOVE_AWAY_MIN_WAIT_S      : INT  := 60;  (* do not start move-away if next task on same station starts within this many seconds *)
+  (* Take-out constants *)
+  TAKE_OUT_MIN_WAIT_S       : INT  := 60;  (* do not start take-out if next task on same station starts within this many seconds *)
 END_VAR

@@ -34,10 +34,10 @@ FOR ti := 1 TO MAX_Transporters DO
   current_station := g_transporter[ti].CurrentStation;
   IF current_station < MIN_StationIndex OR current_station > MAX_StationIndex THEN CONTINUE; END_IF;
 
-  take_out_delay := g_station[current_station].TakeOutDelay;
+  take_out_delay := Stations[current_station].TakeOutDelay;
   IF take_out_delay = 0 THEN CONTINUE; END_IF;
 
-  take_out_dist := INT_TO_DINT(g_station[current_station].TakeOutDistance);
+  take_out_dist := INT_TO_DINT(Stations[current_station].TakeOutDistance);
   IF take_out_dist <= 0 THEN CONTINUE; END_IF;
 
   idle_time := i_time_s - g_sim_trans[ti].IdleStartTime;
@@ -48,7 +48,7 @@ FOR ti := 1 TO MAX_Transporters DO
     queued_lift_station := g_task[ti].Queue[1].LiftStationTarget;
     IF queued_lift_station = current_station THEN
       time_to_start := g_task[ti].Queue[1].StartTime - i_time_s;
-      IF time_to_start >= 0 AND time_to_start < DINT_TO_LINT(INT_TO_DINT(MOVE_AWAY_MIN_WAIT_S)) THEN
+      IF time_to_start >= 0 AND time_to_start < DINT_TO_LINT(INT_TO_DINT(TAKE_OUT_MIN_WAIT_S)) THEN
         CONTINUE;
       END_IF;
     END_IF;
@@ -58,7 +58,7 @@ FOR ti := 1 TO MAX_Transporters DO
 
   (* Determine direction: toward next task or toward area center *)
   IF g_task[ti].Count > 0 THEN
-    next_lift_x := g_station[g_task[ti].Queue[1].LiftStationTarget].XPosition;
+    next_lift_x := Stations[g_task[ti].Queue[1].LiftStationTarget].XPosition;
     IF next_lift_x > current_x THEN
       dir := 1;
     ELSE

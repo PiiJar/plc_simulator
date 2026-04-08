@@ -52,7 +52,7 @@ VAR_EXTERNAL
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_station                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
@@ -269,8 +269,8 @@ FOR ui := 1 TO MAX_Units DO
               i_from_stn            := loc,
               i_to_stn              := dest_stn,
               i_move                := tmp_move,
-              i_from_dropping_x10   := g_station[loc].DrippingTime,
-              i_to_device_delay_x10 := g_station[dest_stn].DeviceDelay,
+              i_from_dropping_x10   := Stations[loc].DrippingTime,
+              i_to_device_delay_x10 := Stations[dest_stn].DeviceDelay,
               i_drip_tray_delay_x10 := g_cfg[cov_t].DripTrayDelay);
 
             (* ── Travel-to: time for transporter to reach lift station ── *)
@@ -361,7 +361,7 @@ FOR ui := 1 TO MAX_Units DO
           *)
           IF dest_stn > 0 THEN
             overlap_conflict := FALSE;
-            dest_x := g_station[dest_stn].XPosition;
+            dest_x := Stations[dest_stn].XPosition;
             avoid_dist := g_cfg[cov_t].AvoidanceWidth;
             cov_min_x := g_cfg[cov_t].DrivePosMin;
             cov_max_x := g_cfg[cov_t].DrivePosMax;
@@ -384,7 +384,7 @@ FOR ui := 1 TO MAX_Units DO
                 danger_max := zone_max_x + avoid_dist;
 
                 (* ── Calculate shared-area entry time and duration ── *)
-                loc_x := g_station[loc].XPosition;
+                loc_x := Stations[loc].XPosition;
                 IF loc_x >= danger_min AND loc_x <= danger_max THEN
                   shared_entry := task_start;
                   shared_time  := xfer_s;
@@ -392,7 +392,7 @@ FOR ui := 1 TO MAX_Units DO
                   loc_idx := loc - MIN_StationIndex;
                   IF loc_idx >= 1 AND loc_idx <= 25 THEN
                     phase2_s := INT_TO_REAL(g_move[cov_t].LiftTime[loc_idx]) / 10.0
-                              + INT_TO_REAL(g_station[loc].DrippingTime) / 10.0
+                              + INT_TO_REAL(Stations[loc].DrippingTime) / 10.0
                               + INT_TO_REAL(g_cfg[cov_t].DripTrayDelay) / 10.0;
                   ELSE
                     phase2_s := 0.0;

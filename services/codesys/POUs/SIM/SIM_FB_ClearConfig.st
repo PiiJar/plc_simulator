@@ -26,8 +26,8 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_station_count    : INT;
-  g_station         : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  CountStations       : INT;
+  Stations         : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc     : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_cfg              : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
   g_transporter      : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
@@ -57,15 +57,15 @@ END_VAR
 
 (* --- Clear all stations --- *)
 FOR i := MIN_StationIndex TO MAX_StationIndex DO
-  g_station[i].TankId       := 0;
-  g_station[i].IsInUse       := FALSE;
-  g_station[i].XPosition    := 0;
-  g_station[i].YPosition    := 0;
-  g_station[i].ZPosition    := 0;
-  g_station[i].DryWet          := 0;
-  g_station[i].StationType     := 0;
-  g_station[i].DrippingTime := 0;
-  g_station[i].DeviceDelay  := 0;
+  Stations[i].TankId       := 0;
+  Stations[i].IsInUse       := FALSE;
+  Stations[i].XPosition    := 0;
+  Stations[i].YPosition    := 0;
+  Stations[i].ZPosition    := 0;
+  Stations[i].DryWet          := 0;
+  Stations[i].StationType     := 0;
+  Stations[i].DrippingTime := 0;
+  Stations[i].DeviceDelay  := 0;
 END_FOR;
 
 (* --- Clear all location tracking (transporters 1..MAX_Transporters + stations MIN..MAX) --- *)
@@ -73,7 +73,7 @@ FOR i := 1 TO MAX_StationIndex DO
   g_station_loc[i].UnitId     := 0;
   g_station_loc[i].ChangeTime := 0;
 END_FOR;
-g_station_count := 0;
+CountStations := 0;
 
 (* --- Clear all transporter configs --- *)
 FOR i := 1 TO MAX_Transporters DO

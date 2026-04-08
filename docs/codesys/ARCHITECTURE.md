@@ -137,7 +137,7 @@ Jakso N+2:  TSK suorittaa vaiheen (esim. 2101 SWAP_TASKS)
 Asiakkaan integraatio (tai kehitysympäristön Gateway)
     │
     ▼ kirjoittaa globaaleihin
-g_station[], g_cfg[], g_unit[], g_batch[], g_program[]
+Stations[], g_cfg[], g_unit[], g_batch[], g_program[]
     │
     ▼ kirjaston sisäinen laskenta
 STC_FB_MainScheduler

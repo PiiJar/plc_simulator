@@ -27,16 +27,16 @@ IF i_from_stn < MIN_StationIndex OR i_from_stn > MAX_StationIndex THEN RETURN; E
 IF i_dir <> 1 AND i_dir <> -1 THEN RETURN; END_IF;
 IF i_min_steps < 1 THEN RETURN; END_IF;
 
-from_x    := g_station[i_from_stn].XPosition;
+from_x    := Stations[i_from_stn].XPosition;
 drive_min := g_cfg[i_trans].DrivePosMin;
 drive_max := g_cfg[i_trans].DrivePosMax;
 step_count := 0;
 
 IF i_dir = 1 THEN
     FOR scan_station := MIN_StationIndex TO MAX_StationIndex DO
-        IF g_station[scan_station].TankId = 0 THEN CONTINUE; END_IF;
+        IF Stations[scan_station].TankId = 0 THEN CONTINUE; END_IF;
 
-        station_x := g_station[scan_station].XPosition;
+        station_x := Stations[scan_station].XPosition;
         IF station_x <= from_x THEN CONTINUE; END_IF;
         IF station_x > drive_max THEN CONTINUE; END_IF;
 
@@ -63,9 +63,9 @@ IF i_dir = 1 THEN
     END_FOR;
 ELSE
     FOR scan_station := MAX_StationIndex TO MIN_StationIndex BY -1 DO
-        IF g_station[scan_station].TankId = 0 THEN CONTINUE; END_IF;
+        IF Stations[scan_station].TankId = 0 THEN CONTINUE; END_IF;
 
-        station_x := g_station[scan_station].XPosition;
+        station_x := Stations[scan_station].XPosition;
         IF station_x >= from_x THEN CONTINUE; END_IF;
         IF station_x < drive_min THEN CONTINUE; END_IF;
 

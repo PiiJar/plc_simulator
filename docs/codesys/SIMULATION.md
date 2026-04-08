@@ -56,7 +56,7 @@ Phase 0  IDLE
 ```
 Jos g_transporter[ti].TaskId <> 0 ja g_transporter[ti].TaskId <> RunningTaskId:
   RunningTaskId := TaskId
-  XDriveTarget  := g_station[LiftStationTarget].XPosition
+  XDriveTarget  := Stations[LiftStationTarget].XPosition
   Phase := 1
   Tapahtuma: TASK_STARTED
 ```
@@ -96,7 +96,7 @@ Lift käyttää hitaita/nopeita Z-nopeuksia ja erottaa märkä- ja kuiva-asemien
 
 ### Phase 3: X-ajo laskuasemalle
 
-Sama kuin Phase 1, mutta `XDriveTarget := g_station[SinkStationTarget].XPosition`.
+Sama kuin Phase 1, mutta `XDriveTarget := Stations[SinkStationTarget].XPosition`.
 
 ### Phase 4: Z-lasku
 
@@ -158,7 +158,7 @@ FUNCTION SIM_FindStation : DINT
     station_number : INT
   END_VAR
 
-  Suora haku g_station[]-taulukosta asemanumerolla.
+  Suora haku Stations[]-taulukosta asemanumerolla.
   Palauttaa aseman `XPosition`-arvon.
   VAR_OUTPUT:n kautta saadaan lisäksi `skind`, `device_delay_s`
   ja `dropping_time_s`.
@@ -227,7 +227,7 @@ Dequeue:
 ## SIM_FB_ClearConfig — Konfiguraation nollaus
 
 Nollaa kaikki konfiguraatiotaulukot (kutsutaan `cmd_code = 3`):
-- `g_station[]`, `g_cfg[]`, `g_transporter[]`
+- `Stations[]`, `g_cfg[]`, `g_transporter[]`
 - `g_unit[]`, `g_batch[]`, `g_program[]`
 - `g_schedule[]`, `g_task[]`
 - Simulaatiotaulukot
