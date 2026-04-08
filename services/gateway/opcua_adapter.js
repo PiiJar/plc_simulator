@@ -695,19 +695,19 @@ class OpcuaAdapter extends PlcAdapter {
         if (stNum < 100 || stNum > 130) continue;
         const sw = nodes.stationWrite(stNum);
         await this._writeNodes([
-          { nodeId: sw.station_id,    value: stNum,                                    dataType: DataType.Int16 },
-          { nodeId: sw.tank_id,       value: st.tank || 0,                             dataType: DataType.Int16 },
-          { nodeId: sw.is_in_use,     value: true,                                     dataType: DataType.Boolean },
-          { nodeId: sw.station_type,  value: st.operation || st.station_type || 0,     dataType: DataType.Int16 },
-          { nodeId: sw.x_position,    value: Math.round(st.x_position || 0),           dataType: DataType.Int32 },
-          { nodeId: sw.y_position,    value: Math.round(st.y_position || 0),           dataType: DataType.Int32 },
-          { nodeId: sw.z_position,    value: Math.round(st.z_position || 0),           dataType: DataType.Int32 },
-          { nodeId: sw.dripping_time, value: Math.round((st.dropping_time || 0) * 10), dataType: DataType.Int16 },
-          { nodeId: sw.device_delay,  value: Math.round((st.device_delay || 0) * 10),  dataType: DataType.Int16 },
-          { nodeId: sw.dry_wet,       value: st.kind || 0,                             dataType: DataType.Int16 },
-          { nodeId: sw.avoid_distance,    value: st.avoid_distance || 0,                 dataType: DataType.Int16 },
-          { nodeId: sw.take_out_delay,    value: st.take_out_delay || 0,                 dataType: DataType.Int16 },
-          { nodeId: sw.take_out_distance, value: st.take_out_distance || 0,              dataType: DataType.Int16 },
+          { nodeId: sw.station_id,        value: stNum,                                    dataType: DataType.Int16 },
+          { nodeId: sw.tank_id,           value: st.tank || 0,                             dataType: DataType.Int16 },
+          { nodeId: sw.is_in_use,         value: true,                                     dataType: DataType.Boolean },
+          { nodeId: sw.station_type,      value: st.operation || st.station_type || 0,     dataType: DataType.Int16 },
+          { nodeId: sw.x_position,        value: Math.round(st.x_position || 0),           dataType: DataType.Int32 },
+          { nodeId: sw.y_position,        value: Math.round(st.y_position || 0),           dataType: DataType.Int32 },
+          { nodeId: sw.z_position,        value: Math.round(st.z_position || 0),           dataType: DataType.Int32 },
+          { nodeId: sw.dripping_time,     value: Math.round((st.dropping_time || 0) * 10), dataType: DataType.Int16 },
+          { nodeId: sw.device_delay,      value: Math.round((st.device_delay || 0) * 10),  dataType: DataType.Int16 },
+          { nodeId: sw.dry_wet,           value: st.kind || 0,                             dataType: DataType.Int16 },
+          { nodeId: sw.avoid_distance,    value: st.avoid_distance || 0,                   dataType: DataType.Int16 },
+          { nodeId: sw.take_out_delay,    value: st.take_out_delay || 0,                   dataType: DataType.Int16 },
+          { nodeId: sw.take_out_distance, value: st.take_out_distance || 0,                dataType: DataType.Int16 },
         ]);
       }
       console.log(`[OPC-UA] Wrote ${stations.length} stations`);
