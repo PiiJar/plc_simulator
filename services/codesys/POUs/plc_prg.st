@@ -45,8 +45,4 @@ sim_main();
    properly resetting internal state of both TSK and DEP FBs. *)
 main_scheduler(i_run := sim_main.o_init_done, i_time_s := g_time_s);
 
-(* ── Cycle counter ── *)
-cycle_count := cycle_count + 1;
-  IF cycle_count > 30000 THEN cycle_count := 0; END_IF;
-
 END_PROGRAM
