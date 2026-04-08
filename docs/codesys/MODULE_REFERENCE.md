@@ -59,7 +59,7 @@ Tiedostokohtainen hakuteos. Jokaisesta POU:sta: tyyppi, tarkoitus, rajapinta ja 
 **VAR_INPUT:** `i_run : BOOL`, `i_time_s : LINT`
 **VAR_OUTPUT:** `o_phase`, `o_batch_cnt`, `o_task_cnt`, `o_cycle_cnt`, `o_conflict`
 
-**Kutsuu:** STC_CollectActiveBatches, STC_NoTreatmentStates, STC_CalcSchedule, STC_CreateTasks, STC_SortTasks, STC_SwapTasks, TSK_Analyze, TSK_Resolve, TSK_NoTreatment, STC_MoveAway
+**Kutsuu:** STC_CollectActiveBatches, STC_NoTreatmentStates, STC_CalcSchedule, STC_CreateTasks, STC_SortTasks, STC_SwapTasks, TSK_Analyze, TSK_Resolve, TSK_NoTreatment, STC_TakeOut
 
 **Tilakone:** ks. [SCHEDULER_PHASES.md](SCHEDULER_PHASES.md)
 
@@ -375,14 +375,14 @@ Tiedostokohtainen hakuteos. Jokaisesta POU:sta: tyyppi, tarkoitus, rajapinta ja 
 
 ---
 
-## STC_MoveAway 🔒
+## STC_TakeOut 🔒
 
 | | |
 |---|---|
-| **Tiedosto** | `POUs/STC_MoveAway.st` |
+| **Tiedosto** | `POUs/STC_TakeOut.st` |
 | **Tyyppi** | FUNCTION |
 | **Toimitus** | 🔒 KIRJASTO |
-| **Tarkoitus** | Siirrä tyhjäkäynnillä oleva nostin pois tieltä |
+| **Tarkoitus** | Siirrä tyhjäkäynnillä oleva nostin pois asemalta (TakeOutDelay + TakeOutDistance) |
 
 ---
 

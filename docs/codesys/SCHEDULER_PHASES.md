@@ -57,7 +57,7 @@ Oletussiirtymä on `phase + 1`. Poikkeussiirtymät asetetaan muuttujalla `next_p
   │
   2201  APPLY_STRETCHES ── Kirjaa resolve-päätökset g_program:iin
   │
-  2202  MOVE_AWAY ── Tarkista tyhjäkäyntiväistöt
+  2202  TAKE_OUT ── Tarkista tyhjäkäyntipoissiirrot
   │
   10000  READY ─── Aseta g_tsk_stable, g_conflict_resolved
   │
@@ -115,8 +115,8 @@ Yksi erä per PLC-jakso:
 - Kirjaa konfliktisilmukan `stretches[]` → `g_program[unit].Steps[stage].CalTime`
 - Tekee ratkaisut pysyviksi
 
-#### Phase 2202: MOVE_AWAY
-- `STC_MoveAway()` → tarkista pitääkö tyhjäkäynnillä oleva nostin väistää
+#### Phase 2202: TAKE_OUT
+- `STC_TakeOut()` → tarkista pitääkö tyhjäkäynnillä oleva nostin siirtää pois (TakeOutDelay/TakeOutDistance)
 
 #### Phase 10000: READY
 - `g_tsk_stable := TRUE` (kun `conflict_resolved`)

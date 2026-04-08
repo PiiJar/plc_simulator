@@ -122,8 +122,10 @@ DrippingTime   : INT     tippumisaika (×10 = 0.1 s)
 DeviceDelay    : INT     laiteviive (×10 = 0.1 s)
 Crosstransport : INT     poikkisiirtoindeksi
 ChangeStation  : INT     vaihtoasemaindeksi
-MoveAway       : INT     tyhjäkäyntiviive (s), 0 = ei väistöä
-...                      (lisää kenttiä: DryWet, LiftSinkZone, AvoidDistance)
+TakeOutDelay   : INT     poissiirtoviive (s), 0 = ei poissiirtoa
+TakeOutDistance : INT     poissiirtoetäisyys (mm)
+AvoidDistance  : INT     asemakohtainen väistöetäisyys (mm)
+...                      (lisää kenttiä: DryWet, LiftSinkZone)
 ```
 
 ### Schedulerin tietorakenteet

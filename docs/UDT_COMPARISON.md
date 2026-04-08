@@ -51,9 +51,9 @@ Vertailu 10 samannimisestä UDT-tyypistä tuotanto-PLC:n (docs/Parameters/) ja s
 | 19  | Level_Index          | INT    | ✓        | ✓            | ✅   |
 | 20  | Cond_Index           | INT    | ✓        | ✓            | ✅   |
 | 21  | HasAutomaticRotation | BOOL   | ✓        | ✓            | ✅   |
-| 22  | MoveAway             | INT    | —        | ✓            | 🔵   |
+| 22  | MoveAway             | INT    | ✓        | ✓            | ✅   |
 
-**Yhteenveto:** 21 identtistä, 1 vain simulaattorissa. Simulaattori lisää `MoveAway`-kentän (max idle time ennen pakkosiirtoa).
+**Yhteenveto:** 22 identtistä. `MoveAway` säilytetty yhteensopivuuden vuoksi. Simulaattori käyttää `TakeOutDelay`/`TakeOutDistance`-kenttiä poissiirtologiikassa.
 
 ---
 
@@ -314,7 +314,7 @@ Vertailu 10 samannimisestä UDT-tyypistä tuotanto-PLC:n (docs/Parameters/) ja s
 | UDT                          | Tuotanto | Simulaattori | Yhteisiä | Vain tuotanto 🟡 | Vain simulaattori 🔵       |
 |------------------------------|----------|--------------|----------|-------------------|-----------------------------|
 | UDT_BatchType                | 8        | 8            | 8        | 0                 | 0                           |
-| UDT_StationType              | 21       | 22           | 21       | 0                 | 1 (MoveAway)                |
+| UDT_StationType              | 22       | 22           | 22       | 0                 | 0                           |
 | UDT_TankType                 | 32       | 32           | 32       | 0                 | 0                           |
 | UDT_TaskArea                 | 4        | 4            | 4        | 0                 | 0                           |
 | UDT_TransporterStatusType    | 26       | 27           | 26       | 0                 | 1 (CurrentTaskFinishTime)   |
@@ -328,7 +328,7 @@ Vertailu 10 samannimisestä UDT-tyypistä tuotanto-PLC:n (docs/Parameters/) ja s
 ### Erot tiivistettynä
 
 **Simulaattorissa lisäkenttiä (🔵):**
-- `UDT_StationType.MoveAway` — max idle time ennen pakkosiirtoa (scheduler-ominaisuus)
+
 - `UDT_TransporterStatusType.CurrentTaskFinishTime` — arvioitu tehtävän valmistumisaika (LINT, unix s)
 
 **Tuotannossa lisäkenttiä (🟡):**

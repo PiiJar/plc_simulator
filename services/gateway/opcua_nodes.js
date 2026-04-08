@@ -330,8 +330,11 @@ function stationWrite(stNum) {
     z_position:     P(`${b}.ZPosition`),
     dripping_time:  P(`${b}.DrippingTime`),
     device_delay:   P(`${b}.DeviceDelay`),
-    dry_wet:        P(`${b}.DryWet`),
-    move_away:      P(`${b}.MoveAway`),
+    dry_wet:           P(`${b}.DryWet`),
+    move_away:         P(`${b}.MoveAway`),
+    avoid_distance:    P(`${b}.AvoidDistance`),
+    take_out_delay:    P(`${b}.TakeOutDelay`),
+    take_out_distance: P(`${b}.TakeOutDistance`),
   };
 }
 

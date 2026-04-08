@@ -71,7 +71,9 @@ VAR
 
   (* Station scan: nearest restricting station per side *)
   near_left_x               : DINT;
+  near_left_stn             : INT;
   near_right_x              : DINT;
+  near_right_stn            : INT;
   has_left                  : BOOL;
   has_right                 : BOOL;
   midpoint                  : DINT;
@@ -146,7 +148,9 @@ FOR i := 1 TO MAX_Transporters DO
   has_left := FALSE;
   has_right := FALSE;
   near_left_x := 0;
+  near_left_stn := 0;
   near_right_x := 0;
+  near_right_stn := 0;
 
   FOR stn_num := MIN_StationIndex TO MAX_StationIndex DO
     IF g_station[stn_num].TankId = 0 THEN CONTINUE; END_IF;
@@ -167,24 +171,26 @@ FOR i := 1 TO MAX_Transporters DO
     IF stn_x < current_x THEN
       IF NOT has_left OR stn_x > near_left_x THEN
         near_left_x := stn_x;
+        near_left_stn := stn_num;
         has_left := TRUE;
       END_IF;
     ELSIF stn_x > current_x THEN
       IF NOT has_right OR stn_x < near_right_x THEN
         near_right_x := stn_x;
+        near_right_stn := stn_num;
         has_right := TRUE;
       END_IF;
     END_IF;
   END_FOR;
 
-  (* Apply station restrictions *)
+  (* Apply station restrictions using station-specific AvoidDistance *)
   IF has_left THEN
-    new_val := near_left_x + avoid_dist;
-  IF new_val > min_x THEN min_x := new_val; END_IF;
+    new_val := near_left_x + g_station[near_left_stn].AvoidDistance;
+    IF new_val > min_x THEN min_x := new_val; END_IF;
   END_IF;
   IF has_right THEN
-    new_val := near_right_x - avoid_dist;
-  IF new_val < max_x THEN max_x := new_val; END_IF;
+    new_val := near_right_x - g_station[near_right_stn].AvoidDistance;
+    IF new_val < max_x THEN max_x := new_val; END_IF;
   END_IF;
 
   (* Conflict: trapped between two restricting stations *)

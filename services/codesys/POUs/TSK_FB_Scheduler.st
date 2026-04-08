@@ -377,7 +377,7 @@ ELSIF phase = 2201 THEN
 (* PHASE 2202: MOVE_AWAY — idle transporter move-away check     *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2202 THEN
-  STC_MoveAway(i_time_s := i_time_s);
+  STC_TakeOut(i_time_s := i_time_s);
   next_phase := 10000;
 
 (* ══════════════════════════════════════════════════════════════ *)

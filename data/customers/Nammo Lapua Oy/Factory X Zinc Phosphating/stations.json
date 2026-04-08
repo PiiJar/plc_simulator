@@ -12,7 +12,9 @@
       "kind": 0,
       "operation": 42,
       "device_delay": 0.0,
-      "move_away": 1,
+      "take_out_delay": 1,
+      "take_out_distance": 2000,
+      "avoid_distance": 2000,
       "start_station": true
     },
     {
@@ -27,7 +29,9 @@
       "kind": 0,
       "operation": 30,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -42,7 +46,9 @@
       "kind": 0,
       "operation": 30,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -57,7 +63,9 @@
       "kind": 0,
       "operation": 0,
       "device_delay": 3.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -72,7 +80,9 @@
       "kind": 0,
       "operation": 0,
       "device_delay": 3.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -87,7 +97,9 @@
       "kind": 0,
       "operation": 0,
       "device_delay": 3.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -102,7 +114,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 3.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -117,7 +131,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -132,7 +148,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -147,7 +165,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -162,7 +182,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 0.0,
-      "move_away": 1,
+      "take_out_delay": 1,
+      "take_out_distance": 2000,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -177,7 +199,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 3.0,
-      "move_away": 1,
+      "take_out_delay": 1,
+      "take_out_distance": 2000,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -192,7 +216,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -207,7 +233,9 @@
       "kind": 0,
       "operation": 32,
       "device_delay": 0.0,
-      "move_away": 1,
+      "take_out_delay": 1,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -222,7 +250,9 @@
       "kind": 0,
       "operation": 0,
       "device_delay": 3.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -237,7 +267,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 3.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -252,7 +284,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -267,7 +301,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -282,7 +318,9 @@
       "kind": 0,
       "operation": 30,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -297,7 +335,9 @@
       "kind": 0,
       "operation": 30,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     },
     {
@@ -312,7 +352,9 @@
       "kind": 1,
       "operation": 0,
       "device_delay": 0.0,
-      "move_away": 0,
+      "take_out_delay": 0,
+      "take_out_distance": 0,
+      "avoid_distance": 2000,
       "start_station": false
     }
   ],

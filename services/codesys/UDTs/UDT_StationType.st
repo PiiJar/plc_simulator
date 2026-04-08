@@ -1,5 +1,6 @@
 TYPE UDT_StationType :
 STRUCT
+    
     StationId            : INT;  (* Primary key *)
     TankId               : INT;  (* Reference to tanks.TankId *)
     IsInUse              : BOOL; (* Station enabled *)
@@ -10,12 +11,13 @@ STRUCT
     YPosition            : DINT; (* Y position mm *)
     ZPosition            : DINT; (* Z position mm *)
     LiftSinkZone         : INT;  (* Lift/sink zone *)
-    AvoidDistance        : INT;  (* Avoid distance *)
-    TakeOutDistance      : INT;  (* Take out distance *)
+    AvoidDistance        : INT;  (* Avoid distance mm*)
+    TakeOutDelay         : INT;  (* Take out delay s*)
+    TakeOutDistance      : INT;  (* Take out distance mm*)
     DrippingTime         : INT;  (* Dripping time ×10 = tenths of second *)
     DeviceDelay          : INT;  (* Device delay ×10 = tenths of second *)
     DryWet               : INT;  (* 0=dry, 1=wet *)
-
+ 
     (* Cross transport parameters *)
     Crosstransport       : INT;  (* Cross transport index *)
     CrossTransportTime   : INT;  (* Cross transport time s *)
@@ -29,8 +31,6 @@ STRUCT
 
     (* Rotation parameters *)
     HasAutomaticRotation : BOOL; (* TRUE = chemical tank (sink at 45°), FALSE = loading/buffer (sink at 0° vertical) *)
-
-    (* Move-away configuration *)
-    MoveAway             : INT;  (* 0 = no move-away, >0 = max idle time (s) before forced move *)
+ 
 END_STRUCT;
 END_TYPE
