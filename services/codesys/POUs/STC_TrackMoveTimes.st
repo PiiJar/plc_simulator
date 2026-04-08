@@ -40,7 +40,7 @@ END_VAR
 VAR_EXTERNAL
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   g_actual_move             : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
   g_time_s                  : LINT;
@@ -127,7 +127,7 @@ IF i_prev = 4 AND i_new = 0 THEN
 
                 (* Mechanical delays in 0.1s ticks *)
                 drip_x10 := Stations[lift_stn].DrippingTime;
-                tray_x10 := g_cfg[t].DripTrayDelay;
+                tray_x10 := Transporters[t].DripTrayDelay;
                 dev_x10  := Stations[sink_stn].DeviceDelay;
 
                 (* Raw durations are already in 0.1s ticks *)

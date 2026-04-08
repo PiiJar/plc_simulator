@@ -13,7 +13,7 @@ DEP ei koskaan kirjoita suoraan globaaleihin taulukoihin:
 ```
 LIVE-DATA                           SANDBOX (g_dep_wk_*)
 g_batch[1..10]  ──SNAPSHOT──→  g_dep_wk_batch[1..10]
-g_program[1..10] ──SNAPSHOT──→ g_dep_wk_program[1..10]
+TreatmentPrograms[1..10] ──SNAPSHOT──→ g_dep_wk_program[1..10]
 
                   (laskenta tapahtuu sandboxissa)
 
@@ -229,7 +229,7 @@ Kun `g_dep_pending.Valid = TRUE`:
 
 1. `STC_FB_MainScheduler` ei päästä DEP:tä ajoon (skippaa DEP-vuoron)
 2. TSK:n Phase 10001 (CHECK_DEP_PENDING) käsittelee:
-   - Kopioi `g_dep_pending.Programs` → `g_program`
+   - Kopioi `g_dep_pending.Programs` → `TreatmentPrograms`
    - Päivitä `g_batch[unit]` → State, CurStage, aika-arvot
    - Aseta `g_dep_pending.Valid := FALSE`
 3. TSK aloittaa uuden kierroksen (Phase 10002 → 1), laskee kaikki erät mukaan lukien uusi

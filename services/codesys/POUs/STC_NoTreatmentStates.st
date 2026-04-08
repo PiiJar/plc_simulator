@@ -51,7 +51,7 @@ END_VAR
 VAR_EXTERNAL
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_time_s                  : LINT;
@@ -107,7 +107,7 @@ END_VAR
         snap[u].Elapsed := 0;
       END_IF;
       IF snap[u].CurStage >= 1 THEN
-        snap[u].CalTime := g_program[u].Steps[snap[u].CurStage].CalTime;
+        snap[u].CalTime := TreatmentPrograms[u].Steps[snap[u].CurStage].CalTime;
       ELSE
         snap[u].CalTime := 0;
       END_IF;
@@ -134,7 +134,7 @@ END_VAR
       CONTINUE;
     END_IF;
     IF snap[u].CurStage >= 1 AND snap[u].CurStage < MAX_STEPS_PER_PROGRAM THEN
-      IF snap[u].CurStage >= g_program[u].StepCount THEN
+      IF snap[u].CurStage >= TreatmentPrograms[u].StepCount THEN
         IF snap[u].Elapsed > 0 AND snap[u].Elapsed >= DINT_TO_LINT(snap[u].CalTime) THEN
           g_batch[u].State := PROCESSED;
           snap[u].BatchState   := PROCESSED;  (* update snapshot *)
@@ -146,7 +146,7 @@ END_VAR
             g_event_pending.TsLo := LINT_TO_UINT(g_time_s MOD LINT#65536);
             g_event_pending.Payload[1]  := u;                                  (* unit_id *)
             g_event_pending.Payload[2]  := g_batch[u].BatchCode;               (* batch_code *)
-            g_event_pending.Payload[3]  := g_program[u].StepCount;             (* stage_count *)
+            g_event_pending.Payload[3]  := TreatmentPrograms[u].StepCount;             (* stage_count *)
             g_event_pending.Payload[4]  := snap[u].Location;                   (* final_station *)
             g_event_pending.Payload[5]  := 0;
             g_event_pending.Payload[6]  := 0;
@@ -182,7 +182,7 @@ END_VAR
     IF snap[u].CurStage < 1 OR snap[u].CurStage >= MAX_STEPS_PER_PROGRAM THEN
       CONTINUE;
     END_IF;
-    IF snap[u].CurStage >= g_program[u].StepCount THEN
+    IF snap[u].CurStage >= TreatmentPrograms[u].StepCount THEN
       CONTINUE;  (* no next stage *)
     END_IF;
 
@@ -190,7 +190,7 @@ END_VAR
     free_found := FALSE;
     avoid_uid  := 0;
     FOR p := 0 TO MAX_STATIONS_PER_STEP - 1 DO
-      next_stn := g_program[u].Steps[snap[u].CurStage + 1].Stations[p];
+      next_stn := TreatmentPrograms[u].Steps[snap[u].CurStage + 1].Stations[p];
       IF next_stn = 0 THEN
         EXIT;
       END_IF;
@@ -212,7 +212,7 @@ END_VAR
     (* — Pass 2: all occupied → mark ONE movable unit TO_AVOID — *)
     IF NOT free_found THEN
       FOR p := 0 TO MAX_STATIONS_PER_STEP - 1 DO
-        next_stn := g_program[u].Steps[snap[u].CurStage + 1].Stations[p];
+        next_stn := TreatmentPrograms[u].Steps[snap[u].CurStage + 1].Stations[p];
         IF next_stn = 0 THEN
           EXIT;
         END_IF;

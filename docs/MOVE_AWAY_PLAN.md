@@ -163,7 +163,7 @@ FOR ti := 1 TO MAX_Transporters DO
     END_IF;
   ELSE
     (* Ei seuraavaa tehtävää → suunta kohti ajoalueen keskikohtaa *)
-    area_center := (g_cfg[ti].DrivePosMin + g_cfg[ti].DrivePosMax) / 2;
+    area_center := (Transporters[ti].DrivePosMin + Transporters[ti].DrivePosMax) / 2;
     IF area_center > current_x THEN
       dir := 1;
     ELSE
@@ -261,7 +261,7 @@ IF g_task[ti].Count > 0 THEN
     dir := -1;
   END_IF;
 ELSE
-  area_center := (g_cfg[ti].DrivePosMin + g_cfg[ti].DrivePosMax) / 2;
+  area_center := (Transporters[ti].DrivePosMin + Transporters[ti].DrivePosMax) / 2;
   IF area_center > current_x THEN
     dir := 1;
   ELSE
@@ -355,11 +355,11 @@ Toiminta:
 1. Käy asemat X-suunnassa `i_dir`-suuntaan alkaen `i_from_stn` + 1 asemaväli
 2. "Asemaväli" = seuraava asema X-positiojärjestyksessä saman transporterin
   käyttöalueella
-3. Käyttöalue määritellään `g_cfg[i_trans].TaskArea[]`-rajoista, ei pelkästä
+3. Käyttöalue määritellään `Transporters[i_trans].TaskArea[]`-rajoista, ei pelkästä
   station-numerosta eikä pelkästä X-järjestyksestä
 4. Ohita asemat joilla `TankId = 0`
 5. Laske askeleet; kun `i_min_steps` täyttyy, palauta kyseinen asema
-6. Jos aseman `XPosition` ylittää nostimen ajoalueen (`g_cfg[i_trans].DrivePosMin` /
+6. Jos aseman `XPosition` ylittää nostimen ajoalueen (`Transporters[i_trans].DrivePosMin` /
   `DrivePosMax`), palauta 0
 7. Jos asemia ei löydy riittävästi, palauta 0
 

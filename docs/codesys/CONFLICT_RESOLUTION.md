@@ -163,7 +163,7 @@ stretches[1..20] : ARRAY OF UDT_JC_TskStretchType
 
 Phase 2201:
   FOR si := 1 TO stretch_cnt DO
-    g_program[stretches[si].Unit].Steps[stretches[si].Stage].CalTime
+    TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].CalTime
       += stretches[si].DelayS;
   END_FOR;
 ```
@@ -192,8 +192,8 @@ Kierros 2:
         → next_phase := 2200 (ulos silmukasta)
 
 Phase 2201:
-  g_program[B].Steps[stage].CalTime -= 3
-  g_program[A].Steps[stage].CalTime += 1.2
+  TreatmentPrograms[B].Steps[stage].CalTime -= 3
+  TreatmentPrograms[A].Steps[stage].CalTime += 1.2
 ```
 
 ## Debug-muuttujat

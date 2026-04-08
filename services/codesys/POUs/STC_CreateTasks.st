@@ -42,7 +42,7 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
 END_VAR
 

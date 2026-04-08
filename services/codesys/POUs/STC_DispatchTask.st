@@ -47,11 +47,11 @@ VAR_EXTERNAL
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   g_time_s                  : LINT;
   g_event_pending           : UDT_JC_EventMsgType;
@@ -162,9 +162,9 @@ FOR ti := 1 TO MAX_Transporters DO
 
         IF prog_stage >= 1 AND prog_stage <= MAX_STEPS_PER_PROGRAM
            AND t_unit >= 1 AND t_unit <= MAX_Units THEN
-          (* Treatment task — look in g_program for parallel stations *)
+          (* Treatment task — look in TreatmentPrograms for parallel stations *)
           FOR si := 0 TO MAX_STATIONS_PER_STEP - 1 DO
-            cand_stn := g_program[t_unit].Steps[prog_stage].Stations[si];
+            cand_stn := TreatmentPrograms[t_unit].Steps[prog_stage].Stations[si];
             IF cand_stn > 0 AND cand_stn <> t_sink THEN
               IF cand_stn >= MIN_StationIndex AND cand_stn <= MAX_StationIndex THEN
                 cand_free := TRUE;
@@ -307,7 +307,7 @@ FOR ti := 1 TO MAX_Transporters DO
             i_move                := g_move[ti],
             i_from_dropping_x10   := Stations[t_lift].DrippingTime,
             i_to_device_delay_x10 := Stations[sink_stn].DeviceDelay,
-            i_drip_tray_delay_x10 := g_cfg[ti].DripTrayDelay
+            i_drip_tray_delay_x10 := Transporters[ti].DripTrayDelay
           );
           IF xfer_total < 1.0 THEN
             xfer_total := INT_TO_REAL(ABS(sink_stn - t_lift)) * 8.0;

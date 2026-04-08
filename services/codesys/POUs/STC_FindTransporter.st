@@ -46,7 +46,7 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
 END_VAR
 
@@ -75,7 +75,7 @@ cap_count := 0;
 FOR ti := 1 TO MAX_Transporters DO
   FOR ai := 1 TO 4 DO
     IF cap_count < 3 THEN
-      area := g_cfg[ti].TaskArea[ai];
+      area := Transporters[ti].TaskArea[ai];
       IF area.MinLift > 0 OR area.MaxLift > 0 THEN
         can_lift := (i_lift_stn >= area.MinLift) AND (i_lift_stn <= area.MaxLift);
         IF i_sink_stn = 0 THEN

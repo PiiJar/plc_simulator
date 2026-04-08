@@ -46,7 +46,7 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   CountStations              : INT;
@@ -126,11 +126,11 @@ FOR i := 1 TO MAX_Transporters DO
     CONTINUE;
   END_IF;
 
-  min_x := g_cfg[i].DrivePosMin;
-  max_x := g_cfg[i].DrivePosMax;
+  min_x := Transporters[i].DrivePosMin;
+  max_x := Transporters[i].DrivePosMax;
   current_x := g_transporter[i].XPosition;
   current_y := g_transporter[i].YPosition;
-  avoid_dist := g_cfg[i].AvoidanceWidth;
+  avoid_dist := Transporters[i].AvoidanceWidth;
 
   (* Lock transporters with no drive range configured *)
   IF (min_x < 1) OR (max_x < 1) THEN
@@ -212,11 +212,11 @@ FOR i := 1 TO MAX_Transporters DO
 
     IF other_x < current_x THEN
       (* j is LEFT → j's safety zone pushes i's min up *)
-      new_val := other_x + g_cfg[j].AvoidanceWidth;
+      new_val := other_x + Transporters[j].AvoidanceWidth;
   IF new_val > min_x THEN min_x := new_val; END_IF;
     ELSIF other_x > current_x THEN
       (* j is RIGHT → j's safety zone pushes i's max down *)
-      new_val := other_x - g_cfg[j].AvoidanceWidth;
+      new_val := other_x - Transporters[j].AvoidanceWidth;
   IF new_val < max_x THEN max_x := new_val; END_IF;
     END_IF;
   END_FOR;
@@ -370,8 +370,8 @@ FOR i := 1 TO MAX_Transporters DO
         between := ABS(rank[i] - rank[j]) - 1;
   IF between < 0 THEN between := 0; END_IF;
 
-        chain_ofs := g_cfg[i].AvoidanceWidth
-                   + INT_TO_DINT(between) * (MIN_WorkingArea + g_cfg[i].AvoidanceWidth);
+        chain_ofs := Transporters[i].AvoidanceWidth
+                   + INT_TO_DINT(between) * (MIN_WorkingArea + Transporters[i].AvoidanceWidth);
 
         IF current_x < other_x THEN
           (* i LEFT, j RIGHT → restrict j's XMin *)
@@ -417,7 +417,7 @@ FOR i := 1 TO MAX_Transporters DO
 
       IF current_x < other_x AND i_moving_right AND j_moving_right THEN
         (* i LEFT chasing j RIGHT → restrict j's XMin *)
-        new_val := current_x + g_cfg[i].AvoidanceWidth;
+        new_val := current_x + Transporters[i].AvoidanceWidth;
         IF new_val > g_transporter[j].XMinDriveLimit THEN
           g_transporter[j].XMinDriveLimit := new_val;
         END_IF;
@@ -425,7 +425,7 @@ FOR i := 1 TO MAX_Transporters DO
 
       IF current_x > other_x AND i_moving_left AND j_moving_left THEN
         (* i RIGHT chasing j LEFT → restrict j's XMax *)
-        new_val := current_x - g_cfg[i].AvoidanceWidth;
+        new_val := current_x - Transporters[i].AvoidanceWidth;
         IF new_val < g_transporter[j].XMaxDriveLimit THEN
           g_transporter[j].XMaxDriveLimit := new_val;
         END_IF;

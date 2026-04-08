@@ -137,7 +137,7 @@ Jakso N+2:  TSK suorittaa vaiheen (esim. 2101 SWAP_TASKS)
 Asiakkaan integraatio (tai kehitysympäristön Gateway)
     │
     ▼ kirjoittaa globaaleihin
-Stations[], g_cfg[], g_unit[], g_batch[], g_program[]
+Stations[], Transporters[], g_unit[], g_batch[], TreatmentPrograms[]
     │
     ▼ kirjaston sisäinen laskenta
 STC_FB_MainScheduler
@@ -145,7 +145,7 @@ STC_FB_MainScheduler
     │    käyttää suoraan g_schedule[], g_task[], g_batch[]
     │
     └─ DEP_FB_Scheduler
-         kopioi: g_batch[], g_program[] → g_dep_wk_*  (sandbox)
+         kopioi: g_batch[], TreatmentPrograms[] → g_dep_wk_*  (sandbox)
          kirjoittaa: g_dep_pending (aktivointipyyntö)
     │
     ▼ asiakas lukee tulokset

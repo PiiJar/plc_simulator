@@ -54,7 +54,7 @@ VAR_EXTERNAL
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
 END_VAR
 
@@ -172,8 +172,8 @@ FOR ui := 1 TO MAX_Units DO
       covers := FALSE;
       FOR ai := 1 TO 4 DO
         IF NOT covers THEN
-          IF g_cfg[cov_t].TaskArea[ai].MinLift > 0 OR g_cfg[cov_t].TaskArea[ai].MaxLift > 0 THEN
-            IF loc >= g_cfg[cov_t].TaskArea[ai].MinLift AND loc <= g_cfg[cov_t].TaskArea[ai].MaxLift THEN
+          IF Transporters[cov_t].TaskArea[ai].MinLift > 0 OR Transporters[cov_t].TaskArea[ai].MaxLift > 0 THEN
+            IF loc >= Transporters[cov_t].TaskArea[ai].MinLift AND loc <= Transporters[cov_t].TaskArea[ai].MaxLift THEN
               covers := TRUE;
             END_IF;
           END_IF;
@@ -271,7 +271,7 @@ FOR ui := 1 TO MAX_Units DO
               i_move                := tmp_move,
               i_from_dropping_x10   := Stations[loc].DrippingTime,
               i_to_device_delay_x10 := Stations[dest_stn].DeviceDelay,
-              i_drip_tray_delay_x10 := g_cfg[cov_t].DripTrayDelay);
+              i_drip_tray_delay_x10 := Transporters[cov_t].DripTrayDelay);
 
             (* ── Travel-to: time for transporter to reach lift station ── *)
             travel_to_lift_s := 0.0;
@@ -362,15 +362,15 @@ FOR ui := 1 TO MAX_Units DO
           IF dest_stn > 0 THEN
             overlap_conflict := FALSE;
             dest_x := Stations[dest_stn].XPosition;
-            avoid_dist := g_cfg[cov_t].AvoidanceWidth;
-            cov_min_x := g_cfg[cov_t].DrivePosMin;
-            cov_max_x := g_cfg[cov_t].DrivePosMax;
+            avoid_dist := Transporters[cov_t].AvoidanceWidth;
+            cov_min_x := Transporters[cov_t].DrivePosMin;
+            cov_max_x := Transporters[cov_t].DrivePosMax;
 
             FOR ot := 1 TO MAX_Transporters DO
               IF ot <> cov_t AND NOT overlap_conflict
                  AND g_transporter[ot].IsActive THEN
-                ot_min_x := g_cfg[ot].DrivePosMin;
-                ot_max_x := g_cfg[ot].DrivePosMax;
+                ot_min_x := Transporters[ot].DrivePosMin;
+                ot_max_x := Transporters[ot].DrivePosMax;
 
                 IF cov_min_x > ot_min_x THEN zone_min_x := cov_min_x;
   ELSE zone_min_x := ot_min_x; END_IF;
@@ -393,7 +393,7 @@ FOR ui := 1 TO MAX_Units DO
                   IF loc_idx >= 1 AND loc_idx <= 25 THEN
                     phase2_s := INT_TO_REAL(g_move[cov_t].LiftTime[loc_idx]) / 10.0
                               + INT_TO_REAL(Stations[loc].DrippingTime) / 10.0
-                              + INT_TO_REAL(g_cfg[cov_t].DripTrayDelay) / 10.0;
+                              + INT_TO_REAL(Transporters[cov_t].DripTrayDelay) / 10.0;
                   ELSE
                     phase2_s := 0.0;
                   END_IF;

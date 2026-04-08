@@ -39,12 +39,12 @@ VAR_EXTERNAL
   g_sim_trans    : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
   Stations      : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc  : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_cfg          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters          : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_move         : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   g_actual_move  : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
   g_unit         : ARRAY[1..MAX_Units] OF UDT_UnitType;
   g_batch        : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_program      : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms      : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_time_s       : LINT;
   g_event_pending       : UDT_JC_EventMsgType;
   g_event_pending_valid : BOOL;
@@ -134,9 +134,9 @@ FOR i := 1 TO MAX_Transporters DO
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
-        v_max    := g_cfg[i].SpeedMax_X,
-        t_acc    := g_cfg[i].Acceleration_X,
-        t_dec    := g_cfg[i].Deceleration_X,
+        v_max    := Transporters[i].SpeedMax_X,
+        t_acc    := Transporters[i].Acceleration_X,
+        t_dec    := Transporters[i].Deceleration_X,
         x_pos    := tmp_x,
         v_x      := tmp_vx
       );
@@ -148,9 +148,9 @@ FOR i := 1 TO MAX_Transporters DO
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
-        v_max    := g_cfg[i].SpeedMax_X,
-        t_acc    := g_cfg[i].Acceleration_X,
-        t_dec    := g_cfg[i].Deceleration_X,
+        v_max    := Transporters[i].SpeedMax_X,
+        t_acc    := Transporters[i].Acceleration_X,
+        t_dec    := Transporters[i].Deceleration_X,
         x_pos    := tmp_x,
         v_x      := tmp_vx
       );
@@ -162,9 +162,9 @@ FOR i := 1 TO MAX_Transporters DO
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
-        v_max    := g_cfg[i].SpeedMax_X,
-        t_acc    := g_cfg[i].Acceleration_X,
-        t_dec    := g_cfg[i].Deceleration_X,
+        v_max    := Transporters[i].SpeedMax_X,
+        t_acc    := Transporters[i].Acceleration_X,
+        t_dec    := Transporters[i].Deceleration_X,
         x_pos    := tmp_x,
         v_x      := tmp_vx
       );
@@ -206,7 +206,7 @@ FOR i := 1 TO MAX_Transporters DO
         IF g_batch[lift_uid].State = IN_PROCESS
            AND g_batch[lift_uid].CurStage >= 1
            AND g_batch[lift_uid].CurStage <= MAX_STEPS_PER_PROGRAM THEN
-          treat_cal := g_program[lift_uid].Steps[g_batch[lift_uid].CurStage].CalTime;
+          treat_cal := TreatmentPrograms[lift_uid].Steps[g_batch[lift_uid].CurStage].CalTime;
           IF treat_cal > 0 THEN
             treat_elapsed := g_time_s - g_station_loc[g_transporter[i].LiftStationTarget].ChangeTime;
             IF treat_elapsed < DINT_TO_LINT(treat_cal) THEN
@@ -243,7 +243,7 @@ FOR i := 1 TO MAX_Transporters DO
         i_move                := g_move[i],
         i_from_dropping_x10   := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
         i_to_device_delay_x10 := Stations[g_transporter[i].SinkStationTarget].DeviceDelay,
-        i_drip_tray_delay_x10 := g_cfg[i].DripTrayDelay
+        i_drip_tray_delay_x10 := Transporters[i].DripTrayDelay
       );
       IF xfer_total < 1.0 THEN
         xfer_total := INT_TO_REAL(
@@ -274,12 +274,12 @@ FOR i := 1 TO MAX_Transporters DO
         END_IF;
         (* ── Original program calc/min/max for this stage ── *)
         (* g_sim_trans holds dispatch-time scheduler values which may differ
-           from the treatment program originals. Read directly from g_program
+           from the treatment program originals. Read directly from TreatmentPrograms
            using the batch's current stage (CurStage=1-based program index). *)
         IF g_batch[evt_unit].CurStage >= 1 AND g_batch[evt_unit].CurStage <= 30 THEN
-          g_event_pending.Payload[9]  := DINT_TO_INT(g_program[evt_unit].Steps[g_batch[evt_unit].CurStage].CalTime);
-          g_event_pending.Payload[10] := DINT_TO_INT(g_program[evt_unit].Steps[g_batch[evt_unit].CurStage].MinTime);
-          g_event_pending.Payload[11] := DINT_TO_INT(g_program[evt_unit].Steps[g_batch[evt_unit].CurStage].MaxTime);
+          g_event_pending.Payload[9]  := DINT_TO_INT(TreatmentPrograms[evt_unit].Steps[g_batch[evt_unit].CurStage].CalTime);
+          g_event_pending.Payload[10] := DINT_TO_INT(TreatmentPrograms[evt_unit].Steps[g_batch[evt_unit].CurStage].MinTime);
+          g_event_pending.Payload[11] := DINT_TO_INT(TreatmentPrograms[evt_unit].Steps[g_batch[evt_unit].CurStage].MaxTime);
         ELSE
           (* Stage 0 (pickup) — no program step *)
           g_event_pending.Payload[9]  := 0;
@@ -316,14 +316,14 @@ FOR i := 1 TO MAX_Transporters DO
       fb_z1(
         delta_t       := 0.02,
         station_kind  := station_kind,
-        ZPosDown        := g_cfg[i].ZPosDown,
+        ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
-        ZPosSlowUp      := g_cfg[i].ZPosSlowUp,
-        ZPosSlowDown    := g_cfg[i].ZPosSlowDown,
-        ZPosSlowEnd     := g_cfg[i].ZPosSlowEnd,
-        SpeedLiftSlow_Z := g_cfg[i].SpeedLiftSlow_Z,
-        SpeedLiftFast_Z := g_cfg[i].SpeedLiftFast_Z,
-        DripTrayDelay   := g_cfg[i].DripTrayDelay,
+        ZPosSlowUp      := Transporters[i].ZPosSlowUp,
+        ZPosSlowDown    := Transporters[i].ZPosSlowDown,
+        ZPosSlowEnd     := Transporters[i].ZPosSlowEnd,
+        SpeedLiftSlow_Z := Transporters[i].SpeedLiftSlow_Z,
+        SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
+        DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
@@ -334,14 +334,14 @@ FOR i := 1 TO MAX_Transporters DO
       fb_z2(
         delta_t       := 0.02,
         station_kind  := station_kind,
-        ZPosDown        := g_cfg[i].ZPosDown,
+        ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
-        ZPosSlowUp      := g_cfg[i].ZPosSlowUp,
-        ZPosSlowDown    := g_cfg[i].ZPosSlowDown,
-        ZPosSlowEnd     := g_cfg[i].ZPosSlowEnd,
-        SpeedLiftSlow_Z := g_cfg[i].SpeedLiftSlow_Z,
-        SpeedLiftFast_Z := g_cfg[i].SpeedLiftFast_Z,
-        DripTrayDelay   := g_cfg[i].DripTrayDelay,
+        ZPosSlowUp      := Transporters[i].ZPosSlowUp,
+        ZPosSlowDown    := Transporters[i].ZPosSlowDown,
+        ZPosSlowEnd     := Transporters[i].ZPosSlowEnd,
+        SpeedLiftSlow_Z := Transporters[i].SpeedLiftSlow_Z,
+        SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
+        DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
@@ -352,14 +352,14 @@ FOR i := 1 TO MAX_Transporters DO
       fb_z3(
         delta_t       := 0.02,
         station_kind  := station_kind,
-        ZPosDown        := g_cfg[i].ZPosDown,
+        ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
-        ZPosSlowUp      := g_cfg[i].ZPosSlowUp,
-        ZPosSlowDown    := g_cfg[i].ZPosSlowDown,
-        ZPosSlowEnd     := g_cfg[i].ZPosSlowEnd,
-        SpeedLiftSlow_Z := g_cfg[i].SpeedLiftSlow_Z,
-        SpeedLiftFast_Z := g_cfg[i].SpeedLiftFast_Z,
-        DripTrayDelay   := g_cfg[i].DripTrayDelay,
+        ZPosSlowUp      := Transporters[i].ZPosSlowUp,
+        ZPosSlowDown    := Transporters[i].ZPosSlowDown,
+        ZPosSlowEnd     := Transporters[i].ZPosSlowEnd,
+        SpeedLiftSlow_Z := Transporters[i].SpeedLiftSlow_Z,
+        SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
+        DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
@@ -388,9 +388,9 @@ FOR i := 1 TO MAX_Transporters DO
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
-        v_max    := g_cfg[i].SpeedMax_X,
-        t_acc    := g_cfg[i].Acceleration_X,
-        t_dec    := g_cfg[i].Deceleration_X,
+        v_max    := Transporters[i].SpeedMax_X,
+        t_acc    := Transporters[i].Acceleration_X,
+        t_dec    := Transporters[i].Deceleration_X,
         x_pos    := tmp_x,
         v_x      := tmp_vx
       );
@@ -402,9 +402,9 @@ FOR i := 1 TO MAX_Transporters DO
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
-        v_max    := g_cfg[i].SpeedMax_X,
-        t_acc    := g_cfg[i].Acceleration_X,
-        t_dec    := g_cfg[i].Deceleration_X,
+        v_max    := Transporters[i].SpeedMax_X,
+        t_acc    := Transporters[i].Acceleration_X,
+        t_dec    := Transporters[i].Deceleration_X,
         x_pos    := tmp_x,
         v_x      := tmp_vx
       );
@@ -416,9 +416,9 @@ FOR i := 1 TO MAX_Transporters DO
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
-        v_max    := g_cfg[i].SpeedMax_X,
-        t_acc    := g_cfg[i].Acceleration_X,
-        t_dec    := g_cfg[i].Deceleration_X,
+        v_max    := Transporters[i].SpeedMax_X,
+        t_acc    := Transporters[i].Acceleration_X,
+        t_dec    := Transporters[i].Deceleration_X,
         x_pos    := tmp_x,
         v_x      := tmp_vx
       );
@@ -436,7 +436,7 @@ FOR i := 1 TO MAX_Transporters DO
       (* Record arrival at sink timestamp *)
       ts_at_sink[i] := g_time_s;
       SIM_FindStation(station_number := g_transporter[i].SinkStationTarget, device_delay_s => device_delay);
-      g_sim_trans[i].ZTimer := device_delay + INT_TO_REAL(g_cfg[i].DripTrayDelay) / 10.0;
+      g_sim_trans[i].ZTimer := device_delay + INT_TO_REAL(Transporters[i].DripTrayDelay) / 10.0;
       g_sim_trans[i].ZStage := 6;
       g_transporter[i].Phase := 4;
       STC_TrackMoveTimes(i_trans := i, i_prev := 3, i_new := 4);
@@ -453,14 +453,14 @@ FOR i := 1 TO MAX_Transporters DO
       fb_z1(
         delta_t       := 0.02,
         station_kind  := station_kind,
-        ZPosDown        := g_cfg[i].ZPosDown,
+        ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
-        ZPosSlowUp      := g_cfg[i].ZPosSlowUp,
-        ZPosSlowDown    := g_cfg[i].ZPosSlowDown,
-        ZPosSlowEnd     := g_cfg[i].ZPosSlowEnd,
-        SpeedLiftSlow_Z := g_cfg[i].SpeedLiftSlow_Z,
-        SpeedLiftFast_Z := g_cfg[i].SpeedLiftFast_Z,
-        DripTrayDelay   := g_cfg[i].DripTrayDelay,
+        ZPosSlowUp      := Transporters[i].ZPosSlowUp,
+        ZPosSlowDown    := Transporters[i].ZPosSlowDown,
+        ZPosSlowEnd     := Transporters[i].ZPosSlowEnd,
+        SpeedLiftSlow_Z := Transporters[i].SpeedLiftSlow_Z,
+        SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
+        DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := 0,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
@@ -471,14 +471,14 @@ FOR i := 1 TO MAX_Transporters DO
       fb_z2(
         delta_t       := 0.02,
         station_kind  := station_kind,
-        ZPosDown        := g_cfg[i].ZPosDown,
+        ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
-        ZPosSlowUp      := g_cfg[i].ZPosSlowUp,
-        ZPosSlowDown    := g_cfg[i].ZPosSlowDown,
-        ZPosSlowEnd     := g_cfg[i].ZPosSlowEnd,
-        SpeedLiftSlow_Z := g_cfg[i].SpeedLiftSlow_Z,
-        SpeedLiftFast_Z := g_cfg[i].SpeedLiftFast_Z,
-        DripTrayDelay   := g_cfg[i].DripTrayDelay,
+        ZPosSlowUp      := Transporters[i].ZPosSlowUp,
+        ZPosSlowDown    := Transporters[i].ZPosSlowDown,
+        ZPosSlowEnd     := Transporters[i].ZPosSlowEnd,
+        SpeedLiftSlow_Z := Transporters[i].SpeedLiftSlow_Z,
+        SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
+        DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := 0,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
@@ -489,14 +489,14 @@ FOR i := 1 TO MAX_Transporters DO
       fb_z3(
         delta_t       := 0.02,
         station_kind  := station_kind,
-        ZPosDown        := g_cfg[i].ZPosDown,
+        ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
-        ZPosSlowUp      := g_cfg[i].ZPosSlowUp,
-        ZPosSlowDown    := g_cfg[i].ZPosSlowDown,
-        ZPosSlowEnd     := g_cfg[i].ZPosSlowEnd,
-        SpeedLiftSlow_Z := g_cfg[i].SpeedLiftSlow_Z,
-        SpeedLiftFast_Z := g_cfg[i].SpeedLiftFast_Z,
-        DripTrayDelay   := g_cfg[i].DripTrayDelay,
+        ZPosSlowUp      := Transporters[i].ZPosSlowUp,
+        ZPosSlowDown    := Transporters[i].ZPosSlowDown,
+        ZPosSlowEnd     := Transporters[i].ZPosSlowEnd,
+        SpeedLiftSlow_Z := Transporters[i].SpeedLiftSlow_Z,
+        SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
+        DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := 0,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
@@ -512,8 +512,8 @@ FOR i := 1 TO MAX_Transporters DO
       IF NOT g_event_pending_valid THEN
         (* Config-based sub-phase durations *)
         dropping_s := g_transporter[i].DrippingTime / 10;
-        IF g_cfg[i].DripTrayInUse THEN
-          trip_s := g_cfg[i].DripTrayDelay / 10;
+        IF Transporters[i].DripTrayInUse THEN
+          trip_s := Transporters[i].DripTrayDelay / 10;
         ELSE
           trip_s := 0;
         END_IF;
@@ -571,9 +571,9 @@ FOR i := 1 TO MAX_Transporters DO
         x_target := tmp_x,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
-        v_max    := g_cfg[i].SpeedMax_X,
-        t_acc    := g_cfg[i].Acceleration_X,
-        t_dec    := g_cfg[i].Deceleration_X,
+        v_max    := Transporters[i].SpeedMax_X,
+        t_acc    := Transporters[i].Acceleration_X,
+        t_dec    := Transporters[i].Deceleration_X,
         x_pos    := tmp_x,
         v_x      := tmp_vx
       );
@@ -583,9 +583,9 @@ FOR i := 1 TO MAX_Transporters DO
         x_target := tmp_x,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
-        v_max    := g_cfg[i].SpeedMax_X,
-        t_acc    := g_cfg[i].Acceleration_X,
-        t_dec    := g_cfg[i].Deceleration_X,
+        v_max    := Transporters[i].SpeedMax_X,
+        t_acc    := Transporters[i].Acceleration_X,
+        t_dec    := Transporters[i].Deceleration_X,
         x_pos    := tmp_x,
         v_x      := tmp_vx
       );
@@ -595,9 +595,9 @@ FOR i := 1 TO MAX_Transporters DO
         x_target := tmp_x,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
-        v_max    := g_cfg[i].SpeedMax_X,
-        t_acc    := g_cfg[i].Acceleration_X,
-        t_dec    := g_cfg[i].Deceleration_X,
+        v_max    := Transporters[i].SpeedMax_X,
+        t_acc    := Transporters[i].Acceleration_X,
+        t_dec    := Transporters[i].Deceleration_X,
         x_pos    := tmp_x,
         v_x      := tmp_vx
       );

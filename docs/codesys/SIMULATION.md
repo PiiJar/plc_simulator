@@ -66,9 +66,9 @@ Jos g_transporter[ti].TaskId <> 0 ja g_transporter[ti].TaskId <> RunningTaskId:
 ```
 SIM_FB_XMotion(
     target     := XDriveTarget,
-    speed_max  := g_cfg[ti].SpeedMax_X,
-    accel      := g_cfg[ti].Acceleration_X,
-    decel      := g_cfg[ti].Deceleration_X,
+    speed_max  := Transporters[ti].SpeedMax_X,
+    accel      := Transporters[ti].Acceleration_X,
+    decel      := Transporters[ti].Deceleration_X,
     x_min      := XMinDriveLimit,    ← TWA-rajoitus
     x_max      := XMaxDriveLimit     ← TWA-rajoitus
 )
@@ -227,8 +227,8 @@ Dequeue:
 ## SIM_FB_ClearConfig — Konfiguraation nollaus
 
 Nollaa kaikki konfiguraatiotaulukot (kutsutaan `cmd_code = 3`):
-- `Stations[]`, `g_cfg[]`, `g_transporter[]`
-- `g_unit[]`, `g_batch[]`, `g_program[]`
+- `Stations[]`, `Transporters[]`, `g_transporter[]`
+- `g_unit[]`, `g_batch[]`, `TreatmentPrograms[]`
 - `g_schedule[]`, `g_task[]`
 - Simulaatiotaulukot
 

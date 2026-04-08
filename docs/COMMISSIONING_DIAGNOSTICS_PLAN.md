@@ -247,7 +247,7 @@ Kutsuesimerkki — fataali konfiguraatiovirhe:
 
 ```iec-st
 (* STC_ValidateConfig: transportterin nopeus = 0 *)
-IF g_cfg[t].Speed_X <= 0.0 THEN
+IF Transporters[t].Speed_X <= 0.0 THEN
     STC_PushDiag(i_mode := 1, i_code := 2, i_v1 := t, i_v2 := 1, i_v3 := 0, i_v4 := 0);
     error_count := error_count + 1;
 END_IF;
@@ -735,7 +735,7 @@ CREATE TABLE IF NOT EXISTS diag_codes (
 INSERT INTO diag_codes (mode, code, mode_name, severity, description, hint, val_labels) VALUES
   -- Mode 1: CONFIG (fataali)
   (1, 1, 'CONFIG', 'FATAL', 'CountStations = 0 or > MAX',                     'Set via gateway before INIT',                        'station_count, -, -, -'),
-  (1, 2, 'CONFIG', 'FATAL', 'Transporter speed = 0',                          'Set Speed_X/Z > 0 in g_cfg',                         'trans_id, axis(1=X 2=Z), -, -'),
+  (1, 2, 'CONFIG', 'FATAL', 'Transporter speed = 0',                          'Set Speed_X/Z > 0 in Transporters',                         'trans_id, axis(1=X 2=Z), -, -'),
   (1, 3, 'CONFIG', 'FATAL', 'Working area start > end',                       'Swap WorkingArea_Start and _End',                     'trans_id, start, end, -'),
   (1, 4, 'CONFIG', 'FATAL', 'Working area covers no stations',                'Extend working area or add stations',                 'trans_id, -, -, -'),
   (1, 5, 'CONFIG', 'FATAL', 'Treatment program references unknown station',   'Check station exists in Stations',                   'program_id, step, station_id, -'),

@@ -617,7 +617,7 @@ Muissa tiedostoissa:
 
 ```st
 VAR_EXTERNAL
-  Stations     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;    g_station_loc  : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;  g_cfg          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Stations     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;    g_station_loc  : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;  Transporters          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
 ```
 
 **Ongelma:** Useita deklaraatioita samalla rivillä — pitäisi olla yksi per rivi.

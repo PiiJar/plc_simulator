@@ -42,7 +42,7 @@ END_VAR
 VAR_EXTERNAL
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
 END_VAR
 
@@ -67,8 +67,8 @@ IF i_mode = 1 THEN
     IF g_unit[ui].Status = USED
        AND g_unit[ui].Target = TO_NONE
        AND g_batch[ui].State = NOT_PROCESSED
-       AND g_batch[ui].ProgId = g_program[ui].ProgramId
-       AND g_program[ui].ProgramId > 0 THEN
+       AND g_batch[ui].ProgId = TreatmentPrograms[ui].ProgramId
+       AND TreatmentPrograms[ui].ProgramId > 0 THEN
       cnt := 1;
       o_list[1] := ui;
     END_IF;
@@ -81,8 +81,8 @@ END_IF;
 FOR ui := 1 TO MAX_Units DO
   IF g_unit[ui].Status = USED
      AND g_unit[ui].Target = TO_NONE
-     AND g_batch[ui].ProgId = g_program[ui].ProgramId
-     AND g_program[ui].ProgramId > 0 THEN
+     AND g_batch[ui].ProgId = TreatmentPrograms[ui].ProgramId
+     AND TreatmentPrograms[ui].ProgramId > 0 THEN
 
     IF g_batch[ui].State = IN_PROCESS
        AND g_batch[ui].CurStage >= 0

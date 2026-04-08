@@ -7,7 +7,7 @@
  *
  * -------------------------------------------------------------------------------------------
  *  Identifies stations covered by 2+ transporters.
- *  Reads g_cfg (read-only config). Writes io_overlap.
+ *  Reads Transporters (read-only config). Writes io_overlap.
  *
  *  ------------------------------------------------------------------------------------------
  *
@@ -34,7 +34,7 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
 END_VAR
 
 VAR
@@ -59,7 +59,7 @@ FOR station_idx := MIN_StationIndex TO MAX_StationIndex DO
     covered := FALSE;
     FOR ai := 1 TO 4 DO
       IF NOT covered THEN
-        area := g_cfg[ti].TaskArea[ai];
+        area := Transporters[ti].TaskArea[ai];
         IF (area.MinLift > 0 AND station_idx >= area.MinLift AND station_idx <= area.MaxLift)
            OR (area.MinSink > 0 AND station_idx >= area.MinSink AND station_idx <= area.MaxSink) THEN
           covered := TRUE;

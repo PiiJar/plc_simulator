@@ -52,7 +52,7 @@ VAR_EXTERNAL
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   CountStations              : INT;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
 END_VAR
 
@@ -222,7 +222,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
           i_move                := tmp_move,
           i_from_dropping_x10   := Stations[prev_stn].DrippingTime,
           i_to_device_delay_x10 := Stations[cand_arr[p]].DeviceDelay,
-          i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
+          i_drip_tray_delay_x10 := Transporters[i_trans].DripTrayDelay
         );
         my_entry := exit_t + REAL_TO_LINT(xfer_t);
         my_exit  := my_entry + REAL_TO_LINT(calc_s);
@@ -288,7 +288,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
                   i_move                := tmp_move,
                   i_from_dropping_x10   := Stations[Stations[prev_stn].ChangeStation].DrippingTime,
                   i_to_device_delay_x10 := Stations[stn_num].DeviceDelay,
-                  i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
+                  i_drip_tray_delay_x10 := Transporters[i_trans].DripTrayDelay
                 );
     ELSE
       xfer_t := STC_CalcTransferTime(
@@ -297,7 +297,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
         i_move                := tmp_move,
         i_from_dropping_x10   := Stations[prev_stn].DrippingTime,
         i_to_device_delay_x10 := Stations[stn_num].DeviceDelay,
-        i_drip_tray_delay_x10 := g_cfg[i_trans].DripTrayDelay
+        i_drip_tray_delay_x10 := Transporters[i_trans].DripTrayDelay
       );
     END_IF;
   ELSE

@@ -51,7 +51,7 @@ VAR_EXTERNAL
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   g_time_s                  : LINT;
@@ -93,13 +93,13 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
       g_batch[i_unit].StartTime := g_time_s;
 
       (* Update batch treatment times from program for the new stage *)
-      IF (g_program[i_unit].ProgramId = g_batch[i_unit].ProgId)
-         AND (g_program[i_unit].ProgramId > 0) THEN
+      IF (TreatmentPrograms[i_unit].ProgramId = g_batch[i_unit].ProgId)
+         AND (TreatmentPrograms[i_unit].ProgramId > 0) THEN
         new_stg := g_batch[i_unit].CurStage;
         IF (new_stg >= 1) AND (new_stg <= MAX_STEPS_PER_PROGRAM) THEN
-          g_batch[i_unit].MinTime := g_program[i_unit].Steps[new_stg].MinTime;
-          g_batch[i_unit].MaxTime := g_program[i_unit].Steps[new_stg].MaxTime;
-          g_batch[i_unit].CalTime := g_program[i_unit].Steps[new_stg].CalTime;
+          g_batch[i_unit].MinTime := TreatmentPrograms[i_unit].Steps[new_stg].MinTime;
+          g_batch[i_unit].MaxTime := TreatmentPrograms[i_unit].Steps[new_stg].MaxTime;
+          g_batch[i_unit].CalTime := TreatmentPrograms[i_unit].Steps[new_stg].CalTime;
         END_IF;
       END_IF;
     END_IF;

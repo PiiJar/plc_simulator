@@ -339,11 +339,11 @@ function stationWrite(stNum) {
 }
 
 /**
- * Transporter config write targets (g_cfg[tid])
- * PLC variable: GVL_Parameters.g_cfg[1..3]
+ * Transporter config write targets (Transporters[tid])
+ * PLC variable: GVL_Parameters.Transporters[1..3]
  */
 function cfgWrite(tid) {
-  const b = `g_cfg[${tid}]`;
+  const b = `Transporters[${tid}]`;
   return {
     transporter_id: P(`${b}.TransporterId`),
     is_in_use:      P(`${b}.IsInUse`),
@@ -418,11 +418,11 @@ function batchWrite(uid) {
 }
 
 /**
- * Treatment program write targets (g_program[uid])
- * PLC variable: GVL_Parameters.g_program[1..10]
+ * Treatment program write targets (TreatmentPrograms[uid])
+ * PLC variable: GVL_Parameters.TreatmentPrograms[1..10]
  */
 function programWrite(uid) {
-  const b = `g_program[${uid}]`;
+  const b = `TreatmentPrograms[${uid}]`;
   const n = {
     program_id: P(`${b}.ProgramId`),
     step_count: P(`${b}.StepCount`),

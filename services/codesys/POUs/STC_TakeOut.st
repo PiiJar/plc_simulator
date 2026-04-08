@@ -65,7 +65,7 @@ FOR ti := 1 TO MAX_Transporters DO
       dir := -1;
     END_IF;
   ELSE
-    area_center := (g_cfg[ti].DrivePosMin + g_cfg[ti].DrivePosMax) / 2;
+    area_center := (Transporters[ti].DrivePosMin + Transporters[ti].DrivePosMax) / 2;
     IF area_center > current_x THEN
       dir := 1;
     ELSE
@@ -77,11 +77,11 @@ FOR ti := 1 TO MAX_Transporters DO
   target_x := current_x + (INT_TO_DINT(dir) * take_out_dist);
 
   (* Clamp to transporter drive limits *)
-  IF target_x < g_cfg[ti].DrivePosMin THEN
-    target_x := g_cfg[ti].DrivePosMin;
+  IF target_x < Transporters[ti].DrivePosMin THEN
+    target_x := Transporters[ti].DrivePosMin;
   END_IF;
-  IF target_x > g_cfg[ti].DrivePosMax THEN
-    target_x := g_cfg[ti].DrivePosMax;
+  IF target_x > Transporters[ti].DrivePosMax THEN
+    target_x := Transporters[ti].DrivePosMax;
   END_IF;
 
   (* Skip if we can't actually move *)

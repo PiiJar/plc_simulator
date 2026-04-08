@@ -40,13 +40,13 @@ VAR_EXTERNAL
   CountStations              : INT;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_sim_trans               : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
   g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_avoid_status            : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
@@ -118,7 +118,7 @@ IF g_cmd_code <> 0 THEN
     CountStations := g_cmd_param;
 
     FOR i := 1 TO MAX_Transporters DO
-      IF g_cfg[i].TaskArea[1].MinLift > 0 THEN
+      IF Transporters[i].TaskArea[1].MinLift > 0 THEN
         g_transporter[i].IsActive := TRUE;
         g_transporter[i].Status := 3;  (* auto_idle *)
       ELSE
@@ -130,11 +130,11 @@ IF g_cmd_code <> 0 THEN
       g_sim_trans[i].XVelocity := 0;
       g_sim_trans[i].ZTimer := 0.0;
       g_sim_trans[i].IdleStartTime := g_time_s;  (* init move-away timer *)
-      g_transporter[i].XMinDriveLimit := g_cfg[i].DrivePosMin;
-      g_transporter[i].XMaxDriveLimit := g_cfg[i].DrivePosMax;
+      g_transporter[i].XMinDriveLimit := Transporters[i].DrivePosMin;
+      g_transporter[i].XMaxDriveLimit := Transporters[i].DrivePosMax;
 
       (* Start position: at own area minimum, z=0 *)
-      g_transporter[i].XPosition := g_cfg[i].DrivePosMin;
+      g_transporter[i].XPosition := Transporters[i].DrivePosMin;
       g_transporter[i].ZPosition := 0;
       g_transporter[i].CurrentStation := 0;
     END_FOR;

@@ -29,13 +29,13 @@ VAR_EXTERNAL
   CountStations       : INT;
   Stations         : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   g_station_loc     : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_cfg              : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters              : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_transporter      : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_sim_trans        : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
   g_unit            : ARRAY[1..MAX_Units] OF UDT_UnitType;
   g_ntt             : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
   g_batch          : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_program         : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms         : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_avoid_status     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
   g_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   g_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
@@ -77,27 +77,27 @@ CountStations := 0;
 
 (* --- Clear all transporter configs --- *)
 FOR i := 1 TO MAX_Transporters DO
-  g_cfg[i].DrivePosMin   := 0;
-  g_cfg[i].DrivePosMax   := 0;
-  g_cfg[i].YMinDriveLimit   := 0;
-  g_cfg[i].YMaxDriveLimit   := 0;
-  g_cfg[i].CollisionWidth    := 0;
-  g_cfg[i].AvoidanceWidth    := 0;
-  g_cfg[i].Acceleration_X     := 0;
-  g_cfg[i].Deceleration_X     := 0;
-  g_cfg[i].SpeedMax_X    := 0;
-  g_cfg[i].ZPosDown    := 0;
-  g_cfg[i].ZPosSlowUp := 0;
-  g_cfg[i].ZPosSlowDown := 0;
-  g_cfg[i].ZPosSlowEnd := 0;
-  g_cfg[i].SpeedLiftSlow_Z   := 0;
-  g_cfg[i].SpeedLiftFast_Z   := 0;
-  g_cfg[i].DripTrayDelay  := 0;
+  Transporters[i].DrivePosMin   := 0;
+  Transporters[i].DrivePosMax   := 0;
+  Transporters[i].YMinDriveLimit   := 0;
+  Transporters[i].YMaxDriveLimit   := 0;
+  Transporters[i].CollisionWidth    := 0;
+  Transporters[i].AvoidanceWidth    := 0;
+  Transporters[i].Acceleration_X     := 0;
+  Transporters[i].Deceleration_X     := 0;
+  Transporters[i].SpeedMax_X    := 0;
+  Transporters[i].ZPosDown    := 0;
+  Transporters[i].ZPosSlowUp := 0;
+  Transporters[i].ZPosSlowDown := 0;
+  Transporters[i].ZPosSlowEnd := 0;
+  Transporters[i].SpeedLiftSlow_Z   := 0;
+  Transporters[i].SpeedLiftFast_Z   := 0;
+  Transporters[i].DripTrayDelay  := 0;
   FOR j := 1 TO 4 DO
-    g_cfg[i].TaskArea[j].MinLift := 0;
-    g_cfg[i].TaskArea[j].MaxLift := 0;
-    g_cfg[i].TaskArea[j].MinSink := 0;
-    g_cfg[i].TaskArea[j].MaxSink := 0;
+    Transporters[i].TaskArea[j].MinLift := 0;
+    Transporters[i].TaskArea[j].MaxLift := 0;
+    Transporters[i].TaskArea[j].MinSink := 0;
+    Transporters[i].TaskArea[j].MaxSink := 0;
   END_FOR;
 END_FOR;
 
@@ -169,17 +169,17 @@ END_FOR;
 
 (* --- Clear all treatment programs --- *)
 FOR i := 1 TO MAX_Units DO
-  g_program[i].ProgramId := 0;
-  g_program[i].ProgramName := '';
-  g_program[i].StepCount := 0;
+  TreatmentPrograms[i].ProgramId := 0;
+  TreatmentPrograms[i].ProgramName := '';
+  TreatmentPrograms[i].StepCount := 0;
   FOR j := 0 TO MAX_STEPS_PER_PROGRAM DO
     FOR k := 0 TO 4 DO
-      g_program[i].Steps[j].Stations[k] := 0;
+      TreatmentPrograms[i].Steps[j].Stations[k] := 0;
     END_FOR;
-    g_program[i].Steps[j].StationCount := 0;
-    g_program[i].Steps[j].MinTime := 0;
-    g_program[i].Steps[j].MaxTime := 0;
-    g_program[i].Steps[j].CalTime := 0;
+    TreatmentPrograms[i].Steps[j].StationCount := 0;
+    TreatmentPrograms[i].Steps[j].MinTime := 0;
+    TreatmentPrograms[i].Steps[j].MaxTime := 0;
+    TreatmentPrograms[i].Steps[j].CalTime := 0;
   END_FOR;
 END_FOR;
 

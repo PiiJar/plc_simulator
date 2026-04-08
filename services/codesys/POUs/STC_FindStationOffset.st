@@ -28,8 +28,8 @@ IF i_dir <> 1 AND i_dir <> -1 THEN RETURN; END_IF;
 IF i_min_steps < 1 THEN RETURN; END_IF;
 
 from_x    := Stations[i_from_stn].XPosition;
-drive_min := g_cfg[i_trans].DrivePosMin;
-drive_max := g_cfg[i_trans].DrivePosMax;
+drive_min := Transporters[i_trans].DrivePosMin;
+drive_max := Transporters[i_trans].DrivePosMax;
 step_count := 0;
 
 IF i_dir = 1 THEN
@@ -42,13 +42,13 @@ IF i_dir = 1 THEN
 
         is_in_task_area := FALSE;
         FOR task_area_index := 1 TO 3 DO
-            IF g_cfg[i_trans].TaskArea[task_area_index].MinLift <> 0 THEN
-                IF scan_station >= g_cfg[i_trans].TaskArea[task_area_index].MinLift
-                     AND scan_station <= g_cfg[i_trans].TaskArea[task_area_index].MaxLift THEN
+            IF Transporters[i_trans].TaskArea[task_area_index].MinLift <> 0 THEN
+                IF scan_station >= Transporters[i_trans].TaskArea[task_area_index].MinLift
+                     AND scan_station <= Transporters[i_trans].TaskArea[task_area_index].MaxLift THEN
                     is_in_task_area := TRUE;
                 END_IF;
-                IF scan_station >= g_cfg[i_trans].TaskArea[task_area_index].MinSink
-                     AND scan_station <= g_cfg[i_trans].TaskArea[task_area_index].MaxSink THEN
+                IF scan_station >= Transporters[i_trans].TaskArea[task_area_index].MinSink
+                     AND scan_station <= Transporters[i_trans].TaskArea[task_area_index].MaxSink THEN
                     is_in_task_area := TRUE;
                 END_IF;
             END_IF;
@@ -71,13 +71,13 @@ ELSE
 
         is_in_task_area := FALSE;
         FOR task_area_index := 1 TO 3 DO
-            IF g_cfg[i_trans].TaskArea[task_area_index].MinLift <> 0 THEN
-                IF scan_station >= g_cfg[i_trans].TaskArea[task_area_index].MinLift
-                     AND scan_station <= g_cfg[i_trans].TaskArea[task_area_index].MaxLift THEN
+            IF Transporters[i_trans].TaskArea[task_area_index].MinLift <> 0 THEN
+                IF scan_station >= Transporters[i_trans].TaskArea[task_area_index].MinLift
+                     AND scan_station <= Transporters[i_trans].TaskArea[task_area_index].MaxLift THEN
                     is_in_task_area := TRUE;
                 END_IF;
-                IF scan_station >= g_cfg[i_trans].TaskArea[task_area_index].MinSink
-                     AND scan_station <= g_cfg[i_trans].TaskArea[task_area_index].MaxSink THEN
+                IF scan_station >= Transporters[i_trans].TaskArea[task_area_index].MinSink
+                     AND scan_station <= Transporters[i_trans].TaskArea[task_area_index].MaxSink THEN
                     is_in_task_area := TRUE;
                 END_IF;
             END_IF;

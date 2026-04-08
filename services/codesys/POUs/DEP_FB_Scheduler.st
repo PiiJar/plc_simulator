@@ -92,11 +92,11 @@ END_VAR
 VAR_EXTERNAL
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_dep_idle_slot           : ARRAY[1..MAX_Transporters] OF UDT_JC_DepIdleSlotSetType;
   g_dep_overlap             : UDT_JC_DepOverlapType;
@@ -951,7 +951,7 @@ ELSIF phase = 8000 THEN
     g_event_pending.Payload[1]  := cur_wait_unit;                        (* unit_id *)
     g_event_pending.Payload[2]  := g_batch[cur_wait_unit].BatchCode;     (* batch_code *)
     g_event_pending.Payload[3]  := g_batch[cur_wait_unit].ProgId;        (* program_id *)
-    g_event_pending.Payload[4]  := g_program[cur_wait_unit].StepCount;   (* stages_count *)
+    g_event_pending.Payload[4]  := TreatmentPrograms[cur_wait_unit].StepCount;   (* stages_count *)
     g_event_pending.Payload[5]  := g_dep_wk_schedule[cur_wait_unit].Stages[0].Station; (* start_station *)
     g_event_pending_valid := TRUE;
   END_IF;

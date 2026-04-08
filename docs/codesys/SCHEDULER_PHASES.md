@@ -55,7 +55,7 @@ Oletussiirtymä on `phase + 1`. Poikkeussiirtymät asetetaan muuttujalla `next_p
   │
   2200  NO_TREATMENT ── Luo ei-käsittely-siirrot (NTT)
   │
-  2201  APPLY_STRETCHES ── Kirjaa resolve-päätökset g_program:iin
+  2201  APPLY_STRETCHES ── Kirjaa resolve-päätökset TreatmentPrograms:iin
   │
   2202  TAKE_OUT ── Tarkista tyhjäkäyntipoissiirrot
   │
@@ -112,7 +112,7 @@ Yksi erä per PLC-jakso:
 - Levittää idle-slotteja tarvittaessa
 
 #### Phase 2201: APPLY_STRETCHES
-- Kirjaa konfliktisilmukan `stretches[]` → `g_program[unit].Steps[stage].CalTime`
+- Kirjaa konfliktisilmukan `stretches[]` → `TreatmentPrograms[unit].Steps[stage].CalTime`
 - Tekee ratkaisut pysyviksi
 
 #### Phase 2202: TAKE_OUT
@@ -142,7 +142,7 @@ Yksityiskohtainen kuvaus: [DEP_SCHEDULER.md](DEP_SCHEDULER.md)
   │
   1  WAIT_STABLE ─── Odota g_tsk_stable = TRUE
   │
-  100  INIT_SNAPSHOT ── Kopioi g_batch[], g_program[] → workspace
+  100  INIT_SNAPSHOT ── Kopioi g_batch[], TreatmentPrograms[] → workspace
   101  INIT_COLLECT ── Kerää odottavat + aktiiviset erät
   102  INIT_SORT_WAITING ── FIFO-järjestys odottaville
   103  INIT_CALC_OVERLAP ── Tunnista jaetut asemat

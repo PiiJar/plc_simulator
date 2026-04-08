@@ -49,7 +49,7 @@ END_VAR
 VAR_EXTERNAL
   g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
 END_VAR
 
@@ -64,7 +64,7 @@ IF i_cmd = 1 THEN
   FOR ui := 1 TO MAX_Units DO
     io_wk_schedule[ui].StageCount := 0;
     io_wk_batch[ui]    := g_batch[ui];
-    io_wk_program[ui]  := g_program[ui];
+    io_wk_program[ui]  := TreatmentPrograms[ui];
   END_FOR;
   FOR ui := 1 TO MAX_Transporters DO
     io_wk_task[ui].Count := 0;
@@ -76,7 +76,7 @@ ELSIF i_cmd = 2 THEN
       g_batch[ui] := io_wk_batch[ui];
     END_IF;
     IF io_wk_program[ui].ProgramId > 0 THEN
-      g_program[ui] := io_wk_program[ui];
+      TreatmentPrograms[ui] := io_wk_program[ui];
     END_IF;
   END_FOR;
 ELSIF i_cmd = 3 THEN

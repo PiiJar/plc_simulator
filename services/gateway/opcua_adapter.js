@@ -712,7 +712,7 @@ class OpcuaAdapter extends PlcAdapter {
       }
       console.log(`[OPC-UA] Wrote ${stations.length} stations`);
 
-      // Step 3: Write transporter config to g_cfg[tid]
+      // Step 3: Write transporter config to Transporters[tid]
       const AREA_KEYS = ['line_100', 'line_200', 'line_300'];
       for (const tr of transporters) {
         const tid = tr.id;
@@ -878,7 +878,7 @@ class OpcuaAdapter extends PlcAdapter {
       { nodeId: bw.cal_time,   value: 0,               dataType: DataType.Int32 },
     ]);
 
-    // Write g_program[uid].ProgramId so PLC can match batch → program
+    // Write TreatmentPrograms[uid].ProgramId so PLC can match batch → program
     await this._writeNode(pw.program_id, programId || 0, DataType.Int16);
 
     // StartTime is LINT (Int64) — requires [high, low] format

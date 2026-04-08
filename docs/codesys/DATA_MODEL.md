@@ -62,11 +62,11 @@ Kirjasto lukee ne ja kirjoittaa laskentatulokset takaisin.
 | Muuttuja | Tyyppi | Suunta |
 |----------|--------|--------|
 | `Stations[100..130]` | UDT_StationType | Asiakas → kirjasto |
-| `g_cfg[1..3]` | UDT_TransporterType | Asiakas → kirjasto |
+| `Transporters[1..3]` | UDT_TransporterType | Asiakas → kirjasto |
 | `g_transporter[1..3]` | UDT_TransporterStatusType | Kirjasto → asiakas |
 | `g_unit[1..10]` | UDT_UnitType | Asiakas ↔ kirjasto |
 | `g_batch[1..10]` | UDT_BatchType | Asiakas ↔ kirjasto |
-| `g_program[1..10]` | UDT_TreatmentProgramType | Asiakas ↔ kirjasto |
+| `TreatmentPrograms[1..10]` | UDT_TreatmentProgramType | Asiakas ↔ kirjasto |
 | `g_station_loc[1..130]` | UDT_UnitLocation | Kirjasto → asiakas |
 
 ---

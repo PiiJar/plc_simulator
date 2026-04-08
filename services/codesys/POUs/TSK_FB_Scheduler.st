@@ -62,10 +62,10 @@ END_VAR
 VAR_EXTERNAL
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
-  g_program                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
   g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_cfg                     : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   (* DEP handshake *)
   g_dep_pending             : UDT_JC_DepPendingWriteType;
   g_conflict_resolved       : BOOL;
@@ -122,7 +122,7 @@ VAR
   lock_cnt                  : INT := 0;
   locks_initialized         : BOOL := FALSE;
   fb_find                   : STC_FindTransporter;
-  (* candidateStretches — JS: resolve decisions persisted to g_program *)
+  (* candidateStretches — JS: resolve decisions persisted to TreatmentPrograms *)
   stretches                 : ARRAY[1..20] OF UDT_JC_TskStretchType;
   stretch_cnt               : INT := 0;
   si                        : INT;
@@ -213,7 +213,7 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
     END_IF;
 
     STC_CalcSchedule(i_unit := ui, i_trans := sched_trans, i_time_s := i_time_s,
-                     io_schedule := g_schedule, io_batch := g_batch, io_program := g_program);
+                     io_schedule := g_schedule, io_batch := g_batch, io_program := TreatmentPrograms);
     (* phase + 1 → next batch *)
 
   ELSE
@@ -353,16 +353,16 @@ ELSIF phase = 2201 THEN
   FOR si := 1 TO stretch_cnt DO
     IF stretches[si].Unit >= 1 AND stretches[si].Unit <= MAX_Units THEN
      IF stretches[si].Stage >= 1
-        AND stretches[si].Stage <= g_program[stretches[si].Unit].StepCount THEN
-      new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage].CalTime
+        AND stretches[si].Stage <= TreatmentPrograms[stretches[si].Unit].StepCount THEN
+      new_cal := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].CalTime
                + stretches[si].DelayS;
-      IF new_cal < g_program[stretches[si].Unit].Steps[stretches[si].Stage].MinTime THEN
-        new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage].MinTime;
+      IF new_cal < TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime THEN
+        new_cal := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime;
       END_IF;
-      IF new_cal > g_program[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime THEN
-        new_cal := g_program[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime;
+      IF new_cal > TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime THEN
+        new_cal := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime;
       END_IF;
-      g_program[stretches[si].Unit].Steps[stretches[si].Stage].CalTime := new_cal;
+      TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].CalTime := new_cal;
 
       IF g_batch[stretches[si].Unit].CurStage = stretches[si].Stage THEN
         g_batch[stretches[si].Unit].CalTime := new_cal;
@@ -403,8 +403,8 @@ ELSIF phase = 10000 THEN
 
   FOR ui := 1 TO MAX_Units DO
     IF g_batch[ui].CurStage >= 1
-       AND g_batch[ui].CurStage <= g_program[ui].StepCount THEN
-      g_dbg_prog_cal[ui] := g_program[ui].Steps[g_batch[ui].CurStage].CalTime;
+       AND g_batch[ui].CurStage <= TreatmentPrograms[ui].StepCount THEN
+      g_dbg_prog_cal[ui] := TreatmentPrograms[ui].Steps[g_batch[ui].CurStage].CalTime;
     ELSE
       g_dbg_prog_cal[ui] := 0;
     END_IF;
@@ -418,7 +418,7 @@ ELSIF phase = 10001 THEN
   IF g_dep_pending.Valid THEN
     FOR ui := 1 TO MAX_Units DO
       IF g_dep_pending.Programs[ui].ProgramId > 0 THEN
-        g_program[ui] := g_dep_pending.Programs[ui];
+        TreatmentPrograms[ui] := g_dep_pending.Programs[ui];
       END_IF;
     END_FOR;
     IF g_dep_pending.BatchUnit >= 1 AND g_dep_pending.BatchUnit <= MAX_Units THEN
