@@ -315,8 +315,8 @@ FOR ti := 1 TO MAX_Transporters DO
   IF xfer_total < 5.0 THEN xfer_total := 60.0; END_IF;
           IF NOT g_event_pending_valid THEN
             g_event_pending.MsgType := 1;
-            g_event_pending.TsHi := LINT_TO_INT(g_time_s / LINT#65536);
-            g_event_pending.TsLo := LINT_TO_INT(g_time_s MOD LINT#65536);
+            g_event_pending.TsHi := LINT_TO_UINT(g_time_s / LINT#65536);
+            g_event_pending.TsLo := LINT_TO_UINT(g_time_s MOD LINT#65536);
             g_event_pending.Payload[1]  := LINT_TO_INT(t_start / LINT#65536);   (* TaskId_Hi *)
             g_event_pending.Payload[2]  := LINT_TO_INT(t_start MOD LINT#65536);  (* TaskId_Lo *)
             g_event_pending.Payload[3]  := ti;

@@ -142,8 +142,8 @@ END_VAR
           (* ── Emit BATCH_COMPLETED event (msg_type=5) ── *)
           IF NOT g_event_pending_valid THEN
             g_event_pending.MsgType := 5;
-            g_event_pending.TsHi := LINT_TO_INT(g_time_s / LINT#65536);
-            g_event_pending.TsLo := LINT_TO_INT(g_time_s MOD LINT#65536);
+            g_event_pending.TsHi := LINT_TO_UINT(g_time_s / LINT#65536);
+            g_event_pending.TsLo := LINT_TO_UINT(g_time_s MOD LINT#65536);
             g_event_pending.Payload[1]  := u;                                  (* unit_id *)
             g_event_pending.Payload[2]  := g_batch[u].BatchCode;               (* batch_code *)
             g_event_pending.Payload[3]  := g_program[u].StepCount;             (* stage_count *)

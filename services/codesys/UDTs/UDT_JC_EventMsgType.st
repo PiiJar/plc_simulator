@@ -27,8 +27,8 @@ TYPE UDT_JC_EventMsgType :
 STRUCT
     Seq     : INT;                 (* unique incrementing sequence number *)
     MsgType : INT;                 (* 1=task_dispatched, 2=lift, ... *)
-    TsHi    : INT;                 (* timestamp upper 16 bits (unix s) *)
-    TsLo    : INT;                 (* timestamp lower 16 bits *)
+    TsHi    : UINT;                (* timestamp upper 16 bits (unix s) *)
+    TsLo    : UINT;                (* timestamp lower 16 bits *)
     Payload : ARRAY[1..12] OF INT; (* payload — meaning depends on msg_type *)
 END_STRUCT;
 END_TYPE

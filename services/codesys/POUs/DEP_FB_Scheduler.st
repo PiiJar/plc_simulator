@@ -946,8 +946,8 @@ ELSIF phase = 8000 THEN
   (* ── Emit BATCH_ACTIVATED event (msg_type=4) ── *)
   IF NOT g_event_pending_valid THEN
     g_event_pending.MsgType := 4;
-    g_event_pending.TsHi := LINT_TO_INT(i_time_s / LINT#65536);
-    g_event_pending.TsLo := LINT_TO_INT(i_time_s MOD LINT#65536);
+    g_event_pending.TsHi := LINT_TO_UINT(i_time_s / LINT#65536);
+    g_event_pending.TsLo := LINT_TO_UINT(i_time_s MOD LINT#65536);
     g_event_pending.Payload[1]  := cur_wait_unit;                        (* unit_id *)
     g_event_pending.Payload[2]  := g_batch[cur_wait_unit].BatchCode;     (* batch_code *)
     g_event_pending.Payload[3]  := g_batch[cur_wait_unit].ProgId;        (* program_id *)
