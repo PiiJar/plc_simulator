@@ -21,6 +21,11 @@ VAR
   dir                       : INT;
   queued_lift_station       : INT;
   time_to_start             : LINT;
+  si                        : INT;
+  stn_x                     : DINT;
+  best_stn                  : INT;
+  best_dist                 : DINT;
+  dx                        : DINT;
 END_VAR
 
 STC_TakeOut := TRUE;
@@ -73,15 +78,34 @@ FOR ti := 1 TO MAX_Transporters DO
     END_IF;
   END_IF;
 
-  (* Compute target position from TakeOutDistance *)
+  (* Compute minimum target position from TakeOutDistance *)
   target_x := current_x + (INT_TO_DINT(dir) * take_out_dist);
 
-  (* Clamp to transporter drive limits *)
-  IF target_x < Transporters[ti].DrivePosMin THEN
-    target_x := Transporters[ti].DrivePosMin;
-  END_IF;
-  IF target_x > Transporters[ti].DrivePosMax THEN
-    target_x := Transporters[ti].DrivePosMax;
+  (* Find nearest station in move direction that is at least take_out_dist away *)
+  best_stn := 0;
+  best_dist := DINT#2147483647;
+  FOR si := MIN_StationIndex TO MIN_StationIndex + CountStations - 1 DO
+    stn_x := Stations[si].XPosition;
+    IF stn_x = 0 THEN CONTINUE; END_IF;
+    (* Station must be in the correct direction and at least take_out_dist from current *)
+    IF dir > 0 THEN
+      dx := stn_x - current_x;
+    ELSE
+      dx := current_x - stn_x;
+    END_IF;
+    IF dx >= take_out_dist AND dx < best_dist THEN
+      (* Must be within transporter drive limits *)
+      IF stn_x >= Transporters[ti].DrivePosMin AND stn_x <= Transporters[ti].DrivePosMax THEN
+        best_dist := dx;
+        best_stn := si;
+      END_IF;
+    END_IF;
+  END_FOR;
+
+  IF best_stn > 0 THEN
+    target_x := Stations[best_stn].XPosition;
+  ELSE
+    CONTINUE;  (* no station found in direction — skip take-out *)
   END_IF;
 
   (* Skip if we can't actually move *)
