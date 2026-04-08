@@ -117,7 +117,7 @@ DEP_FitTaskToSlot(
   i_shift_s           = ovlp_delay_s,
   i_calc_time_s       = w_tasks[i].CalcTime,
   i_max_time_s        = w_tasks[i].MaxTime,
-  i_flex_factor       = SCH_FLEX_FACTOR,
+  i_flex_factor       = SCH_DEP_FLEX_FACTOR,
   i_margin_s          = SCH_MARGIN_S,
   i_conflict_margin_s = SCH_CONFLICT_MARGIN_S,
   io_idle_slot        = g_dep_idle_slot,
@@ -133,7 +133,7 @@ DEP_FitTaskToSlot(
       │
       ├─ Jos earliest + task_duration ≤ latest:
       │     delay = earliest - task.start
-      │     flex  = SCH_FLEX_FACTOR × (MaxTime - CalTime)
+      │     flex  = SCH_DEP_FLEX_FACTOR × (MaxTime - CalTime)
       │     margin = SCH_MARGIN_S
       │     Jos delay ≤ margin + flex → FITS ✓
       │     Muuten → OVERFLOW (tallenna paras)
@@ -166,7 +166,7 @@ Phase 4000 APPLY_DELAY:
 │  = aktiivinen erä, jonka tehtävä päättää slotin
 │
 ├─ Levitä borderilla: CalcTime += tarvittava aika
-│  (rajoitettu: max SCH_FLEX_FACTOR × flex)
+│  (rajoitettu: max SCH_DEP_FLEX_FACTOR × flex)
 │
 ├─ STC_ShiftSchedule → propagoi viive
 │
@@ -191,10 +191,6 @@ g_dep_pending.TimeStamp := i_time_s
 
 #### Phase 8100: WAIT_SAVE
 Odota kunnes TSK on käsitellyt pyynnön: `g_dep_pending.Valid = FALSE`
-
-#### Phase 8200+i: END_DELAY
-Stabilointitikkejä `SCH_END_DELAY_TICKS = 100` kertaa. Antaa TSK:lle aikaa
-laskea uudelleen uudella erällä.
 
 #### Phase 8500: RESTART
 ```
@@ -238,5 +234,5 @@ Kun `g_dep_pending.Valid = TRUE`:
 
 - DEP käsittelee **yhden odottavan erän kerrallaan** (FIFO)
 - Jos erä ei mahdu mihinkään idle-slottiin, se hylätään ja kokeillaan seuraavaa
-- `SCH_FLEX_FACTOR = 0.5` tarkoittaa, että DEP käyttää korkeintaan puolet aktiivisen erän käytettävissä olevasta flexistä
+- `SCH_DEP_FLEX_FACTOR = 0.5` tarkoittaa, että DEP käyttää korkeintaan puolet aktiivisen erän käytettävissä olevasta flexistä
 - `SCH_MAX_FIT_ROUNDS = 50` rajoittaa backward-chaining-iteraatioiden määrää

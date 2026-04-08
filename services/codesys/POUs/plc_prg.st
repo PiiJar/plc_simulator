@@ -95,6 +95,8 @@ VAR
   evt_queue                 : SIM_FB_EventQueue;
   (* Time from SysTime library *)
   now_ms                    : LINT := 0;
+  prev_ms                   : UDINT := 0;
+  sim_delta_t               : REAL := 0.02;
   (* UI snapshot edge detection *)
   prev_tsk_phase            : INT := 0;
   prev_dep_phase            : INT := 0;
@@ -177,8 +179,14 @@ IF init_done THEN
   g_time_s := g_time_offset + now_ms / 1000;        (* seconds, unix epoch *)
   g_time_100ms := g_time_offset * 10 + now_ms / 100; (* 0.1s ticks, unix epoch *)
 
+  (* ── Actual cycle time for physics simulation ── *)
+  IF prev_ms > 0 THEN
+    sim_delta_t := UDINT_TO_REAL(LINT_TO_UDINT(now_ms) - prev_ms) / 1000.0;
+  END_IF;
+  prev_ms := LINT_TO_UDINT(now_ms);
+
   (* ── Execute transporter tasks (physics simulation) ── *)
-  run_tasks(i_run := init_done);
+  run_tasks(i_run := init_done, i_delta_t := sim_delta_t);
 
 END_IF;  (* init_done *)
 

@@ -28,7 +28,7 @@ Kirjaston sisäinen. Kaikki taulukkorajat ja algoritmien kynnysarvot. Tämä on 
 | `DEP_MAX_WAITING` | 5 | Odottavien erien maksimi |
 | `SCH_DISPATCH_MARGIN_S` | 3.0 | Dispatchin aikaisuusmarginaali (s) |
 | `SCH_CONFLICT_MARGIN_S` | 1.0 | Konfliktin tunnistusmarginaali (s) |
-| `SCH_FLEX_FACTOR` | 0.5 | DEP:n käyttämä osuus käsittelyajan liukumasta |
+| `SCH_DEP_FLEX_FACTOR` | 0.5 | DEP:n käyttämä osuus käsittelyajan liukumasta |
 
 **Tärkeää:** `build_codesys_xml.py` sisältää näiden vakioiden numeeriset arvot (`CONST_VALUES`-dict), jotta PLCopenXML:n taulukkorajat voidaan generoida numeerisina literaaleina. Jos GVL-vakion arvo muuttuu, se pitää päivittää myös build-skriptiin.
 

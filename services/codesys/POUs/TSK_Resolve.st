@@ -49,6 +49,7 @@ END_VAR
 VAR_EXTERNAL CONSTANT
     MAX_Transporters        : INT;
     MAX_Units               : INT;
+    SCH_TSK_FLEX_FACTOR     : REAL;
 END_VAR
 
 VAR_OUTPUT
@@ -151,6 +152,7 @@ IF sched_blocked >= 1 AND sched_blocked <= io_schedule[i_blocked_unit].StageCoun
     io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime
     - io_schedule[i_blocked_unit].Stages[sched_blocked].MinTime);
   IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
+  stage_flex := stage_flex * SCH_TSK_FLEX_FACTOR;
 
   IF stage_flex > 0.1 THEN
     IF io_batch[i_blocked_unit].CurStage = i_blocked_stage THEN cap := 0.9;
@@ -245,6 +247,7 @@ IF sched_conf >= 1 AND sched_conf <= io_schedule[i_conf_unit].StageCount THEN
     io_schedule[i_conf_unit].Stages[sched_conf].MaxTime
     - io_schedule[i_conf_unit].Stages[sched_conf].CalcTime);
   IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
+  stage_flex := stage_flex * SCH_TSK_FLEX_FACTOR;
 
   IF stage_flex > 0.1 THEN
     IF io_batch[i_conf_unit].CurStage = i_conf_stage THEN cap := 0.9;
@@ -315,6 +318,7 @@ IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <=
     stage_flex := DINT_TO_REAL(io_schedule[i_conf_unit].Stages[sched_prev_conf].MaxTime
                 - io_schedule[i_conf_unit].Stages[sched_prev_conf].CalcTime);
   IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
+    stage_flex := stage_flex * SCH_TSK_FLEX_FACTOR;
 
     IF stage_flex > 0.1 THEN
       IF io_batch[i_conf_unit].CurStage = prev_conf_stage THEN cap := 0.9;

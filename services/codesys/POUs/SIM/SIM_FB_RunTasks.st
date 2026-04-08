@@ -23,7 +23,8 @@
 
 FUNCTION_BLOCK SIM_FB_RunTasks
 VAR_INPUT
-  i_run : BOOL;       (* enable — typically init_done *)
+  i_run     : BOOL;   (* enable — typically init_done *)
+  i_delta_t : REAL;   (* actual cycle time in seconds *)
 END_VAR
 VAR_EXTERNAL CONSTANT
     MAX_Transporters    : INT;
@@ -130,7 +131,7 @@ FOR i := 1 TO MAX_Transporters DO
     tmp_vx := g_sim_trans[i].XVelocity;
     IF i = 1 THEN
       fb_x1(
-        delta_t  := 0.02,
+        delta_t  := i_delta_t,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
@@ -144,7 +145,7 @@ FOR i := 1 TO MAX_Transporters DO
       g_transporter[i].XDriveTarget := fb_x1.x_drive;
     ELSIF i = 2 THEN
       fb_x2(
-        delta_t  := 0.02,
+        delta_t  := i_delta_t,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
@@ -158,7 +159,7 @@ FOR i := 1 TO MAX_Transporters DO
       g_transporter[i].XDriveTarget := fb_x2.x_drive;
     ELSIF i = 3 THEN
       fb_x3(
-        delta_t  := 0.02,
+        delta_t  := i_delta_t,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
@@ -314,7 +315,7 @@ FOR i := 1 TO MAX_Transporters DO
     tmp_zt := g_sim_trans[i].ZTimer;
     IF i = 1 THEN
       fb_z1(
-        delta_t       := 0.02,
+        delta_t       := i_delta_t,
         station_kind  := station_kind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
@@ -332,7 +333,7 @@ FOR i := 1 TO MAX_Transporters DO
       arrived_z := fb_z1.done;
     ELSIF i = 2 THEN
       fb_z2(
-        delta_t       := 0.02,
+        delta_t       := i_delta_t,
         station_kind  := station_kind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
@@ -350,7 +351,7 @@ FOR i := 1 TO MAX_Transporters DO
       arrived_z := fb_z2.done;
     ELSIF i = 3 THEN
       fb_z3(
-        delta_t       := 0.02,
+        delta_t       := i_delta_t,
         station_kind  := station_kind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
@@ -384,7 +385,7 @@ FOR i := 1 TO MAX_Transporters DO
     tmp_vx := g_sim_trans[i].XVelocity;
     IF i = 1 THEN
       fb_x1(
-        delta_t  := 0.02,
+        delta_t  := i_delta_t,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
@@ -398,7 +399,7 @@ FOR i := 1 TO MAX_Transporters DO
       g_transporter[i].XDriveTarget := fb_x1.x_drive;
     ELSIF i = 2 THEN
       fb_x2(
-        delta_t  := 0.02,
+        delta_t  := i_delta_t,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
@@ -412,7 +413,7 @@ FOR i := 1 TO MAX_Transporters DO
       g_transporter[i].XDriveTarget := fb_x2.x_drive;
     ELSIF i = 3 THEN
       fb_x3(
-        delta_t  := 0.02,
+        delta_t  := i_delta_t,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
@@ -451,7 +452,7 @@ FOR i := 1 TO MAX_Transporters DO
     tmp_zt := g_sim_trans[i].ZTimer;
     IF i = 1 THEN
       fb_z1(
-        delta_t       := 0.02,
+        delta_t       := i_delta_t,
         station_kind  := station_kind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
@@ -469,7 +470,7 @@ FOR i := 1 TO MAX_Transporters DO
       arrived_z := fb_z1.done;
     ELSIF i = 2 THEN
       fb_z2(
-        delta_t       := 0.02,
+        delta_t       := i_delta_t,
         station_kind  := station_kind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
@@ -487,7 +488,7 @@ FOR i := 1 TO MAX_Transporters DO
       arrived_z := fb_z2.done;
     ELSIF i = 3 THEN
       fb_z3(
-        delta_t       := 0.02,
+        delta_t       := i_delta_t,
         station_kind  := station_kind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
@@ -567,7 +568,7 @@ FOR i := 1 TO MAX_Transporters DO
     (* Use current position as target — XMotion will clamp to nearest limit if outside *)
     IF i = 1 THEN
       fb_x1(
-        delta_t  := 0.02,
+        delta_t  := i_delta_t,
         x_target := tmp_x,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
@@ -579,7 +580,7 @@ FOR i := 1 TO MAX_Transporters DO
       );
     ELSIF i = 2 THEN
       fb_x2(
-        delta_t  := 0.02,
+        delta_t  := i_delta_t,
         x_target := tmp_x,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
@@ -591,7 +592,7 @@ FOR i := 1 TO MAX_Transporters DO
       );
     ELSIF i = 3 THEN
       fb_x3(
-        delta_t  := 0.02,
+        delta_t  := i_delta_t,
         x_target := tmp_x,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,

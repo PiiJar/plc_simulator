@@ -3,14 +3,14 @@
 VAR_GLOBAL CONSTANT
 
   (* ===== Layout Hierarchy Limits ===== *)
-  MAX_STATIONS_PER_LINE     : INT  := 30;  (* max stations per line *)
+  MAX_STATIONS_PER_LINE     : INT  := 30;   (* max stations per line *)
   MIN_StationIndex          : INT  := 100;  (* first valid station index *)
   MAX_StationIndex          : INT  := 130;  (* MaxLines*100 + MaxStationsPerLine *)
 
   (* ===== Derived Absolute Limits ===== *)
-  MAX_Transporters          : INT  := 3;  (* absolute max transporters in a plant *)
+  MAX_Transporters          : INT  := 3;   (* absolute max transporters in a plant *)
   MAX_Units                 : INT  := 10;  (* max units (lifting frames / hooks) *)
-  MAX_STATIONS_PER_STEP     : INT  := 5;  (* max parallel stations per program stage *)
+  MAX_STATIONS_PER_STEP     : INT  := 5;   (* max parallel stations per program stage *)
   MAX_STEPS_PER_PROGRAM     : INT  := 30;  (* max stages in a treatment program *)
   MAX_TASK_QUEUE            : INT  := 30;  (* max tasks per transporter queue — must match UDT_JC_TskQueueType.Queue size *)
 
@@ -18,16 +18,16 @@ VAR_GLOBAL CONSTANT
   MAX_LOCKS                 : INT  := 50;  (* max locked stages in conflict resolution *)
   DEP_MAX_IDLE_SLOTS        : INT  := 20;  (* max idle slots per transporter *)
   DEP_MAX_DELAY_ACTS        : INT  := 20;  (* max delay actions per cycle *)
-  DEP_MAX_WAITING           : INT  := 5;  (* max waiting batches *)
+  DEP_MAX_WAITING           : INT  := 5;   (* max waiting batches *)
   MIN_WorkingArea           : DINT := 20;  (* mm — TWA minimum working area *)
 
   (* ===== Scheduler Timing Constants ===== *)
   SCH_DISPATCH_MARGIN_S     : REAL := 3.0;  (* dispatch early-start margin (seconds) *)
-  SCH_CONFLICT_MARGIN_S     : REAL := 1.0;  (* conflict detection margin (seconds) *)
-  SCH_FLEX_FACTOR           : REAL := 0.6;  (* fraction of flex (max-cal) used by DEP *)
+  SCH_CONFLICT_MARGIN_S     : REAL := 2.0;  (* conflict detection margin (seconds) *)
+  SCH_DEP_FLEX_FACTOR       : REAL := 0.6;  (* fraction of flex (max-cal) used by DEP *)
+  SCH_TSK_FLEX_FACTOR       : REAL := 0.9;  (* fraction of flex (max-cal) used by TSK scheduler *)
   SCH_MARGIN_S              : REAL := 5.0;  (* DEP small-delay threshold (seconds) *)
   SCH_MAX_INIT_WAIT_S       : REAL := 120.0;  (* max initial wait for stage0 pickup (seconds) *)
-  SCH_END_DELAY_TICKS       : INT  := 100;  (* stabilization ticks after DEP activate *)
   SCH_MAX_FIT_ROUNDS        : INT  := 50;  (* max recalc rounds in DEP fit loop *)
 
   (* ===== Enumerated Constants ===== *)

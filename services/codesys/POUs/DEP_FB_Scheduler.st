@@ -80,11 +80,10 @@ VAR_EXTERNAL CONSTANT
     IN_PROCESS              : INT;
     USED                    : INT;
     TO_NONE                 : INT;
-    SCH_FLEX_FACTOR         : REAL;
+    SCH_DEP_FLEX_FACTOR         : REAL;
     SCH_MARGIN_S            : REAL;
     SCH_CONFLICT_MARGIN_S   : REAL;
     SCH_MAX_INIT_WAIT_S     : REAL;
-    SCH_END_DELAY_TICKS     : INT;
     SCH_MAX_FIT_ROUNDS      : INT;
     MAX_TASK_QUEUE          : INT;
 END_VAR
@@ -692,7 +691,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
       i_shift_s      := ovlp_delay_s,
       i_calc_time_s  := w_tasks[si].CalcTime,
       i_max_time_s   := w_tasks[si].MaxTime,
-      i_flex_factor  := SCH_FLEX_FACTOR,
+      i_flex_factor  := SCH_DEP_FLEX_FACTOR,
       i_margin_s     := SCH_MARGIN_S,
       i_conflict_margin_s := SCH_CONFLICT_MARGIN_S,
       io_idle_slot   := g_dep_idle_slot,
@@ -743,7 +742,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
           IF remaining_need <= SCH_MARGIN_S THEN EXIT; END_IF;
           prev_flex_up := DINT_TO_REAL(w_tasks[bk].MaxTime - w_tasks[bk].CalcTime);
   IF prev_flex_up < 0.0 THEN prev_flex_up := 0.0; END_IF;
-          prev_capped := prev_flex_up * SCH_FLEX_FACTOR;
+          prev_capped := prev_flex_up * SCH_DEP_FLEX_FACTOR;
           use_delay := prev_capped;
   IF use_delay > remaining_need THEN use_delay := remaining_need; END_IF;
 
@@ -832,7 +831,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
                 g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime
               - g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime);
   IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
-              border_capped := border_flex * SCH_FLEX_FACTOR;
+              border_capped := border_flex * SCH_DEP_FLEX_FACTOR;
               border_use := border_capped;
   IF border_use > widen_need THEN border_use := widen_need; END_IF;
 
@@ -864,7 +863,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
                   g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime
                 - g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime);
   IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
-                border_capped := border_flex * SCH_FLEX_FACTOR;
+                border_capped := border_flex * SCH_DEP_FLEX_FACTOR;
                 border_use := border_capped;
   IF border_use > widen_need THEN border_use := widen_need; END_IF;
 
@@ -963,20 +962,10 @@ ELSIF phase = 8000 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 8100 THEN
   IF NOT g_dep_pending.Valid THEN
-    next_phase := 8200;
+    next_phase := 8500;
   ELSE
     next_phase := 8100;  (* stay *)
   END_IF;
-
-(* ════════════════════════════════════════════════════════════ *)
-(* PHASE 8200+i: END_DELAY — stabilization ticks               *)
-(* ════════════════════════════════════════════════════════════ *)
-ELSIF phase >= 8200 AND phase <= 8499 THEN
-  idx := phase - 8200;
-  IF idx >= SCH_END_DELAY_TICKS THEN
-    next_phase := 8500;
-  END_IF;
-  (* else phase + 1 -> next tick *)
 
 (* ════════════════════════════════════════════════════════════ *)
 (* PHASE 8500: RESTART — back to WAIT_STABLE                   *)
