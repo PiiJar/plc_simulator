@@ -44,3 +44,6 @@ services/ui/.nuxt/
 
 # Migration leftovers
 *.migrated
+
+# Docs - generated parameter files
+docs/Parameters/
