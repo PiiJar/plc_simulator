@@ -1,5 +1,5 @@
-(* UDT_UnitType - Tracks a single bar/basket unit on the treatment line *)
-TYPE UDT_UnitType :
+(* UDT_JC_UnitType - Tracks a single bar/basket unit on the treatment line *)
+TYPE UDT_JC_UnitType :
 STRUCT
     Location : INT; (* station number where unit currently is *)
     Status   : INT; (* NOT_USED=0, USED=1 *)

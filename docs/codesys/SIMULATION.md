@@ -111,7 +111,7 @@ Lasku ei ole noston peilikuva, vaan erillinen 3-vaiheinen sekvenssi:
 
 Phase 4:n valmistuessa:
 - Päivitä `g_unit[unit].Location := SinkStationTarget`
-- Päivitä `g_station_loc[stn].UnitId`
+- Päivitä `g_station_occupancy[stn].UnitId`
 - Kutsu `STC_TrackMoveTimes` → tallenna mitatut ajat
 - `g_transporter[ti].Phase := 0`
 

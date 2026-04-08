@@ -38,11 +38,11 @@ VAR_EXTERNAL
   g_transporter  : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_sim_trans    : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
   Stations      : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc  : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_station_occupancy  : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
   Transporters          : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_move         : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   g_actual_move  : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
-  g_unit         : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_unit         : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   g_batch        : ARRAY[1..MAX_Units] OF UDT_BatchType;
   TreatmentPrograms      : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_time_s       : LINT;
@@ -201,14 +201,14 @@ FOR i := 1 TO MAX_Transporters DO
       SIM_FindStation(station_number := g_transporter[i].LiftStationTarget, device_delay_s => device_delay, dropping_time_s => drop_time);
 
       (* Check treatment time *)
-      lift_uid := g_station_loc[g_transporter[i].LiftStationTarget].UnitId;
+      lift_uid := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
       IF lift_uid >= 1 AND lift_uid <= MAX_Units THEN
         IF g_batch[lift_uid].State = IN_PROCESS
            AND g_batch[lift_uid].CurStage >= 1
            AND g_batch[lift_uid].CurStage <= MAX_STEPS_PER_PROGRAM THEN
           treat_cal := TreatmentPrograms[lift_uid].Steps[g_batch[lift_uid].CurStage].CalTime;
           IF treat_cal > 0 THEN
-            treat_elapsed := g_time_s - g_station_loc[g_transporter[i].LiftStationTarget].ChangeTime;
+            treat_elapsed := g_time_s - g_station_occupancy[g_transporter[i].LiftStationTarget].ChangeTime;
             IF treat_elapsed < DINT_TO_LINT(treat_cal) THEN
               can_lift := FALSE;
             END_IF;
@@ -254,7 +254,7 @@ FOR i := 1 TO MAX_Transporters DO
       IF xfer_total < 5.0 THEN xfer_total := 60.0; END_IF;
 
       (* ── Emit LIFT event (msg_type=2) ── *)
-      evt_unit := g_station_loc[g_transporter[i].LiftStationTarget].UnitId;
+      evt_unit := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
       IF NOT g_event_pending_valid AND evt_unit >= 1 THEN
         g_event_pending.MsgType := 2;
         g_event_pending.TsHi := LINT_TO_UINT(g_time_s / LINT#65536);
@@ -266,7 +266,7 @@ FOR i := 1 TO MAX_Transporters DO
         g_event_pending.Payload[5]  := g_transporter[i].LiftStationTarget;
         g_event_pending.Payload[6]  := g_batch[evt_unit].BatchCode;
         g_event_pending.Payload[7]  := g_batch[evt_unit].CurStage;
-        evt_diff := g_time_s - g_station_loc[g_transporter[i].LiftStationTarget].ChangeTime;
+        evt_diff := g_time_s - g_station_occupancy[g_transporter[i].LiftStationTarget].ChangeTime;
         IF evt_diff > LINT#32000 THEN
           g_event_pending.Payload[8] := 32000;
         ELSE
@@ -291,7 +291,7 @@ FOR i := 1 TO MAX_Transporters DO
       END_IF;
 
       (* Unit moves from lift station → transporter *)
-      pick_unit_id := g_station_loc[g_transporter[i].LiftStationTarget].UnitId;
+      pick_unit_id := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
       IF pick_unit_id >= 1 THEN
         STC_UpdateUnitLocation(i_unit := pick_unit_id, i_location := i, i_ntt_primary := 0);
 
@@ -546,7 +546,7 @@ FOR i := 1 TO MAX_Transporters DO
       END_IF;
 
       (* Unit moves from transporter → sink station *)
-      sink_unit_id := g_station_loc[i].UnitId;
+      sink_unit_id := g_station_occupancy[i].UnitId;
       IF sink_unit_id >= 1 THEN
         STC_UpdateUnitLocation(i_unit := sink_unit_id, i_location := g_transporter[i].SinkStationTarget, i_ntt_primary := g_sim_trans[i].NttPrimary);
       END_IF;

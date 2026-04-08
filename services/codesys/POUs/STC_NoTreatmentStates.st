@@ -49,11 +49,11 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
   g_time_s                  : LINT;
   g_production_queue        : INT;
   g_event_pending           : UDT_JC_EventMsgType;
@@ -101,8 +101,8 @@ END_VAR
     IF snap[u].OnStation THEN
       snap[u].LocationOp    := Stations[snap[u].Location].StationType;
       snap[u].InBuffer := snap[u].LocationOp >= OP_BUFFER AND snap[u].LocationOp <= OP_BUFFER_PROCESSED;
-      IF g_station_loc[snap[u].Location].ChangeTime > 0 THEN
-        snap[u].Elapsed := g_time_s - g_station_loc[snap[u].Location].ChangeTime;
+      IF g_station_occupancy[snap[u].Location].ChangeTime > 0 THEN
+        snap[u].Elapsed := g_time_s - g_station_occupancy[snap[u].Location].ChangeTime;
       ELSE
         snap[u].Elapsed := 0;
       END_IF;
@@ -195,11 +195,11 @@ END_VAR
         EXIT;
       END_IF;
       IF next_stn >= MIN_StationIndex AND next_stn <= MAX_StationIndex THEN
-        IF g_station_loc[next_stn].UnitId = 0 THEN
+        IF g_station_occupancy[next_stn].UnitId = 0 THEN
           free_found := TRUE;
           EXIT;
         END_IF;
-        occ_uid := g_station_loc[next_stn].UnitId;
+        occ_uid := g_station_occupancy[next_stn].UnitId;
         IF occ_uid >= 1 AND occ_uid <= MAX_Units THEN
           IF snap[occ_uid].Target = TO_AVOID THEN
             free_found := TRUE;
@@ -217,7 +217,7 @@ END_VAR
           EXIT;
         END_IF;
         IF next_stn >= MIN_StationIndex AND next_stn <= MAX_StationIndex THEN
-          occ_uid := g_station_loc[next_stn].UnitId;
+          occ_uid := g_station_occupancy[next_stn].UnitId;
           IF occ_uid >= 1 AND occ_uid <= MAX_Units THEN
             IF NOT snap[occ_uid].HasBatch AND snap[occ_uid].Target = TO_NONE THEN
               avoid_uid := occ_uid;
@@ -244,7 +244,7 @@ END_VAR
     FOR stk := MIN_StationIndex TO MAX_StationIndex DO
       op := Stations[stk].StationType;
       IF (op = OP_LOADING OR op = OP_LOADING_UNLOADING)
-         AND g_station_loc[stk].UnitId = 0 THEN
+         AND g_station_occupancy[stk].UnitId = 0 THEN
         load_free := TRUE;
         EXIT;
       END_IF;

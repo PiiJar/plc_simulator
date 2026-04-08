@@ -7,7 +7,7 @@
  *
  * -------------------------------------------------------------------------------------------
  *  Sets g_unit[i_unit].location to the given new location.
- *  Updates g_station_loc[].UnitId + ChangeTime for both old
+ *  Updates g_station_occupancy[].UnitId + ChangeTime for both old
  *  and new locations.
  *
  *  When moving to a station:
@@ -47,9 +47,9 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
@@ -67,8 +67,8 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
 
   (* --- Clear unit_id from old location (unified: transporter or station) --- *)
   IF (old_loc >= 1) AND (old_loc <= MAX_StationIndex) THEN
-    g_station_loc[old_loc].UnitId     := 0;
-    g_station_loc[old_loc].ChangeTime := g_time_s;
+    g_station_occupancy[old_loc].UnitId     := 0;
+    g_station_occupancy[old_loc].ChangeTime := g_time_s;
   END_IF;
 
   (* --- Update unit location --- *)
@@ -76,8 +76,8 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
 
   (* --- Set unit_id on new location (unified: transporter or station) --- *)
   IF (i_location >= 1) AND (i_location <= MAX_StationIndex) THEN
-    g_station_loc[i_location].UnitId     := i_unit;
-    g_station_loc[i_location].ChangeTime := g_time_s;
+    g_station_occupancy[i_location].UnitId     := i_unit;
+    g_station_occupancy[i_location].ChangeTime := g_time_s;
 
     (* Station-specific: batch stage advance only when landing on a station *)
     IF (i_location >= MIN_StationIndex) THEN

@@ -47,9 +47,9 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
   CountStations              : INT;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
   Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
@@ -254,8 +254,8 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
       FOR p := 1 TO cand_cnt DO
         IF NOT sched_occupied[p] THEN
           IF cand_arr[p] >= MIN_StationIndex AND cand_arr[p] <= MAX_StationIndex THEN
-            IF g_station_loc[cand_arr[p]].ChangeTime < best_change_time THEN
-              best_change_time := g_station_loc[cand_arr[p]].ChangeTime;
+            IF g_station_occupancy[cand_arr[p]].ChangeTime < best_change_time THEN
+              best_change_time := g_station_occupancy[cand_arr[p]].ChangeTime;
               chosen_stn := cand_arr[p];
             END_IF;
           END_IF;

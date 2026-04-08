@@ -233,7 +233,7 @@ Audit-vaitteen mukaan UDT-tiedostoissa olisi vain headerit ilman kenttakohtaisia
 
 Vastanaytteita:
 
-- [services/codesys/UDTs/UDT_UnitType.st](../services/codesys/UDTs/UDT_UnitType.st)
+- [services/codesys/UDTs/UDT_JC_UnitType.st](../services/codesys/UDTs/UDT_JC_UnitType.st)
 - [services/codesys/UDTs/UDT_JC_TskScheduleType.st](../services/codesys/UDTs/UDT_JC_TskScheduleType.st)
 - [services/codesys/UDTs/UDT_JC_TskTaskType.st](../services/codesys/UDTs/UDT_JC_TskTaskType.st)
 

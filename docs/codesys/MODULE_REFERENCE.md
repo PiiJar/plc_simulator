@@ -360,7 +360,7 @@ Tiedostokohtainen hakuteos. Jokaisesta POU:sta: tyyppi, tarkoitus, rajapinta ja 
 | **Tiedosto** | `POUs/STC_UpdateUnitLocation.st` |
 | **Tyyppi** | FUNCTION |
 | **Toimitus** | 🔒 KIRJASTO |
-| **Tarkoitus** | Päivitä g_station_loc[] kun unit siirtyy asemalle |
+| **Tarkoitus** | Päivitä g_station_occupancy[] kun unit siirtyy asemalle |
 
 ---
 

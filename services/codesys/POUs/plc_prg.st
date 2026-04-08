@@ -39,11 +39,11 @@ VAR_EXTERNAL
   (* --- Shared data arrays — written by Gateway via OPC UA --- *)
   CountStations              : INT;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
   Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_sim_trans               : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
@@ -144,14 +144,14 @@ IF g_cmd_code <> 0 THEN
     (* Calculate time offset: real unix time - uptime *)
     g_time_offset := g_time_sync - UDINT_TO_LINT(SysTimeGetMs()) / 1000;
 
-    (* Build g_station_loc from g_unit[].location so SIM_FB_RunTasks
-       can find units on stations via g_station_loc[stn].UnitId.
-       Gateway writes g_unit[] but not g_station_loc[]. *)
+    (* Build g_station_occupancy from g_unit[].location so SIM_FB_RunTasks
+       can find units on stations via g_station_occupancy[stn].UnitId.
+       Gateway writes g_unit[] but not g_station_occupancy[]. *)
     FOR i := 1 TO MAX_Units DO
       IF g_unit[i].location >= MIN_StationIndex
          AND g_unit[i].location <= MAX_StationIndex THEN
-        g_station_loc[g_unit[i].location].UnitId     := i;
-        g_station_loc[g_unit[i].location].ChangeTime  := g_time_s;
+        g_station_occupancy[g_unit[i].location].UnitId     := i;
+        g_station_occupancy[g_unit[i].location].ChangeTime  := g_time_s;
       END_IF;
     END_FOR;
 

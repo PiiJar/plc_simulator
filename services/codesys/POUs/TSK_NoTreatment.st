@@ -48,12 +48,12 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
   g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
   g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
   Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
 END_VAR
@@ -150,7 +150,7 @@ FOR ui := 1 TO MAX_Units DO
     already := FALSE;
     FOR ti := 1 TO MAX_Transporters DO
       IF NOT already THEN
-        IF g_transporter[ti].Phase > 0 AND g_station_loc[ti].UnitId = ui THEN
+        IF g_transporter[ti].Phase > 0 AND g_station_occupancy[ti].UnitId = ui THEN
           already := TRUE;
         END_IF;
         FOR qi2 := 1 TO io_task[ti].Count DO

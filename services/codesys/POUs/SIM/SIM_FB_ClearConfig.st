@@ -28,11 +28,11 @@ END_VAR
 VAR_EXTERNAL
   CountStations       : INT;
   Stations         : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc     : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_station_occupancy     : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
   Transporters              : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_transporter      : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_sim_trans        : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
-  g_unit            : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_unit            : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   g_ntt             : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
   g_batch          : ARRAY[1..MAX_Units] OF UDT_BatchType;
   TreatmentPrograms         : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
@@ -70,8 +70,8 @@ END_FOR;
 
 (* --- Clear all location tracking (transporters 1..MAX_Transporters + stations MIN..MAX) --- *)
 FOR i := 1 TO MAX_StationIndex DO
-  g_station_loc[i].UnitId     := 0;
-  g_station_loc[i].ChangeTime := 0;
+  g_station_occupancy[i].UnitId     := 0;
+  g_station_occupancy[i].ChangeTime := 0;
 END_FOR;
 CountStations := 0;
 

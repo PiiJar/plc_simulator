@@ -45,8 +45,8 @@ VAR_EXTERNAL
   g_sim_trans               : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
   g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
@@ -174,8 +174,8 @@ FOR ti := 1 TO MAX_Transporters DO
                   END_IF;
                 END_FOR;
                 IF cand_free THEN
-                  IF g_station_loc[cand_stn].ChangeTime < best_change THEN
-                    best_change := g_station_loc[cand_stn].ChangeTime;
+                  IF g_station_occupancy[cand_stn].ChangeTime < best_change THEN
+                    best_change := g_station_occupancy[cand_stn].ChangeTime;
                     best_stn := cand_stn;
                   END_IF;
                 END_IF;
@@ -213,8 +213,8 @@ FOR ti := 1 TO MAX_Transporters DO
                       END_IF;
                     END_FOR;
                     IF cand_free THEN
-                      IF g_station_loc[cand_stn].ChangeTime < best_change THEN
-                        best_change := g_station_loc[cand_stn].ChangeTime;
+                      IF g_station_occupancy[cand_stn].ChangeTime < best_change THEN
+                        best_change := g_station_occupancy[cand_stn].ChangeTime;
                         best_stn := cand_stn;
                       END_IF;
                     END_IF;
@@ -236,8 +236,8 @@ FOR ti := 1 TO MAX_Transporters DO
                       END_IF;
                     END_FOR;
                     IF cand_free THEN
-                      IF g_station_loc[cand_stn].ChangeTime < best_change THEN
-                        best_change := g_station_loc[cand_stn].ChangeTime;
+                      IF g_station_occupancy[cand_stn].ChangeTime < best_change THEN
+                        best_change := g_station_occupancy[cand_stn].ChangeTime;
                         best_stn := cand_stn;
                       END_IF;
                     END_IF;
@@ -293,7 +293,7 @@ FOR ti := 1 TO MAX_Transporters DO
           g_transporter[ti].LiftStationTarget := t_lift;
           g_transporter[ti].SinkStationTarget := sink_stn;
           g_transporter[ti].CurrentTaskFinishTime := g_task[ti].Queue[qi].FinishTime;
-          g_station_loc[ti].UnitId      := t_unit;
+          g_station_occupancy[ti].UnitId      := t_unit;
           g_sim_trans[ti].TreatmentTime := t_calc_time;
           g_sim_trans[ti].MinTime := g_task[ti].Queue[qi].MinTime;
           g_sim_trans[ti].MaxTime := g_task[ti].Queue[qi].MaxTime;

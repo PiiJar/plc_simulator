@@ -278,7 +278,7 @@ Vertailu 10 samannimisestä UDT-tyypistä tuotanto-PLC:n (docs/Parameters/) ja s
 
 ---
 
-## 9. UDT_UnitLocation
+## 9. UDT_JC_UnitAtStationType
 
 | #   | Kenttä     | Tyyppi | Tuotanto | Simulaattori | Tila |
 |-----|------------|--------|----------|--------------|------|
@@ -289,7 +289,7 @@ Vertailu 10 samannimisestä UDT-tyypistä tuotanto-PLC:n (docs/Parameters/) ja s
 
 ---
 
-## 10. UDT_UnitType
+## 10. UDT_JC_UnitType
 
 | #   | Kenttä           | Tyyppi         | Tuotanto | Simulaattori | Tila |
 |-----|------------------|----------------|----------|--------------|------|
@@ -321,8 +321,8 @@ Vertailu 10 samannimisestä UDT-tyypistä tuotanto-PLC:n (docs/Parameters/) ja s
 | UDT_TransporterType          | 95       | 95           | 95       | 0                 | 0                           |
 | UDT_TreatmentProgramStepType | 5        | 5            | 5        | 0                 | 0                           |
 | UDT_TreatmentProgramType     | 4        | 4            | 4        | 0                 | 0                           |
-| UDT_UnitLocation             | 2        | 2            | 2        | 0                 | 0                           |
-| UDT_UnitType                 | 11       | 3            | 3        | 8                 | 0                           |
+| UDT_JC_UnitAtStationType             | 2        | 2            | 2        | 0                 | 0                           |
+| UDT_JC_UnitType                 | 11       | 3            | 3        | 8                 | 0                           |
 | **YHTEENSÄ**                 | **208**  | **202**      | **200**  | **8**             | **2**                       |
 
 ### Erot tiivistettynä
@@ -332,4 +332,4 @@ Vertailu 10 samannimisestä UDT-tyypistä tuotanto-PLC:n (docs/Parameters/) ja s
 - `UDT_TransporterStatusType.CurrentTaskFinishTime` — arvioitu tehtävän valmistumisaika (LINT, unix s)
 
 **Tuotannossa lisäkenttiä (🟡):**
-- `UDT_UnitType` — 8 runtime-kenttää (StationIndex, Stage, ElapsedTime, RemainingTime, NextStationIndex, IsReady, IsOverdue, Charge). Simulaattori ei tarvitse näitä koska scheduler käyttää omia rakenteita (g_batch, g_schedule, g_task).
+- `UDT_JC_UnitType` — 8 runtime-kenttää (StationIndex, Stage, ElapsedTime, RemainingTime, NextStationIndex, IsReady, IsOverdue, Charge). Simulaattori ei tarvitse näitä koska scheduler käyttää omia rakenteita (g_batch, g_schedule, g_task).

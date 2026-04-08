@@ -51,7 +51,7 @@ VAR_EXTERNAL
   Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
   CountStations              : INT;
   g_avoid_status            : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
-  g_station_loc             : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;
+  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
 END_VAR
 
@@ -249,7 +249,7 @@ FOR i := 1 TO MAX_Transporters DO
   IF i_phase >= 1 AND i_phase <= 4 THEN
     lift_stn := g_transporter[i].LiftStationTarget;
     IF lift_stn >= 1 AND lift_stn <= MAX_StationIndex THEN
-      lift_uid := g_station_loc[lift_stn].UnitId;
+      lift_uid := g_station_occupancy[lift_stn].UnitId;
       IF lift_uid >= 1 AND lift_uid <= MAX_Units THEN
         IF g_batch[lift_uid].State = IN_PROCESS THEN
           batch_boost := DINT#100000;

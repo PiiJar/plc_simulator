@@ -61,7 +61,7 @@ END_VAR
 
 VAR_EXTERNAL
   g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_UnitType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
   g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
   g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;

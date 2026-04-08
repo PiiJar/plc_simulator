@@ -100,7 +100,7 @@ Testi-PLC_PRG (yksi scan cycle)
 ├─ 3. SIM_FB_RunTasks()                ← EI OLE OSA KIRJASTOA
 │     Simuloi nostimien X/Z-liikettä.
 │     Generoi tapahtumia (lift_begin, task_complete, ...).
-│     Päivittää g_station_loc[], g_transporter[].
+│     Päivittää g_station_occupancy[], g_transporter[].
 │
 ├─ 4. STC_FB_MainScheduler()          ← KIRJASTON ENTRY POINT
 │     ├─ STC_DispatchTask()       ← joka jakso

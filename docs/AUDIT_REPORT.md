@@ -67,7 +67,7 @@
 
 ```st
 (* ── Waiting batch: direct lookup at station 114 ── *)
-ui := g_station_loc[114].UnitId;
+ui := g_station_occupancy[114].UnitId;
 ```
 
 **Tilanne:**  
@@ -83,7 +83,7 @@ Kun odottavien sorttaus toteutetaan, tämä kohta korvataan dynaamisella logiika
 ```st
 (* Tulevaisuudessa: hae ja sorttaa kaikki odottavat *)
 FOR station := FIRST_LOADING_STATION TO LAST_LOADING_STATION DO
-  IF g_station_loc[station].UnitId > 0 THEN
+  IF g_station_occupancy[station].UnitId > 0 THEN
     (* Lisää waiting_list:iin *)
   END_IF;
 END_FOR;
@@ -434,7 +434,7 @@ FOR qi := 1 TO MAX_Units DO
 **Todellisuus:** Tarkistus osoittaa, että lähes kaikki UDT-tiedostot sisältävät kenttäkohtaiset kommentit. Esimerkkejä:
 
 ```st
-(* UDT_UnitType.st *)
+(* UDT_JC_UnitType.st *)
     Location : INT; (* station number where unit currently is *)
     Status   : INT; (* NOT_USED=0, USED=1 *)
     Target   : INT; (* TO_NONE=0, TO_LOADING=1, ... *)
@@ -617,7 +617,7 @@ Muissa tiedostoissa:
 
 ```st
 VAR_EXTERNAL
-  Stations     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;    g_station_loc  : ARRAY[1..MAX_StationIndex] OF UDT_UnitLocation;  Transporters          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
+  Stations     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;    g_station_occupancy  : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;  Transporters          : ARRAY[1..MAX_Transporters] OF UDT_TransporterType;
 ```
 
 **Ongelma:** Useita deklaraatioita samalla rivillä — pitäisi olla yksi per rivi.
@@ -838,7 +838,7 @@ ins_i           (* sufiksina i *)
 UDT:ssä käytetään PascalCase:
 
 ```st
-TYPE UDT_UnitType :
+TYPE UDT_JC_UnitType :
 STRUCT
     Location : INT;  (* PascalCase *)
     Status   : INT;
@@ -872,7 +872,7 @@ target    : INT;   (* ei tgt *)
 
 | Muoto | Käyttöpaikka |
 |-------|--------------|
-| `Location` | UDT_UnitType kenttä, UDT_JC_UnitSnap kenttä |
+| `Location` | UDT_JC_UnitType kenttä, UDT_JC_UnitSnap kenttä |
 | `location` | STC_CalcSchedule lokaali muuttuja |
 | `loc` | TSK_NoTreatment lokaali muuttuja |
 | `g_unit[ui].location` | Viittaus UDT:n kenttään (pienellä l:llä!) |
