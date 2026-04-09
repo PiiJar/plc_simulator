@@ -528,6 +528,17 @@ class OpcuaAdapter extends PlcAdapter {
         }
       }
 
+      // ── Parse manual task state (g_manual_task[1..3]) ────────
+      const manualTaskState = [];
+      for (let t = 1; t <= 3; t++) {
+        manualTaskState.push({
+          transporterId: t,
+          liftStation: toNum(v[`mt.${t}.lift_station`]),
+          sinkStation: toNum(v[`mt.${t}.sink_station`]),
+          valid: !!v[`mt.${t}.valid`],
+        });
+      }
+
       return {
         timestamp: new Date().toISOString(),
         transporters,
@@ -539,6 +550,7 @@ class OpcuaAdapter extends PlcAdapter {
         schedulerDebug,
         simUi,
         eventHead,
+        manualTaskState,
       };
     } catch (err) {
       const msg = err.message || String(err);
@@ -846,10 +858,13 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   async writeCommand(transporterId, liftStation, sinkStation) {
-    // Manual transport is not supported via g_cmd protocol.
-    // The PLC scheduler handles all transport assignments automatically.
-    // Log the request for debugging purposes.
-    console.log(`[OPC-UA] writeCommand T${transporterId}: lift=${liftStation} sink=${sinkStation} (manual commands not supported in CODESYS version)`);
+    const mt = nodes.manualTaskWrite(transporterId);
+    await this._writeNodes([
+      { nodeId: mt.liftStation, value: liftStation, dataType: DataType.Int16 },
+      { nodeId: mt.sinkStation, value: sinkStation, dataType: DataType.Int16 },
+      { nodeId: mt.valid,       value: true,        dataType: DataType.Boolean },
+    ]);
+    console.log(`[OPC-UA] ManualTask T${transporterId}: lift=${liftStation} sink=${sinkStation}`);
   }
 
   async writeUnit(unitId, location, status, target) {

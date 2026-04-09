@@ -93,6 +93,7 @@ let plcUnits = [];
 let depState = {};
 let schedulerDebug = {};
 let simUi = { wait_unit: 0, wait_reason: 0 };
+let manualTaskState = [];
 let prevSchedSnapshot = '';  // JSON string for change detection
 let twaLimits = { 1: { x_min: 0, x_max: 0 }, 2: { x_min: 0, x_max: 0 }, 3: { x_min: 0, x_max: 0 } };
 let plcTaskQueues = { 1: { count: 0, tasks: [] }, 2: { count: 0, tasks: [] }, 3: { count: 0, tasks: [] } };
@@ -153,6 +154,7 @@ function startPolling() {
       depState = state.depState;
       schedulerDebug = state.schedulerDebug;
       simUi = state.simUi || { wait_unit: 0, wait_reason: 0 };
+      manualTaskState = state.manualTaskState || [];
       plcAlive = true;
 
       // ── Scheduler conflict debug log ──────────────────────
@@ -368,7 +370,7 @@ app.post('/api/command/move', async (req, res) => {
 });
 
 app.get('/api/manual-tasks', (req, res) => {
-  res.json({ tasks: manualTasks });
+  res.json({ tasks: manualTasks, plcState: manualTaskState });
 });
 
 app.delete('/api/manual-tasks/:id', (req, res) => {

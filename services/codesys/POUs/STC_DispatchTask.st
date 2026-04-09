@@ -99,6 +99,8 @@ VAR
   xfer_total                : REAL;
   (* Program stage number for event *)
   prog_stage                : INT;
+  (* Manual task dispatch flag *)
+  unit_ok                   : BOOL;
 END_VAR
 
 FOR ti := 1 TO MAX_Transporters DO
@@ -124,8 +126,18 @@ FOR ti := 1 TO MAX_Transporters DO
     prog_stage := t_stage;
 
     (* ── 1b. Lift station unit check — unit must be AT the lift station ── *)
-    IF t_unit >= 1 AND t_unit <= MAX_Units
-       AND g_unit[t_unit].location = t_lift THEN
+    (* Manual tasks have Unit=0 → skip unit-location check *)
+    (* NOTE: CODESYS does NOT short-circuit OR — use nested IFs *)
+    unit_ok := FALSE;
+    IF t_unit = 0 THEN
+      unit_ok := TRUE;
+    ELSIF t_unit >= 1 AND t_unit <= MAX_Units THEN
+      IF g_unit[t_unit].location = t_lift THEN
+        unit_ok := TRUE;
+      END_IF;
+    END_IF;
+
+    IF unit_ok THEN
 
     (* ── 2. Time check ── *)
     travel_s := 0.0;
@@ -323,9 +335,14 @@ FOR ti := 1 TO MAX_Transporters DO
             g_event_pending.Payload[4]  := t_unit;
             g_event_pending.Payload[5]  := t_lift;
             g_event_pending.Payload[6]  := sink_stn;
-            prog_stage := g_batch[t_unit].CurStage;
-            g_event_pending.Payload[7]  := prog_stage;
-            g_event_pending.Payload[8]  := g_batch[t_unit].BatchCode;
+            IF t_unit >= 1 AND t_unit <= MAX_Units THEN
+              prog_stage := g_batch[t_unit].CurStage;
+              g_event_pending.Payload[7]  := prog_stage;
+              g_event_pending.Payload[8]  := g_batch[t_unit].BatchCode;
+            ELSE
+              g_event_pending.Payload[7]  := 0;
+              g_event_pending.Payload[8]  := 0;
+            END_IF;
             g_event_pending.Payload[9]  := DINT_TO_INT(t_calc_time);
             g_event_pending.Payload[10] := DINT_TO_INT(g_task[ti].Queue[qi].MinTime);
             g_event_pending.Payload[11] := DINT_TO_INT(g_task[ti].Queue[qi].MaxTime);

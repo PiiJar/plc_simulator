@@ -342,6 +342,7 @@ ELSIF phase = 2103 THEN
 (* PHASE 2200: NO_TREATMENT — create no-treatment tasks         *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2200 THEN
+  STC_ManualTask(i_time_s := i_time_s, io_task := g_task);
   TSK_NoTreatment(i_time_s := i_time_s, io_task := g_task);
   o_conflict := FALSE;
   (* phase + 1 → 2201 *)

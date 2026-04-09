@@ -82,6 +82,9 @@ VAR_GLOBAL
   g_sim_ui_wait_unit            : INT;   (* current waiting batch unit, 0 = none *)
   g_sim_ui_wait_reason          : INT;   (* 0=pending, 1=NO_SLOT, 2=DELAY_TOO_LARGE, 3=STATION_CONFLICT, 4=MAX_ROUNDS *)
 
+  (* ===== Manual Task Commands ===== *)
+  g_manual_task                 : ARRAY[1..MAX_Transporters] OF UDT_JC_ManualTaskType;  (* gateway writes, PLC clears Valid after execution *)
+
   (* ===== OPC UA Gateway Command Interface ===== *)
   (* Gateway writes g_cmd_code + g_cmd_param via OPC UA.
      PLC processes when g_cmd_code <> 0, then clears it.

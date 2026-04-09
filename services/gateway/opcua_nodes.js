@@ -465,6 +465,31 @@ function nttWrite(tid) {
   return n;
 }
 
+/**
+ * Manual task write targets (g_manual_task[tid])
+ * PLC variable: GVL_JC_Scheduler.g_manual_task[1..3]
+ */
+function manualTaskWrite(tid) {
+  const b = `g_manual_task[${tid}]`;
+  return {
+    liftStation: S(`${b}.LiftStation`),
+    sinkStation: S(`${b}.SinkStation`),
+    valid:       S(`${b}.Valid`),
+  };
+}
+
+/**
+ * Manual task read targets (g_manual_task[tid])
+ */
+function manualTaskRead(tid) {
+  const b = `g_manual_task[${tid}]`;
+  return {
+    lift_station: S(`${b}.LiftStation`),
+    sink_station: S(`${b}.SinkStation`),
+    valid:        S(`${b}.Valid`),
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════
@@ -547,6 +572,12 @@ function buildReadList() {
   // Program CalTime snapshot per unit (from g_dbg_prog_cal)
   for (let u = 1; u <= 10; u++) add(`sched.prog_cal.${u}`, progCalDebug(u));
 
+  // Manual task state (g_manual_task[1..3])
+  for (let t = 1; t <= 3; t++) {
+    const mt = manualTaskRead(t);
+    for (const [k, nid] of Object.entries(mt)) add(`mt.${t}.${k}`, nid);
+  }
+
   // Event queue (count + head index + buffer[1..10] headers)
   add('event.count', EVENT.count);
   add('event.head_idx', EVENT.head_idx);
@@ -612,5 +643,7 @@ module.exports = {
   batchWrite,
   programWrite,
   nttWrite,
+  manualTaskWrite,
+  manualTaskRead,
   moveTimesWrite,
 };
