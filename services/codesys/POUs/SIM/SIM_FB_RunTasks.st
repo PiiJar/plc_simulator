@@ -113,8 +113,7 @@ FOR i := 1 TO MAX_Transporters DO
 
   (* ── Phase 0 → 1: Accept new task ───────────────────────── *)
   IF (g_transporter[i].Phase = 0)
-     AND (g_transporter[i].TaskId <> g_sim_trans[i].RunningTaskId) THEN
-    g_sim_trans[i].RunningTaskId := g_transporter[i].TaskId;
+     AND g_dispatched_task[i].Active THEN
     g_transporter[i].XFinalTarget := g_dispatched_task[i].LiftX;
     g_transporter[i].Status := 4;  (* auto_run — must be set before TrackMoveTimes *)
     g_transporter[i].Phase := 1;
@@ -184,7 +183,7 @@ FOR i := 1 TO MAX_Transporters DO
       (* ── Move-away arrival: Status=3 means idle repositioning, not a real task ── *)
       IF g_transporter[i].Status = 3 THEN
         g_transporter[i].Phase := 0;
-        g_sim_trans[i].IdleStartTime := g_time_s;
+        g_transporter[i].IdleStartTime := g_time_s;
         STC_TrackMoveTimes(i_trans := i, i_prev := 1, i_new := 0);
       ELSE
       (* Record arrival at lift station (first time only) *)
@@ -512,7 +511,7 @@ FOR i := 1 TO MAX_Transporters DO
                      - dropping_s - trip_s;
         IF dur_nosto < 0 THEN dur_nosto := 0; END_IF;
         (* Lasku = total sink phase - device_delay - trip_open *)
-        dd_lift_s := g_sim_trans[i].SinkDeviceDelay / 10;
+        dd_lift_s := g_dispatched_task[i].SinkDeviceDelay_x10 / 10;
         dur_lasku := LINT_TO_INT(g_time_s - ts_at_sink[i]) - dd_lift_s - trip_s;
         IF dur_lasku < 0 THEN dur_lasku := 0; END_IF;
 
@@ -537,7 +536,7 @@ FOR i := 1 TO MAX_Transporters DO
       (* Unit moves from transporter → sink station *)
       sink_unit_id := g_station_occupancy[i].UnitId;
       IF sink_unit_id >= 1 THEN
-        STC_UpdateUnitLocation(i_unit := sink_unit_id, i_location := g_transporter[i].SinkStationTarget, i_ntt_primary := g_sim_trans[i].NttPrimary);
+        STC_UpdateUnitLocation(i_unit := sink_unit_id, i_location := g_transporter[i].SinkStationTarget, i_ntt_primary := g_dispatched_task[i].NttPrimary);
       END_IF;
 
       g_transporter[i].Phase := 0;
@@ -545,7 +544,7 @@ FOR i := 1 TO MAX_Transporters DO
       g_dispatched_task[i].Active := FALSE;
       STC_TrackMoveTimes(i_trans := i, i_prev := 4, i_new := 0);
       g_transporter[i].Status := 3;  (* auto_idle *)
-      g_sim_trans[i].IdleStartTime := g_time_s;  (* move-away idle timer *)
+      g_transporter[i].IdleStartTime := g_time_s;  (* move-away idle timer *)
 
     END_IF;
   END_IF;  (* ELSIF chain: phases 0→1→2→3→4 *)

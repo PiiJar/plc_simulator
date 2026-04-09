@@ -32,6 +32,7 @@ VAR_EXTERNAL
   Transporters              : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   g_transporter      : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
   g_sim_trans        : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
+  g_dispatched_task  : ARRAY[1..MAX_Transporters] OF UDT_JC_DispatchedTaskType;
   g_unit            : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
   g_ntt             : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
   g_batch          : ARRAY[1..MAX_Units] OF UDT_BatchType;
@@ -112,12 +113,8 @@ FOR i := 1 TO MAX_Transporters DO
   g_transporter[i].Status          := 0;
   g_transporter[i].Phase           := 0;
   g_transporter[i].TaskId         := 0;
-  g_sim_trans[i].RunningTaskId := 0;
   g_transporter[i].LiftStationTarget    := 0;
   g_transporter[i].SinkStationTarget    := 0;
-  g_sim_trans[i].TreatmentTime  := 0;
-  g_sim_trans[i].LiftDeviceDelay := 0;
-  g_sim_trans[i].SinkDeviceDelay := 0;
   g_transporter[i].DrippingTime   := 0;
   g_transporter[i].TaskRemainingTime  := 0;
   g_transporter[i].CurrentStation := 0;
@@ -131,7 +128,8 @@ FOR i := 1 TO MAX_Transporters DO
   g_sim_trans[i].XVelocity           := 0;
   g_sim_trans[i].ZStage         := 0;
   g_sim_trans[i].ZTimer       := 0.0;
-  g_sim_trans[i].IdleStartTime := g_time_s;  (* prevent spurious move-away after clear *)
+  g_transporter[i].IdleStartTime := g_time_s;  (* prevent spurious move-away after clear *)
+  g_dispatched_task[i].Active := FALSE;
   g_transporter[i].XMinDriveLimit     := 0;
   g_transporter[i].XMaxDriveLimit     := 0;
 END_FOR;

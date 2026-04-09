@@ -45,7 +45,7 @@ FOR ti := 1 TO MAX_Transporters DO
   take_out_dist := INT_TO_DINT(Stations[current_station].TakeOutDistance);
   IF take_out_dist <= 0 THEN CONTINUE; END_IF;
 
-  idle_time := i_time_s - g_sim_trans[ti].IdleStartTime;
+  idle_time := i_time_s - g_transporter[ti].IdleStartTime;
   IF idle_time < DINT_TO_LINT(INT_TO_DINT(take_out_delay)) THEN CONTINUE; END_IF;
 
   (* Defer if next task on SAME station starts soon *)

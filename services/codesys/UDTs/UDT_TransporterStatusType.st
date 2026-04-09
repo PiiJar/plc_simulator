@@ -42,5 +42,6 @@ STRUCT
     IsActive                 : BOOL; (* Transporter is actively executing a task *)
     IsCarrying               : BOOL; (* Transporter is carrying product *)
     CurrentTaskFinishTime    : LINT; (* Estimated finish of dispatched task (unix s) *)
+    IdleStartTime            : LINT; (* Unix seconds when transporter became idle *)
 END_STRUCT;
 END_TYPE
