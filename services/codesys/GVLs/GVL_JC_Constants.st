@@ -22,7 +22,7 @@ VAR_GLOBAL CONSTANT
 
   (* ===== Scheduler Timing Constants ===== *)
   SCH_DISPATCH_MARGIN_S     : REAL := 3.0;  (* dispatch early-start margin (seconds) *)
-  SCH_CONFLICT_MARGIN_S     : REAL := 2.0;  (* conflict detection margin (seconds) *)
+  SCH_CONFLICT_MARGIN_S     : REAL := 3.0;  (* conflict detection margin (seconds) *)
   SCH_DEP_FLEX_FACTOR       : REAL := 0.6;  (* fraction of flex (max-cal) used by DEP *)
   SCH_TSK_FLEX_FACTOR       : REAL := 0.9;  (* fraction of flex (max-cal) used by TSK scheduler *)
   SCH_MARGIN_S              : REAL := 5.0;  (* DEP small-delay threshold (seconds) *)

@@ -56,6 +56,7 @@ VAR_EXTERNAL
   g_time_s                  : LINT;
   g_event_pending           : UDT_JC_EventMsgType;
   g_event_pending_valid     : BOOL;
+  g_dispatched_task         : ARRAY[1..MAX_Transporters] OF UDT_JC_DispatchedTaskType;
 END_VAR
 
 VAR
@@ -312,6 +313,36 @@ FOR ti := 1 TO MAX_Transporters DO
           g_sim_trans[ti].NttPrimary := g_task[ti].Queue[qi].NttPrimary;
           g_transporter[ti].TaskRemainingTime := t_calc_time;
 
+          (* ── 5b. Fill dispatched task package ── *)
+          g_dispatched_task[ti].TaskId           := t_start;
+          g_dispatched_task[ti].UnitId           := t_unit;
+          g_dispatched_task[ti].LiftStation      := t_lift;
+          g_dispatched_task[ti].SinkStation      := sink_stn;
+          IF t_lift >= MIN_StationIndex AND t_lift <= MAX_StationIndex THEN
+            g_dispatched_task[ti].LiftX              := Stations[t_lift].XPosition;
+            g_dispatched_task[ti].LiftKind           := Stations[t_lift].Kind;
+            g_dispatched_task[ti].DroppingTime_x10   := Stations[t_lift].DrippingTime;
+            g_dispatched_task[ti].LiftDeviceDelay_x10 := Stations[t_lift].DeviceDelay;
+          END_IF;
+          IF sink_stn >= MIN_StationIndex AND sink_stn <= MAX_StationIndex THEN
+            g_dispatched_task[ti].SinkX              := Stations[sink_stn].XPosition;
+            g_dispatched_task[ti].SinkKind           := Stations[sink_stn].Kind;
+            g_dispatched_task[ti].SinkDeviceDelay_x10 := Stations[sink_stn].DeviceDelay;
+          END_IF;
+          g_dispatched_task[ti].DripTrayDelay_x10 := Transporters[ti].DripTrayDelay;
+          g_dispatched_task[ti].TreatmentTime    := t_calc_time;
+          g_dispatched_task[ti].MinTime          := g_task[ti].Queue[qi].MinTime;
+          g_dispatched_task[ti].MaxTime          := g_task[ti].Queue[qi].MaxTime;
+          g_dispatched_task[ti].NttPrimary       := g_task[ti].Queue[qi].NttPrimary;
+          IF t_unit >= 1 AND t_unit <= MAX_Units THEN
+            g_dispatched_task[ti].BatchCode      := g_batch[t_unit].BatchCode;
+            g_dispatched_task[ti].ProgramStage   := g_batch[t_unit].CurStage;
+          ELSE
+            g_dispatched_task[ti].BatchCode      := 0;
+            g_dispatched_task[ti].ProgramStage   := 0;
+          END_IF;
+          g_dispatched_task[ti].Active           := TRUE;
+
           (* ── Emit TASK_DISPATCHED event (msg_type=1) ── *)
           xfer_total := STC_CalcTransferTime(
             i_from_stn            := t_lift,
@@ -325,6 +356,7 @@ FOR ti := 1 TO MAX_Transporters DO
             xfer_total := INT_TO_REAL(ABS(sink_stn - t_lift)) * 8.0;
           END_IF;
   IF xfer_total < 5.0 THEN xfer_total := 60.0; END_IF;
+          g_dispatched_task[ti].TransferTime_x10 := REAL_TO_DINT(xfer_total * 10.0);
           IF NOT g_event_pending_valid THEN
             g_event_pending.MsgType := 1;
             g_event_pending.TsHi := LINT_TO_UINT(g_time_s / LINT#65536);

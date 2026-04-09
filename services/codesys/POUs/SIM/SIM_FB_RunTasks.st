@@ -49,6 +49,7 @@ VAR_EXTERNAL
   g_time_s       : LINT;
   g_event_pending       : UDT_JC_EventMsgType;
   g_event_pending_valid : BOOL;
+  g_dispatched_task     : ARRAY[1..MAX_Transporters] OF UDT_JC_DispatchedTaskType;
 END_VAR
 VAR
   i            : INT;
@@ -115,7 +116,7 @@ FOR i := 1 TO MAX_Transporters DO
   IF (g_transporter[i].Phase = 0)
      AND (g_transporter[i].TaskId <> g_sim_trans[i].RunningTaskId) THEN
     g_sim_trans[i].RunningTaskId := g_transporter[i].TaskId;
-    g_transporter[i].XFinalTarget := SIM_FindStation(station_number := g_transporter[i].LiftStationTarget);
+    g_transporter[i].XFinalTarget := g_dispatched_task[i].LiftX;
     g_transporter[i].Status := 4;  (* auto_run — must be set before TrackMoveTimes *)
     g_transporter[i].Phase := 1;
     STC_TrackMoveTimes(i_trans := i, i_prev := 0, i_new := 1);
@@ -199,7 +200,8 @@ FOR i := 1 TO MAX_Transporters DO
          Both timers run simultaneously from transporter arrival.
          This matches JS behavior: max(treatment, device_delay). *)
       can_lift := TRUE;
-      SIM_FindStation(station_number := g_transporter[i].LiftStationTarget, device_delay_s => device_delay, dropping_time_s => drop_time);
+      device_delay := INT_TO_REAL(g_dispatched_task[i].LiftDeviceDelay_x10) / 10.0;
+      drop_time := INT_TO_REAL(g_dispatched_task[i].DroppingTime_x10) / 10.0;
 
       (* Check treatment time *)
       lift_uid := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
@@ -238,20 +240,7 @@ FOR i := 1 TO MAX_Transporters DO
       STC_TrackMoveTimes(i_trans := i, i_prev := 1, i_new := 2);
 
       (* ── Calculate transfer time (used by event + batch times) ── *)
-      xfer_total := STC_CalcTransferTime(
-        i_from_stn            := g_transporter[i].LiftStationTarget,
-        i_to_stn              := g_transporter[i].SinkStationTarget,
-        i_move                := g_move[i],
-        i_from_dropping_x10   := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
-        i_to_device_delay_x10 := Stations[g_transporter[i].SinkStationTarget].DeviceDelay,
-        i_drip_tray_delay_x10 := Transporters[i].DripTrayDelay
-      );
-      IF xfer_total < 1.0 THEN
-        xfer_total := INT_TO_REAL(
-          ABS(g_transporter[i].SinkStationTarget
-              - g_transporter[i].LiftStationTarget)
-        ) * 8.0;
-      END_IF;
+      xfer_total := DINT_TO_REAL(g_dispatched_task[i].TransferTime_x10) / 10.0;
       IF xfer_total < 5.0 THEN xfer_total := 60.0; END_IF;
 
       (* ── Emit LIFT event (msg_type=2) ── *)
@@ -309,7 +298,7 @@ FOR i := 1 TO MAX_Transporters DO
 
   (* ── Phase 2: Lift Z at lift station ────────────────────── *)
   ELSIF g_transporter[i].Phase = 2 THEN
-    SIM_FindStation(station_number := g_transporter[i].LiftStationTarget, skind => station_kind);
+    station_kind := g_dispatched_task[i].LiftKind;
     tmp_z  := g_transporter[i].ZPosition;
     tmp_zs := g_sim_trans[i].ZStage;
     tmp_zt := g_sim_trans[i].ZTimer;
@@ -325,7 +314,7 @@ FOR i := 1 TO MAX_Transporters DO
         SpeedLiftSlow_Z := Transporters[i].SpeedLiftSlow_Z,
         SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
         DripTrayDelay   := Transporters[i].DripTrayDelay,
-        DroppingTime    := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
+        DroppingTime    := g_dispatched_task[i].DroppingTime_x10,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
         z_timer_s     := tmp_zt
@@ -343,7 +332,7 @@ FOR i := 1 TO MAX_Transporters DO
         SpeedLiftSlow_Z := Transporters[i].SpeedLiftSlow_Z,
         SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
         DripTrayDelay   := Transporters[i].DripTrayDelay,
-        DroppingTime    := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
+        DroppingTime    := g_dispatched_task[i].DroppingTime_x10,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
         z_timer_s     := tmp_zt
@@ -361,7 +350,7 @@ FOR i := 1 TO MAX_Transporters DO
         SpeedLiftSlow_Z := Transporters[i].SpeedLiftSlow_Z,
         SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
         DripTrayDelay   := Transporters[i].DripTrayDelay,
-        DroppingTime    := Stations[g_transporter[i].LiftStationTarget].DrippingTime,
+        DroppingTime    := g_dispatched_task[i].DroppingTime_x10,
         z_mm          := tmp_z,
         z_stage       := tmp_zs,
         z_timer_s     := tmp_zt
@@ -374,7 +363,7 @@ FOR i := 1 TO MAX_Transporters DO
     IF arrived_z THEN
       (* Record lift done timestamp *)
       ts_lift_done[i] := g_time_s;
-      g_transporter[i].XFinalTarget := SIM_FindStation(station_number := g_transporter[i].SinkStationTarget);
+      g_transporter[i].XFinalTarget := g_dispatched_task[i].SinkX;
       g_transporter[i].Phase := 3;
       STC_TrackMoveTimes(i_trans := i, i_prev := 2, i_new := 3);
     END_IF;
@@ -436,8 +425,8 @@ FOR i := 1 TO MAX_Transporters DO
       g_transporter[i].CurrentStation := g_transporter[i].SinkStationTarget;
       (* Record arrival at sink timestamp *)
       ts_at_sink[i] := g_time_s;
-      SIM_FindStation(station_number := g_transporter[i].SinkStationTarget, device_delay_s => device_delay);
-      g_sim_trans[i].ZTimer := device_delay + INT_TO_REAL(Transporters[i].DripTrayDelay) / 10.0;
+      device_delay := INT_TO_REAL(g_dispatched_task[i].SinkDeviceDelay_x10) / 10.0;
+      g_sim_trans[i].ZTimer := device_delay + INT_TO_REAL(g_dispatched_task[i].DripTrayDelay_x10) / 10.0;
       g_sim_trans[i].ZStage := 6;
       g_transporter[i].Phase := 4;
       STC_TrackMoveTimes(i_trans := i, i_prev := 3, i_new := 4);
@@ -446,7 +435,7 @@ FOR i := 1 TO MAX_Transporters DO
 
   (* ── Phase 4: Sink Z at sink station ───────────────────── *)
   ELSIF g_transporter[i].Phase = 4 THEN
-    SIM_FindStation(station_number := g_transporter[i].SinkStationTarget, skind => station_kind);
+    station_kind := g_dispatched_task[i].SinkKind;
     tmp_z  := g_transporter[i].ZPosition;
     tmp_zs := g_sim_trans[i].ZStage;
     tmp_zt := g_sim_trans[i].ZTimer;
@@ -554,6 +543,7 @@ FOR i := 1 TO MAX_Transporters DO
 
       g_transporter[i].Phase := 0;
       g_transporter[i].CurrentTaskFinishTime := 0;
+      g_dispatched_task[i].Active := FALSE;
       STC_TrackMoveTimes(i_trans := i, i_prev := 4, i_new := 0);
       g_transporter[i].Status := 3;  (* auto_idle *)
       g_sim_trans[i].IdleStartTime := g_time_s;  (* move-away idle timer *)

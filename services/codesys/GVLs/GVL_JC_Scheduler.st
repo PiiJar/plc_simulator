@@ -82,6 +82,9 @@ VAR_GLOBAL
   g_sim_ui_wait_unit            : INT;   (* current waiting batch unit, 0 = none *)
   g_sim_ui_wait_reason          : INT;   (* 0=pending, 1=NO_SLOT, 2=DELAY_TOO_LARGE, 3=STATION_CONFLICT, 4=MAX_ROUNDS *)
 
+  (* ===== Dispatched Task (Executor Input) ===== *)
+  g_dispatched_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_DispatchedTaskType;  (* filled by Dispatcher, read by Executor *)
+
   (* ===== Manual Task Commands ===== *)
   g_manual_task                 : ARRAY[1..MAX_Transporters] OF UDT_JC_ManualTaskType;  (* gateway writes, PLC clears Valid after execution *)
 
