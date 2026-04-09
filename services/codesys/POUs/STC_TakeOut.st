@@ -48,7 +48,7 @@ FOR ti := 1 TO MAX_Transporters DO
   idle_time := i_time_s - g_sim_trans[ti].IdleStartTime;
   IF idle_time < DINT_TO_LINT(INT_TO_DINT(take_out_delay)) THEN CONTINUE; END_IF;
 
-  (* Defer if next task on same station starts soon *)
+  (* Defer if next task on SAME station starts soon *)
   IF g_task[ti].Count > 0 THEN
     queued_lift_station := g_task[ti].Queue[1].LiftStationTarget;
     IF queued_lift_station = current_station THEN
@@ -109,6 +109,27 @@ FOR ti := 1 TO MAX_Transporters DO
   END_IF;
 
   (* Skip if we can't actually move *)
+  IF ABS(target_x - current_x) < 100 THEN CONTINUE; END_IF;
+
+  (* If next task starts soon and take-out would pass over its lift station,
+     stop at the lift station instead *)
+  IF g_task[ti].Count > 0 THEN
+    time_to_start := g_task[ti].Queue[1].StartTime - i_time_s;
+    IF time_to_start >= 0 AND time_to_start < DINT_TO_LINT(INT_TO_DINT(TAKE_OUT_MIN_WAIT_S)) THEN
+      queued_lift_station := g_task[ti].Queue[1].LiftStationTarget;
+      IF queued_lift_station >= MIN_StationIndex AND queued_lift_station <= MAX_StationIndex THEN
+        next_lift_x := Stations[queued_lift_station].XPosition;
+        (* Check if take-out target is on the other side of lift station *)
+        IF dir > 0 AND target_x > next_lift_x AND next_lift_x > current_x THEN
+          target_x := next_lift_x;
+        ELSIF dir < 0 AND target_x < next_lift_x AND next_lift_x < current_x THEN
+          target_x := next_lift_x;
+        END_IF;
+      END_IF;
+    END_IF;
+  END_IF;
+
+  (* Re-check: still worth moving? *)
   IF ABS(target_x - current_x) < 100 THEN CONTINUE; END_IF;
 
   g_transporter[ti].Phase := 1;

@@ -85,7 +85,12 @@ FOR ti := 1 TO MAX_Transporters DO
   END_IF;
 
   (* Transporter must be active and idle *)
-  IF NOT g_transporter[ti].IsActive OR g_transporter[ti].Phase <> 0 THEN
+  (* Transporter must be active and idle or in move-away *)
+  IF NOT g_transporter[ti].IsActive THEN
+    CONTINUE;
+  END_IF;
+  IF g_transporter[ti].Phase <> 0
+     AND NOT (g_transporter[ti].Phase = 1 AND g_transporter[ti].Status = 3) THEN
     CONTINUE;  (* keep Valid — retry next cycle *)
   END_IF;
 
