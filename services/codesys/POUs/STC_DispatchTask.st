@@ -320,13 +320,13 @@ FOR ti := 1 TO MAX_Transporters DO
           g_dispatched_task[ti].SinkStation      := sink_stn;
           IF t_lift >= MIN_StationIndex AND t_lift <= MAX_StationIndex THEN
             g_dispatched_task[ti].LiftX              := Stations[t_lift].XPosition;
-            g_dispatched_task[ti].LiftKind           := Stations[t_lift].Kind;
+            g_dispatched_task[ti].LiftKind           := Stations[t_lift].DryWet;
             g_dispatched_task[ti].DroppingTime_x10   := Stations[t_lift].DrippingTime;
             g_dispatched_task[ti].LiftDeviceDelay_x10 := Stations[t_lift].DeviceDelay;
           END_IF;
           IF sink_stn >= MIN_StationIndex AND sink_stn <= MAX_StationIndex THEN
             g_dispatched_task[ti].SinkX              := Stations[sink_stn].XPosition;
-            g_dispatched_task[ti].SinkKind           := Stations[sink_stn].Kind;
+            g_dispatched_task[ti].SinkKind           := Stations[sink_stn].DryWet;
             g_dispatched_task[ti].SinkDeviceDelay_x10 := Stations[sink_stn].DeviceDelay;
           END_IF;
           g_dispatched_task[ti].DripTrayDelay_x10 := Transporters[ti].DripTrayDelay;
