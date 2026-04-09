@@ -61,7 +61,6 @@ VAR
   fb_z1        : SIM_FB_ZMotion;
   fb_z2        : SIM_FB_ZMotion;
   fb_z3        : SIM_FB_ZMotion;
-  (* Station lookup — now FC SIM_FindStation, no instance needed *)
   (* Temp vars for VAR_IN_OUT passing *)
   tmp_x        : DINT;
   tmp_vx       : DINT;
