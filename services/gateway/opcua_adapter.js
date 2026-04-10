@@ -965,6 +965,38 @@ class OpcuaAdapter extends PlcAdapter {
     console.log(`[OPC-UA] Movement times written for transporter ${tid}`);
   }
 
+  /**
+   * Read movement times for one transporter from g_move[tid].
+   * @param {number} tid - transporter id (1..3)
+   * @returns {object} { lift_s: {stn: seconds}, sink_s: {stn: seconds}, travel: {from: {to: seconds}} }
+   */
+  async readMovementTimes(tid) {
+    const mw = nodes.moveTimesWrite(tid);
+    const readList = Object.entries(mw).map(([key, nid]) => ({ key, nodeId: nid }));
+    const raw = await this._readNodes(readList);
+
+    const lift_s = {};
+    const sink_s = {};
+    const travel = {};
+    for (const [key, val] of Object.entries(raw)) {
+      if (val == null) continue;
+      const v = Number(val) / 10;  // tenths → seconds
+      if (v === 0) continue;       // skip zeros
+      const lm = key.match(/^lift_(\d+)$/);
+      if (lm) { lift_s[100 + Number(lm[1])] = v; continue; }
+      const sm = key.match(/^sink_(\d+)$/);
+      if (sm) { sink_s[100 + Number(sm[1])] = v; continue; }
+      const tm = key.match(/^travel_(\d+)_(\d+)$/);
+      if (tm) {
+        const from = 100 + Number(tm[1]);
+        const to   = 100 + Number(tm[2]);
+        if (!travel[from]) travel[from] = {};
+        travel[from][to] = v;
+      }
+    }
+    return { id: tid, lift_s, sink_s, travel };
+  }
+
   async writeProgramStage(unitIndex, stageIndex, stations, minTime, maxTime, calTime) {
     const pw = nodes.programWrite(unitIndex);
     const step = pw[`step_${stageIndex}`];

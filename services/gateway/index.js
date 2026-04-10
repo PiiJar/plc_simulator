@@ -379,6 +379,18 @@ app.delete('/api/manual-tasks/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// Read movement times from PLC (g_move[1..3])
+app.get('/api/movement-times', async (req, res) => {
+  if (!adapter.isConnected()) {
+    return res.status(503).json({ success: false, error: 'PLC not connected' });
+  }
+  const result = {};
+  for (const tid of [1, 2, 3]) {
+    result[tid] = await adapter.readMovementTimes(tid);
+  }
+  res.json({ success: true, transporters: result });
+});
+
 // Task queue from PLC
 app.get('/api/transporter-tasks', (req, res) => {
   const tasks = [];
