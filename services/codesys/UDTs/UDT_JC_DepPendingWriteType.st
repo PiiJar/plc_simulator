@@ -10,5 +10,6 @@ STRUCT
     BatchMaxTime : DINT;                                     (* stage 0 max_time for activated batch (seconds) *)
     BatchCalTime : DINT;                                     (* stage 0 cal_time for activated batch (seconds) *)
     TimeStamp    : LINT;                                     (* activation time (s), unix seconds *)
+    ActiveBatchCalTime : ARRAY[1..10] OF DINT;               (* CalTime for active batches at their CurStage *)
 END_STRUCT;
 END_TYPE

@@ -31,6 +31,7 @@ VAR_INPUT
   i_task_end                : LINT;
   i_shift_s                 : REAL;
   i_calc_time_s             : DINT;
+  i_min_time_s              : DINT;
   i_max_time_s              : DINT;
   i_flex_factor             : REAL;
   i_margin_s                : REAL;
@@ -88,7 +89,9 @@ DEP_FitTaskToSlot := FALSE;
 IF i_trans_id < 1 OR i_trans_id > MAX_Transporters THEN RETURN; END_IF;
 
 task_dur   := i_task_end - i_task_start;
-flex_up    := DINT_TO_REAL(i_max_time_s - i_calc_time_s);
+(* Absolute cap: flex based on full (max - min) range, not (max - calc).
+   This prevents cumulative drift when CalcTime is adjusted across rounds. *)
+flex_up    := DINT_TO_REAL(i_max_time_s - i_min_time_s);
   IF flex_up < 0.0 THEN flex_up := 0.0; END_IF;
 capped_flex := flex_up * i_flex_factor;
 

@@ -84,6 +84,7 @@ VAR
   sched_conf                : INT;
   sched_prev_conf           : INT;
   tmp_si                    : INT;
+  cap_remain                : REAL;
 END_VAR
 
 TSK_Resolve := FALSE;
@@ -148,11 +149,19 @@ IF can_advance
    AND i_blocked_stage >= 1 THEN
 IF sched_blocked >= 1 AND sched_blocked <= io_schedule[i_blocked_unit].StageCount THEN
 
+  (* Absolute flex cap: use (MaxTime - MinTime) range, not (CalcTime - MinTime).
+     This prevents cumulative drift when CalcTime is adjusted across rounds. *)
   stage_flex := DINT_TO_REAL(
-    io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime
+    io_schedule[i_blocked_unit].Stages[sched_blocked].MaxTime
     - io_schedule[i_blocked_unit].Stages[sched_blocked].MinTime);
   IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
   stage_flex := stage_flex * SCH_TSK_FLEX_FACTOR;
+  (* Cap to actual remaining advance room *)
+  cap_remain := DINT_TO_REAL(
+    io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime
+    - io_schedule[i_blocked_unit].Stages[sched_blocked].MinTime);
+  IF cap_remain < 0.0 THEN cap_remain := 0.0; END_IF;
+  IF stage_flex > cap_remain THEN stage_flex := cap_remain; END_IF;
 
   IF stage_flex > 0.1 THEN
     IF io_batch[i_blocked_unit].CurStage = i_blocked_stage THEN cap := 0.9;
@@ -243,11 +252,19 @@ IF can_delay AND remain > 0.1
    AND i_conf_stage >= 1 THEN
 IF sched_conf >= 1 AND sched_conf <= io_schedule[i_conf_unit].StageCount THEN
 
+  (* Absolute flex cap: use (MaxTime - MinTime) range, not (MaxTime - CalcTime).
+     This prevents cumulative drift when CalcTime is adjusted across rounds. *)
   stage_flex := DINT_TO_REAL(
     io_schedule[i_conf_unit].Stages[sched_conf].MaxTime
-    - io_schedule[i_conf_unit].Stages[sched_conf].CalcTime);
+    - io_schedule[i_conf_unit].Stages[sched_conf].MinTime);
   IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
   stage_flex := stage_flex * SCH_TSK_FLEX_FACTOR;
+  (* Cap to actual remaining delay room *)
+  cap_remain := DINT_TO_REAL(
+    io_schedule[i_conf_unit].Stages[sched_conf].MaxTime
+    - io_schedule[i_conf_unit].Stages[sched_conf].CalcTime);
+  IF cap_remain < 0.0 THEN cap_remain := 0.0; END_IF;
+  IF stage_flex > cap_remain THEN stage_flex := cap_remain; END_IF;
 
   IF stage_flex > 0.1 THEN
     IF io_batch[i_conf_unit].CurStage = i_conf_stage THEN cap := 0.9;
@@ -315,10 +332,14 @@ IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <=
   END_FOR;
 
   IF NOT is_pcs_locked THEN
-    stage_flex := DINT_TO_REAL(io_schedule[i_conf_unit].Stages[sched_prev_conf].MaxTime
-                - io_schedule[i_conf_unit].Stages[sched_prev_conf].CalcTime);
+    (* Flex cap: min + factor × (max - min); available room = flex_cap - CalcTime *)
+    stage_flex := DINT_TO_REAL(
+      io_schedule[i_conf_unit].Stages[sched_prev_conf].MinTime
+      + REAL_TO_DINT(SCH_TSK_FLEX_FACTOR * DINT_TO_REAL(
+          io_schedule[i_conf_unit].Stages[sched_prev_conf].MaxTime
+        - io_schedule[i_conf_unit].Stages[sched_prev_conf].MinTime))
+      - io_schedule[i_conf_unit].Stages[sched_prev_conf].CalcTime);
   IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
-    stage_flex := stage_flex * SCH_TSK_FLEX_FACTOR;
 
     IF stage_flex > 0.1 THEN
       IF io_batch[i_conf_unit].CurStage = prev_conf_stage THEN cap := 0.9;
@@ -389,8 +410,13 @@ IF remain > 0.1 AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
     END_FOR;
 
     IF NOT is_blk_adv_locked THEN
-      stage_flex := DINT_TO_REAL(io_schedule[i_blocked_unit].Stages[sched_blocked].MaxTime
-                  - io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime);
+      (* Flex cap: min + factor × (max - min); available room = flex_cap - CalcTime *)
+      stage_flex := DINT_TO_REAL(
+        io_schedule[i_blocked_unit].Stages[sched_blocked].MinTime
+        + REAL_TO_DINT(SCH_TSK_FLEX_FACTOR * DINT_TO_REAL(
+            io_schedule[i_blocked_unit].Stages[sched_blocked].MaxTime
+          - io_schedule[i_blocked_unit].Stages[sched_blocked].MinTime))
+        - io_schedule[i_blocked_unit].Stages[sched_blocked].CalcTime);
   IF stage_flex < 0.0 THEN stage_flex := 0.0; END_IF;
 
       IF stage_flex > 0.1 THEN

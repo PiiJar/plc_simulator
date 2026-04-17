@@ -221,6 +221,7 @@ VAR
   cap_a_unit                : INT;
   cap_conflict              : BOOL;
   cap_margin                : LINT := 2;
+  flex_cap                  : DINT;
 
   round_ticks               : INT := 0;  (* ticks since last RESTART *)
 END_VAR
@@ -551,7 +552,11 @@ ELSIF phase = 2600 THEN
               IF cap_prog_stg >= 0 AND cap_prog_stg <= 30 THEN
                 old_cal := g_dep_wk_program[cur_wait_unit].Steps[cap_prog_stg].CalTime;
                 max_cal := g_dep_wk_program[cur_wait_unit].Steps[cap_prog_stg].MaxTime;
+                min_cal := g_dep_wk_program[cur_wait_unit].Steps[cap_prog_stg].MinTime;
                 new_cal := old_cal + LINT_TO_DINT(cap_need);
+                (* Flex cap: min + factor × (max - min) *)
+                flex_cap := min_cal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(max_cal - min_cal));
+                IF max_cal > 0 AND new_cal > flex_cap THEN new_cal := flex_cap; END_IF;
                 IF max_cal <= 0 OR new_cal <= max_cal THEN
                   g_dep_wk_program[cur_wait_unit].Steps[cap_prog_stg].CalTime := new_cal;
                   cap_conflict := TRUE;
@@ -603,7 +608,11 @@ ELSIF phase = 2600 THEN
                   IF cap_a_prog_stg >= 1 AND cap_a_prog_stg <= 30 THEN
                     old_cal := g_dep_wk_program[cap_a_unit].Steps[cap_a_prog_stg].CalTime;
                     max_cal := g_dep_wk_program[cap_a_unit].Steps[cap_a_prog_stg].MaxTime;
+                    min_cal := g_dep_wk_program[cap_a_unit].Steps[cap_a_prog_stg].MinTime;
                     new_cal := old_cal + LINT_TO_DINT(cap_need);
+                    (* Flex cap: min + factor × (max - min) *)
+                    flex_cap := min_cal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(max_cal - min_cal));
+                    IF max_cal > 0 AND new_cal > flex_cap THEN new_cal := flex_cap; END_IF;
                     IF max_cal <= 0 OR new_cal <= max_cal THEN
                       g_dep_wk_program[cap_a_unit].Steps[cap_a_prog_stg].CalTime := new_cal;
                       cap_conflict := TRUE;
@@ -690,6 +699,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
       i_task_end     := w_tasks[si].FinishTime,
       i_shift_s      := ovlp_delay_s,
       i_calc_time_s  := w_tasks[si].CalcTime,
+      i_min_time_s   := w_tasks[si].MinTime,
       i_max_time_s   := w_tasks[si].MaxTime,
       i_flex_factor  := SCH_DEP_FLEX_FACTOR,
       i_margin_s     := SCH_MARGIN_S,
@@ -714,8 +724,10 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
         IF prog_idx >= 0 AND prog_idx <= 30 THEN
           old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
           max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
+          min_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MinTime;
           new_cal := old_cal + REAL_TO_DINT(total_delay_s);
-          IF new_cal > max_cal AND max_cal > 0 THEN new_cal := max_cal; END_IF;
+          flex_cap := min_cal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(max_cal - min_cal));
+          IF max_cal > 0 AND new_cal > flex_cap THEN new_cal := flex_cap; END_IF;
           g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
           fit_round := fit_round + 1;
           o_fit_round := fit_round;
@@ -740,7 +752,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
 
         FOR bk := si - 1 TO 1 BY -1 DO
           IF remaining_need <= SCH_MARGIN_S THEN EXIT; END_IF;
-          prev_flex_up := DINT_TO_REAL(w_tasks[bk].MaxTime - w_tasks[bk].CalcTime);
+          prev_flex_up := DINT_TO_REAL(w_tasks[bk].MaxTime - w_tasks[bk].MinTime);
   IF prev_flex_up < 0.0 THEN prev_flex_up := 0.0; END_IF;
           prev_capped := prev_flex_up * SCH_DEP_FLEX_FACTOR;
           use_delay := prev_capped;
@@ -775,9 +787,11 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
                 IF prog_idx >= 1 AND prog_idx <= 30 THEN
                   old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
                   max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
+                  min_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MinTime;
                   new_cal := old_cal + chain_delays[ci].DelayTime;
-                  IF new_cal > max_cal AND max_cal > 0 THEN
-                    new_cal := max_cal;
+                  flex_cap := min_cal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(max_cal - min_cal));
+                  IF max_cal > 0 AND new_cal > flex_cap THEN
+                    new_cal := flex_cap;
                   END_IF;
                   g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
                 END_IF;
@@ -791,9 +805,11 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
             IF prog_idx >= 1 AND prog_idx <= 30 THEN
               old_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime;
               max_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MaxTime;
+              min_cal := g_dep_wk_program[cur_wait_unit].Steps[prog_idx].MinTime;
               new_cal := old_cal + REAL_TO_DINT(total_delay_s);
-              IF new_cal > max_cal AND max_cal > 0 THEN
-                new_cal := max_cal;
+              flex_cap := min_cal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(max_cal - min_cal));
+              IF max_cal > 0 AND new_cal > flex_cap THEN
+                new_cal := flex_cap;
               END_IF;
               g_dep_wk_program[cur_wait_unit].Steps[prog_idx].CalTime := new_cal;
             END_IF;
@@ -827,19 +843,19 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
             IF border_unit >= 1 AND border_unit <= MAX_Units
                AND border_unit <> cur_wait_unit
                AND border_src_stage >= 1 AND border_src_stage <= 30 THEN
-              border_flex := DINT_TO_REAL(
-                g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime
-              - g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime);
+              (* Flex cap: min + factor × (max - min); available room = flex_cap - CalTime *)
+              min_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MinTime;
+              max_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime;
+              old_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime;
+              flex_cap := min_cal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(max_cal - min_cal));
+              border_flex := DINT_TO_REAL(flex_cap - old_cal);
   IF border_flex < 0.0 THEN border_flex := 0.0; END_IF;
-              border_capped := border_flex * SCH_DEP_FLEX_FACTOR;
-              border_use := border_capped;
+              border_use := border_flex;
   IF border_use > widen_need THEN border_use := widen_need; END_IF;
 
               IF border_use > SCH_MARGIN_S THEN
-                old_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime;
-                max_cal := g_dep_wk_program[border_unit].Steps[border_src_stage].MaxTime;
                 new_cal := old_cal + REAL_TO_DINT(border_use);
-  IF new_cal > max_cal AND max_cal > 0 THEN new_cal := max_cal; END_IF;
+  IF max_cal > 0 AND new_cal > flex_cap THEN new_cal := flex_cap; END_IF;
                 g_dep_wk_program[border_unit].Steps[border_src_stage].CalTime := new_cal;
                 widen_need := widen_need - border_use;
               END_IF;
@@ -928,6 +944,16 @@ ELSIF phase = 4000 THEN
 ELSIF phase = 8000 THEN
   FOR ui := 1 TO MAX_Units DO
     g_dep_pending.Programs[ui] := g_dep_wk_program[ui];
+  END_FOR;
+  (* Write active batch CalTimes from sandbox programs *)
+  FOR ui := 1 TO MAX_Units DO
+    IF g_dep_wk_batch[ui].State = IN_PROCESS
+       AND g_dep_wk_batch[ui].CurStage >= 1
+       AND g_dep_wk_batch[ui].CurStage <= g_dep_wk_program[ui].StepCount THEN
+      g_dep_pending.ActiveBatchCalTime[ui] := g_dep_wk_program[ui].Steps[g_dep_wk_batch[ui].CurStage].CalTime;
+    ELSE
+      g_dep_pending.ActiveBatchCalTime[ui] := 0;
+    END_IF;
   END_FOR;
   g_dep_pending.BatchUnit  := cur_wait_unit;
   g_dep_pending.BatchStage := 0;

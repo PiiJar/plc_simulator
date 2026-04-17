@@ -127,6 +127,7 @@ VAR
   stretch_cnt               : INT := 0;
   si                        : INT;
   new_cal                   : DINT;
+  flex_cap                  : DINT;
   (* Temp *)
   ui                        : INT;
   ui2                       : INT;
@@ -360,8 +361,13 @@ ELSIF phase = 2201 THEN
       IF new_cal < TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime THEN
         new_cal := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime;
       END_IF;
-      IF new_cal > TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime THEN
-        new_cal := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime;
+      (* Flex cap: min + factor × (max - min) *)
+      flex_cap := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime
+               + REAL_TO_DINT(SCH_TSK_FLEX_FACTOR * DINT_TO_REAL(
+                   TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime
+                 - TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime));
+      IF new_cal > flex_cap THEN
+        new_cal := flex_cap;
       END_IF;
       TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].CalTime := new_cal;
 
@@ -430,6 +436,13 @@ ELSIF phase = 10001 THEN
       g_batch[g_dep_pending.BatchUnit].MaxTime     := g_dep_pending.BatchMaxTime;
       g_batch[g_dep_pending.BatchUnit].CalTime     := g_dep_pending.BatchCalTime;
     END_IF;
+    (* Apply active batch CalTimes written by DEP *)
+    FOR ui := 1 TO MAX_Units DO
+      IF g_dep_pending.ActiveBatchCalTime[ui] > 0
+         AND ui <> g_dep_pending.BatchUnit THEN
+        g_batch[ui].CalTime := g_dep_pending.ActiveBatchCalTime[ui];
+      END_IF;
+    END_FOR;
     g_dep_pending.Valid := FALSE;
     g_conflict_resolved := FALSE;
     g_tsk_stable := FALSE;
