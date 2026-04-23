@@ -6,123 +6,123 @@
    Created : 25.03.2026
    ============================================================
    Trapezoidal velocity profile: accelerate, cruise, decelerate.
-   Clamps position to [iXMin..iXMax] drive limits.
-   VAR_IN_OUT: ioXPos, ioVX (modified in place).
+   Clamps position to [x_min..x_max] drive limits.
+   VAR_IN_OUT: x_pos, v_x (modified in place).
    ------------------------------------------------------------
    Changes:
    ============================================================ *)
 
 FUNCTION_BLOCK SIM_FB_XMotion
 VAR_INPUT
-  iDeltaT  : REAL;     (* cycle time s — simulation internal *)
-  iXTarget : DINT;     (* target X mm *)
-  iXMin    : DINT;     (* TWA lower limit mm *)
-  iXMax    : DINT;     (* TWA upper limit mm *)
-  iVMax    : DINT;     (* max velocity mm/s *)
-  iTAcc    : DINT;     (* acceleration time ×10 = tenths of second *)
-  iTDec    : DINT;     (* deceleration time ×10 = tenths of second *)
+  delta_t  : REAL;     (* cycle time s — simulation internal *)
+  x_target : DINT;     (* target X mm *)
+  x_min    : DINT;     (* TWA lower limit mm *)
+  x_max    : DINT;     (* TWA upper limit mm *)
+  v_max    : DINT;     (* max velocity mm/s *)
+  t_acc    : DINT;     (* acceleration time ×10 = tenths of second *)
+  t_dec    : DINT;     (* deceleration time ×10 = tenths of second *)
 END_VAR
 VAR_IN_OUT
-  ioXPos : DINT;        (* current X position mm *)
-  ioVX   : DINT;        (* current X velocity mm/s *)
+  x_pos : DINT;        (* current X position mm *)
+  v_x   : DINT;        (* current X velocity mm/s *)
 END_VAR
 VAR_OUTPUT
-  oArrived : BOOL;
-  oXDrive : DINT;      (* actual drive target after limit clamping *)
+  arrived : BOOL;
+  x_drive : DINT;      (* actual drive target after limit clamping *)
 END_VAR
 VAR
   (* Internal REAL copies for physics integration *)
-  vRTarget     : REAL;
-  vRMin        : REAL;
-  vRMax        : REAL;
-  vRVmax       : REAL;
-  vRTacc       : REAL;
-  vRTdec       : REAL;
-  vRPos        : REAL;
-  vRVel        : REAL;
-  vDriveTarget : REAL;
-  vDistance     : REAL;
-  vDir          : REAL;
-  vAAcc        : REAL;
-  vADec        : REAL;
-  vBrakeDist   : REAL;
-  vNewVel      : REAL;
-  vTravel       : REAL;
+  r_target     : REAL;
+  r_min        : REAL;
+  r_max        : REAL;
+  r_vmax       : REAL;
+  r_tacc       : REAL;
+  r_tdec       : REAL;
+  r_pos        : REAL;
+  r_vel        : REAL;
+  drive_target : REAL;
+  distance     : REAL;
+  dir          : REAL;
+  a_acc        : REAL;
+  a_dec        : REAL;
+  brake_dist   : REAL;
+  new_vel      : REAL;
+  travel       : REAL;
 END_VAR
   (* Convert DINT/INT inputs to REAL for physics *)
-  vRTarget := DINT_TO_REAL(iXTarget);
-  vRMin    := DINT_TO_REAL(iXMin);
-  vRMax    := DINT_TO_REAL(iXMax);
-  vRVmax   := DINT_TO_REAL(iVMax);
-  vRTacc   := DINT_TO_REAL(iTAcc) / 10.0;
-  vRTdec   := DINT_TO_REAL(iTDec) / 10.0;
-  vRPos    := DINT_TO_REAL(ioXPos);
-  vRVel    := DINT_TO_REAL(ioVX);
+  r_target := DINT_TO_REAL(x_target);
+  r_min    := DINT_TO_REAL(x_min);
+  r_max    := DINT_TO_REAL(x_max);
+  r_vmax   := DINT_TO_REAL(v_max);
+  r_tacc   := DINT_TO_REAL(t_acc) / 10.0;
+  r_tdec   := DINT_TO_REAL(t_dec) / 10.0;
+  r_pos    := DINT_TO_REAL(x_pos);
+  r_vel    := DINT_TO_REAL(v_x);
 
-  IF (vRMax > vRMin) THEN
-    IF vRPos < vRMin THEN
-      vDriveTarget := vRMin;
-    ELSIF vRPos > vRMax THEN
-      vDriveTarget := vRMax;
+  IF (r_max > r_min) THEN
+    IF r_pos < r_min THEN
+      drive_target := r_min;
+    ELSIF r_pos > r_max THEN
+      drive_target := r_max;
     ELSE
-      IF vRTarget < vRMin THEN
-        vDriveTarget := vRMin;
-      ELSIF vRTarget > vRMax THEN
-        vDriveTarget := vRMax;
+      IF r_target < r_min THEN
+        drive_target := r_min;
+      ELSIF r_target > r_max THEN
+        drive_target := r_max;
       ELSE
-        vDriveTarget := vRTarget;
+        drive_target := r_target;
       END_IF;
     END_IF;
   ELSE
-    vDriveTarget := vRTarget;
+    drive_target := r_target;
   END_IF;
 
-  oXDrive := REAL_TO_DINT(vDriveTarget);
+  x_drive := REAL_TO_DINT(drive_target);
 
-  oArrived := ABS(vRPos - vDriveTarget) <= 3.0;
-  IF oArrived THEN
-    ioXPos := REAL_TO_DINT(vDriveTarget);
-    ioVX := 0;
+  arrived := ABS(r_pos - drive_target) <= 3.0;
+  IF arrived THEN
+    x_pos := REAL_TO_DINT(drive_target);
+    v_x := 0;
     RETURN;
   END_IF;
 
-  IF vRTacc <= 0.0 THEN vRTacc := 0.001; END_IF;
-  IF vRTdec <= 0.0 THEN vRTdec := 0.001; END_IF;
-  IF vRVmax < 0.0 THEN vRVmax := 0.0; END_IF;
+  IF r_tacc <= 0.0 THEN r_tacc := 0.001; END_IF;
+  IF r_tdec <= 0.0 THEN r_tdec := 0.001; END_IF;
+  IF r_vmax < 0.0 THEN r_vmax := 0.0; END_IF;
 
-  vAAcc := vRVmax / vRTacc;
-  vADec := vRVmax / vRTdec;
+  a_acc := r_vmax / r_tacc;
+  a_dec := r_vmax / r_tdec;
 
-  vDir := 1.0;
-  IF vDriveTarget < vRPos THEN
-    vDir := -1.0;
+  dir := 1.0;
+  IF drive_target < r_pos THEN
+    dir := -1.0;
   END_IF;
 
-  vDistance := ABS(vDriveTarget - vRPos);
+  distance := ABS(drive_target - r_pos);
 
-  IF vADec > 0.0 THEN
-    vBrakeDist := (vRVel * vRVel) / (2.0 * vADec);
+  IF a_dec > 0.0 THEN
+    brake_dist := (r_vel * r_vel) / (2.0 * a_dec);
   ELSE
-    vBrakeDist := 0.0;
+    brake_dist := 0.0;
   END_IF;
 
-  IF vBrakeDist >= vDistance THEN
-    vNewVel := vRVel - vADec * iDeltaT;
-    IF vNewVel < 0.0 THEN vNewVel := 0.0; END_IF;
+  IF brake_dist >= distance THEN
+    new_vel := r_vel - a_dec * delta_t;
+    IF new_vel < 0.0 THEN new_vel := 0.0; END_IF;
   ELSE
-    vNewVel := vRVel + vAAcc * iDeltaT;
-    IF vNewVel > vRVmax THEN vNewVel := vRVmax; END_IF;
+    new_vel := r_vel + a_acc * delta_t;
+    IF new_vel > r_vmax THEN new_vel := r_vmax; END_IF;
   END_IF;
 
-  vTravel := vNewVel * iDeltaT;
-  IF vTravel >= vDistance THEN
-    ioXPos := REAL_TO_DINT(vDriveTarget);
-    ioVX := 0;
-    oArrived := TRUE;
+  travel := new_vel * delta_t;
+  IF travel >= distance THEN
+    x_pos := REAL_TO_DINT(drive_target);
+    v_x := 0;
+    arrived := TRUE;
   ELSE
-    ioXPos := REAL_TO_DINT(vRPos + vDir * vTravel);
-    ioVX := REAL_TO_DINT(vNewVel);
-    oArrived := FALSE;
+    x_pos := REAL_TO_DINT(r_pos + dir * travel);
+    v_x := REAL_TO_DINT(new_vel);
+    arrived := FALSE;
   END_IF;
 END_FUNCTION_BLOCK
 

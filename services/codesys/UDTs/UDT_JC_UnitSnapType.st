@@ -7,7 +7,7 @@ STRUCT
     Target     : INT;  (* target *)
     HasBatch   : BOOL; (* batch_code <> 0 *)
     BatchState : INT;  (* batch state *)
-    CurStage   : INT;  (* current stage from Batch *)
+    CurStage   : INT;  (* current stage from g_batch *)
     InBuffer   : BOOL; (* loc operation 44..47 *)
     OnStation  : BOOL; (* loc in STATION_ARRAY range *)
     Elapsed    : LINT; (* time at station, 0 if not on station *)

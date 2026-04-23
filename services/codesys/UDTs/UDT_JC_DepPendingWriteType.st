@@ -2,7 +2,7 @@
 TYPE UDT_JC_DepPendingWriteType :
 STRUCT
     Valid        : BOOL;
-    Programs     : ARRAY[1..10] OF UDT_TreatmentProgramType; (* MAX_UNITS *)
+    Programs     : ARRAY[1..10] OF UDT_TreatmentProgramType; (* MAX_Units *)
     BatchUnit    : INT;                                      (* activated batch: unit index *)
     BatchStage   : INT;                                      (* activated batch: new cur_stage *)
     BatchState   : INT;                                      (* activated batch: new state (IN_PROCESS=1) *)

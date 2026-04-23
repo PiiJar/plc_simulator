@@ -4,7 +4,7 @@
  * Maintains a production queue (list of batches with treatment programs).
  * Watches the start station via Modbus polling. When a unit is at the start
  * station with status=USED, target=TO_NONE, no batch assigned, and has been
- * there for >= loadinTimeS, dispatches the next batch from the queue:
+ * there for >= loading_time_s, dispatches the next batch from the queue:
  *   - Writes batch header (code, state=NOT_PROCESSED, program_id) to PLC
  *   - Writes all treatment program stages to PLC
  *
@@ -26,11 +26,11 @@ class ProductionDispatcher {
     this._writeBatch = null;   // writeBatchToPLC(unitIndex, batchCode, batchState, programId)
     this._writeStage = null;   // writeProgramStageToPLC(unitIndex, stageIndex, stations[], min, max, cal)
     this._writeUnit  = null;   // writeUnitToPLC(unitId, location, status, target)
-    this._writeProductionQueue = null; // writeProductionQueue(value) — set ProductionQueue on PLC
+    this._writeProductionQueue = null; // writeProductionQueue(value) — set g_production_queue on PLC
 
     // Queue state (loaded from / persisted to production_queue.json)
     this.queue = null;
-    // { start_station, finish_station, loadinTimeS, batches: [...], pointer, active, dispatched }
+    // { start_station, finish_station, loading_time_s, batches: [...], pointer, active, dispatched }
 
     // Parsed-stages cache: csv_file → stages[]
     this.stagesCache = new Map();
@@ -101,7 +101,7 @@ class ProductionDispatcher {
     const remaining = this.queue.batches.length - this.queue.pointer;
     console.log(
       `[DISPATCH] Activated — ${remaining} batches remaining, ` +
-      `start_station=${this.queue.start_station}, loading=${this.queue.loadinTimeS}s`
+      `start_station=${this.queue.start_station}, loading=${this.queue.loading_time_s}s`
     );
     return true;
   }
@@ -127,9 +127,9 @@ class ProductionDispatcher {
       remaining: Math.max(0, this.queue.batches.length - this.queue.pointer),
       start_station: this.queue.start_station,
       finish_station: this.queue.finish_station,
-      loadinTimeS: this.queue.loadinTimeS,
+      loading_time_s: this.queue.loading_time_s,
       dispatched: this.queue.dispatched,
-      loadinUnit_id: this.loadingUnitId,
+      loading_unit_id: this.loadingUnitId,
       loading_elapsed_s: this.loadingStartMs
         ? Math.round((Date.now() - this.loadingStartMs) / 1000)
         : null,
@@ -204,14 +204,14 @@ class ProductionDispatcher {
   }
 
   /**
-   * Read unloadinTimeS from production_setup.json.
+   * Read unloading_time_s from production_setup.json.
    */
   async _getUnloadingTimeS() {
     try {
       const fp = path.join(this.runtimeDir, 'production_setup.json');
       const raw = await fs.readFile(fp, 'utf8');
       const setup = JSON.parse(raw);
-      return Number(setup.unloadinTimeS) || 60;
+      return Number(setup.unloading_time_s) || 60;
     } catch {
       return 60;
     }
@@ -241,7 +241,7 @@ class ProductionDispatcher {
     }
 
     const startStation = Number(this.queue.start_station);
-    const loadingTimeS = Number(this.queue.loadinTimeS) || 60;
+    const loadingTimeS = Number(this.queue.loading_time_s) || 60;
 
     // Find unit at start station: USED + TO_NONE + no batch
     const candidate = plcUnits.find(u =>
@@ -343,7 +343,7 @@ class ProductionDispatcher {
 
       // Last batch dispatched → clear production queue flag on PLC
       if (this.queue.pointer >= this.queue.batches.length) {
-        console.log('[DISPATCH] Last batch dispatched — setting ProductionQueue = 0');
+        console.log('[DISPATCH] Last batch dispatched — setting g_production_queue = 0');
         if (this._writeProductionQueue) {
           await this._writeProductionQueue(0);
         }
@@ -367,7 +367,7 @@ class ProductionDispatcher {
 
   /**
    * Check dispatched batches: if a unit is at finish_station with
-   * batch_state=PROCESSED and has been there >= unloadinTimeS,
+   * batch_state=PROCESSED and has been there >= unloading_time_s,
    * clear the batch and route the empty unit to buffer.
    */
   async _checkUnloads(plcUnits) {

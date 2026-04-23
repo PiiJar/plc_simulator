@@ -14,7 +14,7 @@ STRUCT
     MaxStation               : INT;                         (* Maximum station *)
 
     (* ===== Task Areas (per transporter-per-line) ===== *)
-    TaskArea                 : ARRAY[1..3] OF UDT_TaskAreaType; (* lift/sink station ranges per slot *)
+    TaskArea                 : ARRAY[1..3] OF UDT_TaskArea; (* lift/sink station ranges per slot *)
 
     (* ===== Sensor Limits ===== *)
     ZSensorLowLimit          : INT;                         (* Z sensor low limit *)

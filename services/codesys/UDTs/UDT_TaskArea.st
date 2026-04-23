@@ -1,5 +1,5 @@
 (* TaskArea - Lift/sink station ranges per transporter task area slot *)
-TYPE UDT_TaskAreaType :
+TYPE UDT_TaskArea :
 STRUCT
     MinLift : INT; (* minimum lift station number *)
     MaxLift : INT; (* maximum lift station number *)

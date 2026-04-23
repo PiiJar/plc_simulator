@@ -1,7 +1,7 @@
 (* EventMsgType - Generic event message with type-dependent payload *)
 (*
    All events share TaskId in f[1..2] for cross-referencing:
-     TaskId = f[1] * 65536 + f[2]  (= TransporterStatus.TaskId)
+     TaskId = f[1] * 65536 + f[2]  (= g_transporter.TaskId)
 
    msg_type=1 (TASK_DISPATCHED):
      f[1]=TaskId_Hi  f[2]=TaskId_Lo

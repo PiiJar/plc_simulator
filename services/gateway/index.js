@@ -379,7 +379,7 @@ app.delete('/api/manual-tasks/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// Read movement times from PLC (Move[1..3])
+// Read movement times from PLC (g_move[1..3])
 app.get('/api/movement-times', async (req, res) => {
   if (!adapter.isConnected()) {
     return res.status(503).json({ success: false, error: 'PLC not connected' });
@@ -693,7 +693,7 @@ app.post('/api/production-queue', async (req, res) => {
       const ok = await dispatcher.activate();
       if (!ok) return res.status(400).json({ error: 'No production queue found — create production first' });
       const qs = dispatcher.getStatus();
-      simLog('PRODUCTION_START', { total_batches: qs.total, start_station: qs.start_station, finish_station: qs.finish_station, loadinTimeS: qs.loadinTimeS });
+      simLog('PRODUCTION_START', { total_batches: qs.total, start_station: qs.start_station, finish_station: qs.finish_station, loading_time_s: qs.loading_time_s });
     } else {
       await dispatcher.deactivate();
       const qs = dispatcher.getStatus();

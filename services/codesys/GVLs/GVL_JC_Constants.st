@@ -1,15 +1,14 @@
-{attribute 'qualified_only'}
 (* Scheduler GVL_JC_Constants — Global constants *)
 VAR_GLOBAL CONSTANT
 
   (* ===== Layout Hierarchy Limits ===== *)
   MAX_STATIONS_PER_LINE     : INT  := 30;   (* max stations per line *)
-  MIN_STATION_INDEX          : INT  := 100;  (* first valid station index *)
-  MAX_STATION_INDEX          : INT  := 130;  (* MaxLines*100 + MaxStationsPerLine *)
+  MIN_StationIndex          : INT  := 100;  (* first valid station index *)
+  MAX_StationIndex          : INT  := 130;  (* MaxLines*100 + MaxStationsPerLine *)
 
   (* ===== Derived Absolute Limits ===== *)
-  MAX_TRANSPORTERS          : INT  := 3;   (* absolute max transporters in a plant *)
-  MAX_UNITS                 : INT  := 10;  (* max units (lifting frames / hooks) *)
+  MAX_Transporters          : INT  := 3;   (* absolute max transporters in a plant *)
+  MAX_Units                 : INT  := 10;  (* max units (lifting frames / hooks) *)
   MAX_STATIONS_PER_STEP     : INT  := 5;   (* max parallel stations per program stage *)
   MAX_STEPS_PER_PROGRAM     : INT  := 30;  (* max stages in a treatment program *)
   MAX_TASK_QUEUE            : INT  := 30;  (* max tasks per transporter queue — must match UDT_JC_TskQueueType.Queue size *)
@@ -19,7 +18,7 @@ VAR_GLOBAL CONSTANT
   DEP_MAX_IDLE_SLOTS        : INT  := 20;  (* max idle slots per transporter *)
   DEP_MAX_DELAY_ACTS        : INT  := 20;  (* max delay actions per cycle *)
   DEP_MAX_WAITING           : INT  := 5;   (* max waiting batches *)
-  MIN_WORKING_AREA           : DINT := 20;  (* mm — TWA minimum working area *)
+  MIN_WorkingArea           : DINT := 20;  (* mm — TWA minimum working area *)
 
   (* ===== Scheduler Timing Constants ===== *)
   SCH_DISPATCH_MARGIN_S     : REAL := 3.0;  (* dispatch early-start margin (seconds) *)
@@ -60,9 +59,9 @@ VAR_GLOBAL CONSTANT
   PROCESSED                 : INT  := 2;  (* batch processing complete *)
 
   (* Avoid status for stations (TWA) *)
-  AVOID_NONE                : INT  := 0;  (* station not avoided *)
-  AVOID_PASSABLE            : INT  := 1;  (* pass through allowed, no stop *)
-  AVOID_BLOCK               : INT  := 2;  (* hard block, cannot pass *)
+  AVOID_None                : INT  := 0;  (* station not avoided *)
+  AVOID_Passable            : INT  := 1;  (* pass through allowed, no stop *)
+  AVOID_Block               : INT  := 2;  (* hard block, cannot pass *)
 
   (* Take-out constants *)
   TAKE_OUT_MIN_WAIT_S       : INT  := 60;  (* do not start take-out if next task on same station starts within this many seconds *)

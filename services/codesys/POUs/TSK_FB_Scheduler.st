@@ -6,15 +6,15 @@
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  One vPhase per PLC scan cycle.
+ *  One phase per PLC scan cycle.
  *
  *  Phase flow (structured by 100/1000 groups):
  *  0        STOPPED
  *  1        INIT             (collect active batches)
  *  2        NO_TREATMENT_STATES
- *  1000+i   CALC_SCHEDULE    (schedule for batch i, 0..vBatchCount-1)
+ *  1000+i   CALC_SCHEDULE    (schedule for batch i, 0..batch_count-1)
  *  2000     CLEAR_TASKS      (clear task queues)
- *  2001+i   CREATE_TASKS     (tasks for batch i, 0..vBatchCount-1)
+ *  2001+i   CREATE_TASKS     (tasks for batch i, 0..batch_count-1)
  *  2100     SORT_TASKS
  *  2101     SWAP_TASKS
  *  2102     ANALYZE          (→ 2103 if conflict, → 2200 if clean)
@@ -26,8 +26,8 @@
  *  10002    RESTART          (→ 1)
  *
  *  Phase advancement:
- *  Default = vPhase + 1 (at end of function body).
- *  vNextPhase is set ONLY when jumping to a different group.
+ *  Default = phase + 1 (at end of function body).
+ *  next_phase is set ONLY when jumping to a different group.
  *
  *  Conflict resolution: one conflict per cycle.
  *  If resolved → back to SORT (2100).
@@ -37,7 +37,7 @@
  *  ------------------------------------------------------------------------------------------
  *
  *  Changes:
- *  25.03.2026 - Restructured: vPhase+1 default, vIdx from vPhase offset.
+ *  25.03.2026 - Restructured: phase+1 default, idx from phase offset.
  *
  *
  *)
@@ -49,430 +49,430 @@ FUNCTION_BLOCK TSK_FB_Scheduler
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iRun                     : BOOL;    (* TRUE = run, FALSE = stop *)
-  iTimeS                  : LINT;    (* current absolute time (s), unix seconds *)
+  i_run                     : BOOL;    (* TRUE = run, FALSE = stop *)
+  i_time_s                  : LINT;    (* current absolute time (s), unix seconds *)
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    MAX_UNITS               : INT;
+    MAX_Transporters        : INT;
+    MAX_Units               : INT;
     MAX_LOCKS               : INT;
 END_VAR
 
 VAR_EXTERNAL
-  Batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
-  Unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
-  TreatmentPrograms                 : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
-  Task                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
-  Schedule                : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
-  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
+  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
+  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
   (* DEP handshake *)
-  DepPending             : UDT_JC_DepPendingWriteType;
-  ConflictResolved       : BOOL;
-  TskStable              : BOOL;
+  g_dep_pending             : UDT_JC_DepPendingWriteType;
+  g_conflict_resolved       : BOOL;
+  g_tsk_stable              : BOOL;
   (* Debug observability *)
-  DbgTskConflictType   : INT;
-  DbgTskConflictIter   : INT;
-  DbgTskConfUnit       : INT;
-  DbgTskConfStage      : INT;
-  DbgTskBlockedUnit    : INT;
-  DbgTskBlockedStage   : INT;
-  DbgTskDeficit         : DINT;
-  DbgTskStretchCnt     : INT;
-  DbgTskTotalAdv       : DINT;
-  DbgTskTotalDelay     : DINT;
-  DbgProgCal            : ARRAY[1..MAX_UNITS] OF DINT;
+  g_dbg_tsk_conflict_type   : INT;
+  g_dbg_tsk_conflict_iter   : INT;
+  g_dbg_tsk_conf_unit       : INT;
+  g_dbg_tsk_conf_stage      : INT;
+  g_dbg_tsk_blocked_unit    : INT;
+  g_dbg_tsk_blocked_stage   : INT;
+  g_dbg_tsk_deficit         : DINT;
+  g_dbg_tsk_stretch_cnt     : INT;
+  g_dbg_tsk_total_adv       : DINT;
+  g_dbg_tsk_total_delay     : DINT;
+  g_dbg_prog_cal            : ARRAY[1..MAX_Units] OF DINT;
 END_VAR
 
 VAR_OUTPUT
-  oPhase                   : INT;
-  oBatchCnt               : INT;
-  oTaskCnt                : INT;
-  oCycleCnt               : INT;
-  oConflict                : BOOL;
-  oRoundTicks             : INT;     (* ticks consumed by last completed round *)
+  o_phase                   : INT;
+  o_batch_cnt               : INT;
+  o_task_cnt                : INT;
+  o_cycle_cnt               : INT;
+  o_conflict                : BOOL;
+  o_round_ticks             : INT;     (* ticks consumed by last completed round *)
 END_VAR
 
 VAR
-  vPhase                     : INT := 0;
-  vNextPhase                : INT;
-  vIdx                       : INT;    (* derived from vPhase offset *)
+  phase                     : INT := 0;
+  next_phase                : INT;
+  idx                       : INT;    (* derived from phase offset *)
   (* Batch list *)
-  vBatchList                : ARRAY[1..MAX_UNITS] OF INT;
-  vBatchCount               : INT;
+  batch_list                : ARRAY[1..MAX_Units] OF INT;
+  batch_count               : INT;
   (* Conflict iteration *)
-  vConflictIter             : INT;
-  vMaxConflictIter         : INT := 40;
+  conflict_iter             : INT;
+  MAX_CONFLICT_ITER         : INT := 40;
   (* Analyze result cache *)
-  vAnConflict               : BOOL;
-  vAnConfType              : INT;
-  vAnConfUnit              : INT;
-  vAnConfStage             : INT;
-  vAnConfTrans             : INT;
-  vAnBlockedUnit           : INT;
-  vAnBlockedStage          : INT;
-  vAnDeficit                : REAL;
+  an_conflict               : BOOL;
+  an_conf_type              : INT;
+  an_conf_unit              : INT;
+  an_conf_stage             : INT;
+  an_conf_trans             : INT;
+  an_blocked_unit           : INT;
+  an_blocked_stage          : INT;
+  an_deficit                : REAL;
   (* Resolve result cache *)
-  vRsTotalAdv              : REAL;
-  vRsTotalDelay            : REAL;
+  rs_total_adv              : REAL;
+  rs_total_delay            : REAL;
   (* Transporter assignment *)
-  vSchedTrans               : INT;
+  sched_trans               : INT;
   (* Locked stages — prevents oscillation in resolve loop *)
-  vLocks                     : ARRAY[1..MAX_LOCKS] OF UDT_JC_TskLockType;
-  vLockCnt                  : INT := 0;
-  vLocksInitialized         : BOOL := FALSE;
-  vFB_Find                   : STC_FB_FindTransporter;
+  locks                     : ARRAY[1..MAX_LOCKS] OF UDT_JC_TskLockType;
+  lock_cnt                  : INT := 0;
+  locks_initialized         : BOOL := FALSE;
+  fb_find                   : STC_FindTransporter;
   (* candidateStretches — JS: resolve decisions persisted to TreatmentPrograms *)
-  vStretches                 : ARRAY[1..20] OF UDT_JC_TskStretchType;
-  vStretchCnt               : INT := 0;
-  vSi                        : INT;
-  vNewCal                   : DINT;
-  vFlexCap                  : DINT;
+  stretches                 : ARRAY[1..20] OF UDT_JC_TskStretchType;
+  stretch_cnt               : INT := 0;
+  si                        : INT;
+  new_cal                   : DINT;
+  flex_cap                  : DINT;
   (* Temp *)
-  vUi                        : INT;
-  vUi2                       : INT;
-  vTi                        : INT;
-  vBi                        : INT;
-  vTotalTasks               : INT;
-  vCycleCount               : INT := 0;
-  vRoundTicks               : INT := 0;  (* ticks since last RESTART *)
+  ui                        : INT;
+  ui2                       : INT;
+  ti                        : INT;
+  bi                        : INT;
+  total_tasks               : INT;
+  cycle_count               : INT := 0;
+  round_ticks               : INT := 0;  (* ticks since last RESTART *)
 END_VAR
 
-IF NOT iRun THEN
-  IF vPhase <> 0 THEN
-    FOR vTi := 1 TO MAX_TRANSPORTERS DO
-      Task[vTi].Count := 0;
+IF NOT i_run THEN
+  IF phase <> 0 THEN
+    FOR ti := 1 TO MAX_Transporters DO
+      g_task[ti].Count := 0;
     END_FOR;
   END_IF;
-  vPhase := 0;
-  oPhase := 0;
+  phase := 0;
+  o_phase := 0;
   RETURN;
 END_IF;
 
-vNextPhase := 0;
-vRoundTicks := vRoundTicks + 1;
+next_phase := 0;
+round_ticks := round_ticks + 1;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 0: STOPPED                                             *)
 (* ══════════════════════════════════════════════════════════════ *)
-IF vPhase = 0 THEN
-  vNextPhase := 1;
+IF phase = 0 THEN
+  next_phase := 1;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 1: INIT — collect active batches                       *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 1 THEN
+ELSIF phase = 1 THEN
   (* Clear schedule for ALL units — start from clean slate *)
-  FOR vUi := 1 TO MAX_UNITS DO
-    Schedule[vUi].StageCount := 0;
+  FOR ui := 1 TO MAX_Units DO
+    g_schedule[ui].StageCount := 0;
   END_FOR;
-  vBatchCount := STC_FC_CollectActiveBatches(iMode := 0, oList => vBatchList);
-  oBatchCnt := vBatchCount;
-  vConflictIter := 0;
-  vLocksInitialized := FALSE;
-  vStretchCnt := 0;
-  DbgTskTotalAdv   := 0;
-  DbgTskTotalDelay := 0;
+  batch_count := STC_CollectActiveBatches(i_mode := 0, o_list => batch_list);
+  o_batch_cnt := batch_count;
+  conflict_iter := 0;
+  locks_initialized := FALSE;
+  stretch_cnt := 0;
+  g_dbg_tsk_total_adv   := 0;
+  g_dbg_tsk_total_delay := 0;
 
-  IF vBatchCount = 0 THEN
-    FOR vTi := 1 TO MAX_TRANSPORTERS DO
-      Task[vTi].Count := 0;
+  IF batch_count = 0 THEN
+    FOR ti := 1 TO MAX_Transporters DO
+      g_task[ti].Count := 0;
     END_FOR;
-    ConflictResolved := TRUE;
-    vNextPhase := 2200;   (* skip to NO_TREATMENT *)
+    g_conflict_resolved := TRUE;
+    next_phase := 2200;   (* skip to NO_TREATMENT *)
   ELSE
-    ConflictResolved := FALSE;
-    (* vPhase + 1 → 2 *)
+    g_conflict_resolved := FALSE;
+    (* phase + 1 → 2 *)
   END_IF;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2: NO_TREATMENT_STATES                                *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 2 THEN
-  STC_FC_NoTreatmentStates();
-  vNextPhase := 1000;
+ELSIF phase = 2 THEN
+  STC_NoTreatmentStates();
+  next_phase := 1000;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 1000+i: CALC_SCHEDULE — one batch per scan             *)
-(*   i = 0..vBatchCount-1: calculate schedule                   *)
-(*   i >= vBatchCount: done → 2000                              *)
+(*   i = 0..batch_count-1: calculate schedule                   *)
+(*   i >= batch_count: done → 2000                              *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase >= 1000 AND vPhase <= 1999 THEN
-  vIdx := vPhase - 1000;
+ELSIF phase >= 1000 AND phase <= 1999 THEN
+  idx := phase - 1000;
 
-  IF vIdx < vBatchCount THEN
-    vUi := vBatchList[vIdx + 1];
+  IF idx < batch_count THEN
+    ui := batch_list[idx + 1];
 
     (* CalcSchedule handles elapsed-time normalisation — no pre-adjustment needed here. *)
 
-    IF Unit[vUi].location < MIN_STATION_INDEX THEN
-      vSchedTrans := Unit[vUi].location;
+    IF g_unit[ui].location < MIN_StationIndex THEN
+      sched_trans := g_unit[ui].location;
     ELSE
-      vFB_Find(iLiftStn := Unit[vUi].location, iSinkStn := 0);
-      vSchedTrans := vFB_Find.oTrans;
-      IF vSchedTrans = 0 THEN vSchedTrans := 1; END_IF;
+      fb_find(i_lift_stn := g_unit[ui].location, i_sink_stn := 0);
+      sched_trans := fb_find.o_trans;
+      IF sched_trans = 0 THEN sched_trans := 1; END_IF;
     END_IF;
 
-    STC_FC_CalcSchedule(iUnit := vUi, iTrans := vSchedTrans, iTimeS := iTimeS,
-                     ioSchedule := Schedule, ioBatch := Batch, ioProgram := TreatmentPrograms);
-    (* vPhase + 1 → next batch *)
+    STC_CalcSchedule(i_unit := ui, i_trans := sched_trans, i_time_s := i_time_s,
+                     io_schedule := g_schedule, io_batch := g_batch, io_program := TreatmentPrograms);
+    (* phase + 1 → next batch *)
 
   ELSE
-    vNextPhase := 2000;
+    next_phase := 2000;
   END_IF;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2000: CLEAR_TASKS — clear all task queues              *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 2000 THEN
-  FOR vTi := 1 TO MAX_TRANSPORTERS DO
-    Task[vTi].Count := 0;
+ELSIF phase = 2000 THEN
+  FOR ti := 1 TO MAX_Transporters DO
+    g_task[ti].Count := 0;
   END_FOR;
-  (* vPhase + 1 → 2001 *)
+  (* phase + 1 → 2001 *)
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2001+i: CREATE_TASKS — one batch per scan              *)
-(*   i = 0..vBatchCount-1: create tasks                         *)
-(*   i >= vBatchCount: done → 2100                              *)
+(*   i = 0..batch_count-1: create tasks                         *)
+(*   i >= batch_count: done → 2100                              *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase >= 2001 AND vPhase <= 2099 THEN
-  vIdx := vPhase - 2001;
+ELSIF phase >= 2001 AND phase <= 2099 THEN
+  idx := phase - 2001;
 
-  IF vIdx < vBatchCount THEN
-    vUi := vBatchList[vIdx + 1];
-    STC_FC_CreateTasks(iUnit := vUi, ioSchedule := Schedule, ioTask := Task);
-    (* vPhase + 1 → next batch *)
+  IF idx < batch_count THEN
+    ui := batch_list[idx + 1];
+    STC_CreateTasks(i_unit := ui, io_schedule := g_schedule, io_task := g_task);
+    (* phase + 1 → next batch *)
   ELSE
-    vNextPhase := 2100;
+    next_phase := 2100;
   END_IF;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2100: SORT_TASKS                                       *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 2100 THEN
-  STC_FC_SortTasks(iTrans := 0, iTimeS := iTimeS, ioTask := Task, ioBatch := Batch);
-  IF NOT vLocksInitialized THEN
-    vLockCnt := 0;
-    FOR vBi := 1 TO MAX_LOCKS DO
-      vLocks[vBi].Unit := 0;
-      vLocks[vBi].Stage := 0;
-      vLocks[vBi].Direction := 0;
+ELSIF phase = 2100 THEN
+  STC_SortTasks(i_trans := 0, i_time_s := i_time_s, io_task := g_task, io_batch := g_batch);
+  IF NOT locks_initialized THEN
+    lock_cnt := 0;
+    FOR bi := 1 TO MAX_LOCKS DO
+      locks[bi].Unit := 0;
+      locks[bi].Stage := 0;
+      locks[bi].Direction := 0;
     END_FOR;
-    vLocksInitialized := TRUE;
+    locks_initialized := TRUE;
   END_IF;
-  (* vPhase + 1 → 2101 *)
+  (* phase + 1 → 2101 *)
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2101: SWAP_TASKS                                       *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 2101 THEN
-  STC_FC_SwapTasks(ioTask := Task);
-  (* vPhase + 1 → 2102 *)
+ELSIF phase = 2101 THEN
+  STC_SwapTasks(io_task := g_task);
+  (* phase + 1 → 2102 *)
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2102: ANALYZE                                          *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 2102 THEN
-  TSK_FC_Analyze(ioTask := Task,
-    oHasConflict => vAnConflict, oConfType => vAnConfType,
-    oConfUnit => vAnConfUnit, oConfStage => vAnConfStage,
-    oConfTrans => vAnConfTrans, oBlockedUnit => vAnBlockedUnit,
-    oBlockedStage => vAnBlockedStage, oDeficit => vAnDeficit);
-  oConflict := vAnConflict;
+ELSIF phase = 2102 THEN
+  TSK_Analyze(io_task := g_task,
+    o_has_conflict => an_conflict, o_conf_type => an_conf_type,
+    o_conf_unit => an_conf_unit, o_conf_stage => an_conf_stage,
+    o_conf_trans => an_conf_trans, o_blocked_unit => an_blocked_unit,
+    o_blocked_stage => an_blocked_stage, o_deficit => an_deficit);
+  o_conflict := an_conflict;
 
-  IF vAnConflict THEN
-    DbgTskConflictType  := vAnConfType;
-    DbgTskConfUnit      := vAnConfUnit;
-    DbgTskConfStage     := vAnConfStage;
-    DbgTskBlockedUnit   := vAnBlockedUnit;
-    DbgTskBlockedStage  := vAnBlockedStage;
-    DbgTskDeficit        := REAL_TO_DINT(vAnDeficit);
-    ConflictResolved := FALSE;
-    (* vPhase + 1 → 2103 RESOLVE *)
+  IF an_conflict THEN
+    g_dbg_tsk_conflict_type  := an_conf_type;
+    g_dbg_tsk_conf_unit      := an_conf_unit;
+    g_dbg_tsk_conf_stage     := an_conf_stage;
+    g_dbg_tsk_blocked_unit   := an_blocked_unit;
+    g_dbg_tsk_blocked_stage  := an_blocked_stage;
+    g_dbg_tsk_deficit        := REAL_TO_DINT(an_deficit);
+    g_conflict_resolved := FALSE;
+    (* phase + 1 → 2103 RESOLVE *)
   ELSE
-    ConflictResolved := TRUE;
-    vNextPhase := 2200;   (* skip RESOLVE → NO_TREATMENT *)
+    g_conflict_resolved := TRUE;
+    next_phase := 2200;   (* skip RESOLVE → NO_TREATMENT *)
   END_IF;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2103: RESOLVE — one conflict, then re-analyze          *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 2103 THEN
-  TSK_FC_Resolve(
-    iConfUnit     := vAnConfUnit,
-    iConfStage    := vAnConfStage,
-    iConfTrans    := vAnConfTrans,
-    iBlockedUnit  := vAnBlockedUnit,
-    iBlockedStage := vAnBlockedStage,
-    iDeficit       := vAnDeficit,
-    ioLocks        := vLocks,
-    ioLockCnt     := vLockCnt,
-    ioSchedule     := Schedule,
-    ioTask         := Task,
-    ioBatch        := Batch,
-    oTotalAdv     => vRsTotalAdv,
-    oTotalDelay   => vRsTotalDelay
+ELSIF phase = 2103 THEN
+  TSK_Resolve(
+    i_conf_unit     := an_conf_unit,
+    i_conf_stage    := an_conf_stage,
+    i_conf_trans    := an_conf_trans,
+    i_blocked_unit  := an_blocked_unit,
+    i_blocked_stage := an_blocked_stage,
+    i_deficit       := an_deficit,
+    io_locks        := locks,
+    io_lock_cnt     := lock_cnt,
+    io_schedule     := g_schedule,
+    io_task         := g_task,
+    io_batch        := g_batch,
+    o_total_adv     => rs_total_adv,
+    o_total_delay   => rs_total_delay
   );
 
-  (* Collect vStretches *)
-  IF vRsTotalAdv > 0.1 AND vStretchCnt < 20 THEN
-    vStretchCnt := vStretchCnt + 1;
-    vStretches[vStretchCnt].Unit   := vAnBlockedUnit;
-    vStretches[vStretchCnt].Stage  := vAnBlockedStage;
-    vStretches[vStretchCnt].DelayS := -REAL_TO_DINT(vRsTotalAdv);
-    DbgTskTotalAdv := DbgTskTotalAdv + REAL_TO_DINT(vRsTotalAdv);
+  (* Collect stretches *)
+  IF rs_total_adv > 0.1 AND stretch_cnt < 20 THEN
+    stretch_cnt := stretch_cnt + 1;
+    stretches[stretch_cnt].Unit   := an_blocked_unit;
+    stretches[stretch_cnt].Stage  := an_blocked_stage;
+    stretches[stretch_cnt].DelayS := -REAL_TO_DINT(rs_total_adv);
+    g_dbg_tsk_total_adv := g_dbg_tsk_total_adv + REAL_TO_DINT(rs_total_adv);
   END_IF;
-  IF vRsTotalDelay > 0.1 AND vStretchCnt < 20 THEN
-    vStretchCnt := vStretchCnt + 1;
-    vStretches[vStretchCnt].Unit   := vAnConfUnit;
-    vStretches[vStretchCnt].Stage  := vAnConfStage;
-    vStretches[vStretchCnt].DelayS := REAL_TO_DINT(vRsTotalDelay);
-    DbgTskTotalDelay := DbgTskTotalDelay + REAL_TO_DINT(vRsTotalDelay);
+  IF rs_total_delay > 0.1 AND stretch_cnt < 20 THEN
+    stretch_cnt := stretch_cnt + 1;
+    stretches[stretch_cnt].Unit   := an_conf_unit;
+    stretches[stretch_cnt].Stage  := an_conf_stage;
+    stretches[stretch_cnt].DelayS := REAL_TO_DINT(rs_total_delay);
+    g_dbg_tsk_total_delay := g_dbg_tsk_total_delay + REAL_TO_DINT(rs_total_delay);
   END_IF;
 
-  vConflictIter := vConflictIter + 1;
+  conflict_iter := conflict_iter + 1;
 
-  IF vConflictIter >= vMaxConflictIter THEN
-    ConflictResolved := TRUE;
-    vNextPhase := 2200;   (* accept partial, move on *)
+  IF conflict_iter >= MAX_CONFLICT_ITER THEN
+    g_conflict_resolved := TRUE;
+    next_phase := 2200;   (* accept partial, move on *)
   ELSE
-    vNextPhase := 2100;   (* re-SORT → SWAP → ANALYZE *)
+    next_phase := 2100;   (* re-SORT → SWAP → ANALYZE *)
   END_IF;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2200: NO_TREATMENT — create no-treatment tasks         *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 2200 THEN
-  STC_FC_ManualTask(iTimeS := iTimeS, ioTask := Task);
-  TSK_FC_NoTreatment(iTimeS := iTimeS, ioTask := Task);
-  oConflict := FALSE;
-  (* vPhase + 1 → 2201 *)
+ELSIF phase = 2200 THEN
+  STC_ManualTask(i_time_s := i_time_s, io_task := g_task);
+  TSK_NoTreatment(i_time_s := i_time_s, io_task := g_task);
+  o_conflict := FALSE;
+  (* phase + 1 → 2201 *)
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2201: APPLY_STRETCHES — persist resolve decisions      *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 2201 THEN
-  FOR vSi := 1 TO vStretchCnt DO
-    IF vStretches[vSi].Unit >= 1 AND vStretches[vSi].Unit <= MAX_UNITS THEN
-     IF vStretches[vSi].Stage >= 1
-        AND vStretches[vSi].Stage <= TreatmentPrograms[vStretches[vSi].Unit].StepCount THEN
-      vNewCal := TreatmentPrograms[vStretches[vSi].Unit].Steps[vStretches[vSi].Stage].CalTime
-               + vStretches[vSi].DelayS;
-      IF vNewCal < TreatmentPrograms[vStretches[vSi].Unit].Steps[vStretches[vSi].Stage].MinTime THEN
-        vNewCal := TreatmentPrograms[vStretches[vSi].Unit].Steps[vStretches[vSi].Stage].MinTime;
+ELSIF phase = 2201 THEN
+  FOR si := 1 TO stretch_cnt DO
+    IF stretches[si].Unit >= 1 AND stretches[si].Unit <= MAX_Units THEN
+     IF stretches[si].Stage >= 1
+        AND stretches[si].Stage <= TreatmentPrograms[stretches[si].Unit].StepCount THEN
+      new_cal := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].CalTime
+               + stretches[si].DelayS;
+      IF new_cal < TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime THEN
+        new_cal := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime;
       END_IF;
       (* Flex cap: min + factor × (max - min) *)
-      vFlexCap := TreatmentPrograms[vStretches[vSi].Unit].Steps[vStretches[vSi].Stage].MinTime
+      flex_cap := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime
                + REAL_TO_DINT(SCH_TSK_FLEX_FACTOR * DINT_TO_REAL(
-                   TreatmentPrograms[vStretches[vSi].Unit].Steps[vStretches[vSi].Stage].MaxTime
-                 - TreatmentPrograms[vStretches[vSi].Unit].Steps[vStretches[vSi].Stage].MinTime));
-      IF vNewCal > vFlexCap THEN
-        vNewCal := vFlexCap;
+                   TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MaxTime
+                 - TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].MinTime));
+      IF new_cal > flex_cap THEN
+        new_cal := flex_cap;
       END_IF;
-      TreatmentPrograms[vStretches[vSi].Unit].Steps[vStretches[vSi].Stage].CalTime := vNewCal;
+      TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].CalTime := new_cal;
 
-      IF Batch[vStretches[vSi].Unit].CurStage = vStretches[vSi].Stage THEN
-        Batch[vStretches[vSi].Unit].CalTime := vNewCal;
+      IF g_batch[stretches[si].Unit].CurStage = stretches[si].Stage THEN
+        g_batch[stretches[si].Unit].CalTime := new_cal;
       END_IF;
      END_IF;
     END_IF;
   END_FOR;
-  vStretchCnt := 0;
-  (* vPhase + 1 → 2202 *)
+  stretch_cnt := 0;
+  (* phase + 1 → 2202 *)
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2202: MOVE_AWAY — idle transporter move-away check     *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 2202 THEN
-  STC_FC_TakeOut(iTimeS := iTimeS);
-  vNextPhase := 10000;
+ELSIF phase = 2202 THEN
+  STC_TakeOut(i_time_s := i_time_s);
+  next_phase := 10000;
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 10000: READY — cycle complete                          *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 10000 THEN
-  vTotalTasks := 0;
-  FOR vTi := 1 TO MAX_TRANSPORTERS DO
-    vTotalTasks := vTotalTasks + Task[vTi].Count;
+ELSIF phase = 10000 THEN
+  total_tasks := 0;
+  FOR ti := 1 TO MAX_Transporters DO
+    total_tasks := total_tasks + g_task[ti].Count;
   END_FOR;
-  oTaskCnt := vTotalTasks;
+  o_task_cnt := total_tasks;
 
-  IF NOT oConflict THEN
-    DbgTskConflictType := 0;
-    DbgTskConfUnit     := 0;
-    DbgTskConfStage    := 0;
-    DbgTskBlockedUnit  := 0;
-    DbgTskBlockedStage := 0;
-    DbgTskDeficit       := 0;
+  IF NOT o_conflict THEN
+    g_dbg_tsk_conflict_type := 0;
+    g_dbg_tsk_conf_unit     := 0;
+    g_dbg_tsk_conf_stage    := 0;
+    g_dbg_tsk_blocked_unit  := 0;
+    g_dbg_tsk_blocked_stage := 0;
+    g_dbg_tsk_deficit       := 0;
   END_IF;
-  DbgTskConflictIter := vConflictIter;
-  DbgTskStretchCnt   := vStretchCnt;
+  g_dbg_tsk_conflict_iter := conflict_iter;
+  g_dbg_tsk_stretch_cnt   := stretch_cnt;
 
-  FOR vUi := 1 TO MAX_UNITS DO
-    IF Batch[vUi].CurStage >= 1
-       AND Batch[vUi].CurStage <= TreatmentPrograms[vUi].StepCount THEN
-      DbgProgCal[vUi] := TreatmentPrograms[vUi].Steps[Batch[vUi].CurStage].CalTime;
+  FOR ui := 1 TO MAX_Units DO
+    IF g_batch[ui].CurStage >= 1
+       AND g_batch[ui].CurStage <= TreatmentPrograms[ui].StepCount THEN
+      g_dbg_prog_cal[ui] := TreatmentPrograms[ui].Steps[g_batch[ui].CurStage].CalTime;
     ELSE
-      DbgProgCal[vUi] := 0;
+      g_dbg_prog_cal[ui] := 0;
     END_IF;
   END_FOR;
-  (* vPhase + 1 → 10001 *)
+  (* phase + 1 → 10001 *)
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 10001: CHECK_DEP_PENDING                               *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 10001 THEN
-  IF DepPending.Valid THEN
-    FOR vUi := 1 TO MAX_UNITS DO
-      IF DepPending.Programs[vUi].ProgramId > 0 THEN
-        TreatmentPrograms[vUi] := DepPending.Programs[vUi];
+ELSIF phase = 10001 THEN
+  IF g_dep_pending.Valid THEN
+    FOR ui := 1 TO MAX_Units DO
+      IF g_dep_pending.Programs[ui].ProgramId > 0 THEN
+        TreatmentPrograms[ui] := g_dep_pending.Programs[ui];
       END_IF;
     END_FOR;
-    IF DepPending.BatchUnit >= 1 AND DepPending.BatchUnit <= MAX_UNITS THEN
-      Batch[DepPending.BatchUnit].CurStage   := DepPending.BatchStage;
-      Batch[DepPending.BatchUnit].State       := DepPending.BatchState;
-      Batch[DepPending.BatchUnit].StartTime   := DepPending.TimeStamp;
-      Batch[DepPending.BatchUnit].MinTime     := DepPending.BatchMinTime;
-      Batch[DepPending.BatchUnit].MaxTime     := DepPending.BatchMaxTime;
-      Batch[DepPending.BatchUnit].CalTime     := DepPending.BatchCalTime;
+    IF g_dep_pending.BatchUnit >= 1 AND g_dep_pending.BatchUnit <= MAX_Units THEN
+      g_batch[g_dep_pending.BatchUnit].CurStage   := g_dep_pending.BatchStage;
+      g_batch[g_dep_pending.BatchUnit].State       := g_dep_pending.BatchState;
+      g_batch[g_dep_pending.BatchUnit].StartTime   := g_dep_pending.TimeStamp;
+      g_batch[g_dep_pending.BatchUnit].MinTime     := g_dep_pending.BatchMinTime;
+      g_batch[g_dep_pending.BatchUnit].MaxTime     := g_dep_pending.BatchMaxTime;
+      g_batch[g_dep_pending.BatchUnit].CalTime     := g_dep_pending.BatchCalTime;
     END_IF;
     (* Apply active batch CalTimes written by DEP *)
-    FOR vUi := 1 TO MAX_UNITS DO
-      IF DepPending.ActiveBatchCalTime[vUi] > 0
-         AND vUi <> DepPending.BatchUnit THEN
-        Batch[vUi].CalTime := DepPending.ActiveBatchCalTime[vUi];
+    FOR ui := 1 TO MAX_Units DO
+      IF g_dep_pending.ActiveBatchCalTime[ui] > 0
+         AND ui <> g_dep_pending.BatchUnit THEN
+        g_batch[ui].CalTime := g_dep_pending.ActiveBatchCalTime[ui];
       END_IF;
     END_FOR;
-    DepPending.Valid := FALSE;
-    ConflictResolved := FALSE;
-    TskStable := FALSE;
-    vNextPhase := 1;   (* full recalculation *)
+    g_dep_pending.Valid := FALSE;
+    g_conflict_resolved := FALSE;
+    g_tsk_stable := FALSE;
+    next_phase := 1;   (* full recalculation *)
   END_IF;
-  (* else vPhase + 1 → 10002 *)
+  (* else phase + 1 → 10002 *)
 
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 10002: RESTART — begin new cycle                       *)
 (* ══════════════════════════════════════════════════════════════ *)
-ELSIF vPhase = 10002 THEN
-  vCycleCount := vCycleCount + 1;
-  oCycleCnt := vCycleCount;
-  oRoundTicks := vRoundTicks;
-  vRoundTicks := 0;
-  vNextPhase := 1;
+ELSIF phase = 10002 THEN
+  cycle_count := cycle_count + 1;
+  o_cycle_cnt := cycle_count;
+  o_round_ticks := round_ticks;
+  round_ticks := 0;
+  next_phase := 1;
 
 (* ══════════════════════════════════════════════════════════════ *)
-(* Unknown vPhase → reset                                        *)
+(* Unknown phase → reset                                        *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSE
-  vNextPhase := 1;
+  next_phase := 1;
 END_IF;
 
-(* ── Phase advancement: default = vPhase + 1 ── *)
-IF vNextPhase > 0 THEN
-  vPhase := vNextPhase;
+(* ── Phase advancement: default = phase + 1 ── *)
+IF next_phase > 0 THEN
+  phase := next_phase;
 ELSE
-  vPhase := vPhase + 1;
+  phase := phase + 1;
 END_IF;
-oPhase := vPhase;
+o_phase := phase;
 
 END_FUNCTION_BLOCK
