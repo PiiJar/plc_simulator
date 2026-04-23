@@ -8,8 +8,8 @@
  * -------------------------------------------------------------------------------------------
  *  Simulator version: delegates SIM-specific logic to SIM_FB_MainCycle.
  *
- *  Production version would replace sim_main with:
- *    - Real PLC clock → g_time_s
+ *  Production version would replace vFB_SimMain with:
+ *    - Real PLC clock → TimeS
  *    - TWA calc
  *    - (no command handler, no physics, no UI snapshot, no event queue)
  *
@@ -28,21 +28,21 @@ PROGRAM PLC_PRG
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_EXTERNAL
-  g_time_s                  : LINT;
+  TimeS                  : LINT;
 END_VAR
 
 VAR
-  sim_main                  : SIM_FB_MainCycle;
-  main_scheduler            : STC_FB_MainScheduler;
+  vFB_SimMain                  : SIM_FB_MainCycle;
+  vFB_MainScheduler            : STC_FB_MainScheduler;
 END_VAR
 
 (* ── Simulator: command handler, time, TWA, physics, UI snapshot, events ── *)
-sim_main();
+vFB_SimMain();
 
 (* ── Main Scheduler (TSK + DEP alternating cycles) ──
    MUST run outside init_done block so that when init_done=FALSE
-   (during RESET), MainScheduler's i_run=FALSE path executes,
+   (during RESET), MainScheduler's iRun=FALSE path executes,
    properly resetting internal state of both TSK and DEP FBs. *)
-main_scheduler(i_run := sim_main.o_init_done, i_time_s := g_time_s);
+vFB_MainScheduler(iRun := vFB_SimMain.oInitDone, iTimeS := TimeS);
 
 END_PROGRAM

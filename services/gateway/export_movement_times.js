@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * export_movement_times.js — Read g_move[1..N] from PLC via OPC UA
+ * export_movement_times.js — Read Move[1..N] from PLC via OPC UA
  * and save as movement_times.json to the active customer's plant folder.
  *
  * Usage:  node export_movement_times.js
@@ -65,7 +65,7 @@ async function readInt(session, nid) {
   const session = await client.createSession();
   console.log('Connected to PLC');
 
-  // 3. Read g_move[1..N]
+  // 3. Read Move[1..N]
   const result = {};
   for (let tid = 1; tid <= MAX_TRANSPORTERS; tid++) {
     const key = `transporter_${tid}`;
@@ -76,8 +76,8 @@ async function readInt(session, nid) {
     // Lift & sink times (×10 in PLC → seconds)
     for (let idx = 1; idx <= MAX_STATIONS; idx++) {
       const stn = idx + STATION_OFFSET;
-      const liftVal = await readInt(session, S(`g_move[${tid}].LiftTime[${idx}]`));
-      const sinkVal = await readInt(session, S(`g_move[${tid}].SinkTime[${idx}]`));
+      const liftVal = await readInt(session, S(`Move[${tid}].LiftTime[${idx}]`));
+      const sinkVal = await readInt(session, S(`Move[${tid}].SinkTime[${idx}]`));
       if (liftVal !== 0) lift_s[stn] = liftVal / 10;
       if (sinkVal !== 0) sink_s[stn] = sinkVal / 10;
     }
@@ -89,7 +89,7 @@ async function readInt(session, nid) {
       let hasAny = false;
       for (let to = 1; to <= MAX_STATIONS; to++) {
         const toStn = to + STATION_OFFSET;
-        const val = await readInt(session, S(`g_move[${tid}].Travel[${from}].ToTime[${to}]`));
+        const val = await readInt(session, S(`Move[${tid}].Travel[${from}].ToTime[${to}]`));
         if (val !== 0) {
           row[toStn] = val / 10;
           hasAny = true;
@@ -100,8 +100,8 @@ async function readInt(session, nid) {
 
     result[key] = { id: tid, lift_s, sink_s, travel };
 
-    // Read last transfer status from g_actual_move[tid]
-    const amBase = `g_actual_move[${tid}]`;
+    // Read last transfer status from ActualMove[tid]
+    const amBase = `ActualMove[${tid}]`;
     const lastStartStn = await readInt(session, S(`${amBase}.StartStation`));
     const lastLiftStn  = await readInt(session, S(`${amBase}.LiftStation`));
     const lastSinkStn  = await readInt(session, S(`${amBase}.SinkStation`));

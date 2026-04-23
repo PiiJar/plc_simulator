@@ -1,5 +1,5 @@
 (* SimTransporterType — Simulation physics state only *)
-(* No task/scheduler data — those live in g_dispatched_task *)
+(* No task/scheduler data — those live in DispatchedTask *)
 TYPE UDT_JC_SimTransporterType :
 STRUCT
     XVelocity       : DINT; (* X velocity mm/s *)

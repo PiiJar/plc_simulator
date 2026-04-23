@@ -6,10 +6,10 @@
  *   ns=<NS>;s=|var|<DEVICE>.Application.<GVL>.<Var>
  *
  * Actual PLC variable naming (IEC ST style):
- *   GVL_JC_Parameters: g_transporter[1..3], g_unit[1..10], g_batch[1..10],
- *                   Stations[100..130], g_avoid_status[100..130], CountStations
- *   GVL_JC_Scheduler: g_sim_trans[1..3], g_task[1..3], g_schedule[1..10],
- *                     g_move[1..3], g_event, g_cmd_code, g_cmd_param, etc.
+ *   GVL_JC_Parameters: TransporterStatus[1..3], Unit[1..10], Batch[1..10],
+ *                   Stations[100..130], AvoidStatus[100..130], CountStations
+ *   GVL_JC_Scheduler: SimTrans[1..3], Task[1..3], Schedule[1..10],
+ *                     Move[1..3], Event, CmdCode, CmdParam, etc.
  *
  * Environment config:
  *   OPCUA_NS       — namespace index (default: 4)
@@ -35,10 +35,10 @@ const S = (v) => nodeId('GVL_JC_Scheduler', v);
 
 /**
  * Transporter status fields for transporter tid (1..3)
- * PLC variable: GVL_JC_Parameters.g_transporter[tid]
+ * PLC variable: GVL_JC_Parameters.TransporterStatus[tid]
  */
 function transporterStatus(tid) {
-  const b = `g_transporter[${tid}]`;
+  const b = `TransporterStatus[${tid}]`;
   return {
     x_mm:          P(`${b}.XPosition`),
     y_mm:          P(`${b}.YPosition`),
@@ -65,12 +65,12 @@ function transporterStatus(tid) {
 
 /**
  * SimTransporter fields for transporter tid (1..3)
- * PLC variable: GVL_JC_Scheduler.g_sim_trans[tid]
+ * PLC variable: GVL_JC_Scheduler.SimTrans[tid]
  */
 function simTransporter(tid) {
-  const b = `g_sim_trans[${tid}]`;
+  const b = `SimTrans[${tid}]`;
   return {
-    running_task_id:  S(`${b}.RunningTaskId`),
+    runninTask_id:  S(`${b}.RunningTaskId`),
     treatment_time:   S(`${b}.TreatmentTime`),
     min_time:         S(`${b}.MinTime`),
     max_time:         S(`${b}.MaxTime`),
@@ -84,10 +84,10 @@ function simTransporter(tid) {
 
 /**
  * Unit fields for unit uid (1..10)
- * PLC variable: GVL_JC_Parameters.g_unit[uid]
+ * PLC variable: GVL_JC_Parameters.Unit[uid]
  */
 function unit(uid) {
-  const b = `g_unit[${uid}]`;
+  const b = `Unit[${uid}]`;
   return {
     location: P(`${b}.Location`),
     status:   P(`${b}.Status`),
@@ -97,10 +97,10 @@ function unit(uid) {
 
 /**
  * Batch fields for unit uid (1..10)
- * PLC variable: GVL_JC_Parameters.g_batch[uid]
+ * PLC variable: GVL_JC_Parameters.Batch[uid]
  */
 function batch(uid) {
-  const b = `g_batch[${uid}]`;
+  const b = `Batch[${uid}]`;
   return {
     code:       P(`${b}.BatchCode`),
     state:      P(`${b}.State`),
@@ -115,10 +115,10 @@ function batch(uid) {
 
 /**
  * Task queue for transporter tid (1..3)
- * PLC variable: GVL_JC_Scheduler.g_task[tid]
+ * PLC variable: GVL_JC_Scheduler.Task[tid]
  */
 function taskQueue(tid) {
-  const b = `g_task[${tid}]`;
+  const b = `Task[${tid}]`;
   const nodes = { count: S(`${b}.Count`) };
   // 30 task slots
   for (let q = 1; q <= 30; q++) {
@@ -140,10 +140,10 @@ function taskQueue(tid) {
 
 /**
  * Schedule for unit uid (1..10)
- * PLC variable: GVL_JC_Scheduler.g_schedule[uid]
+ * PLC variable: GVL_JC_Scheduler.Schedule[uid]
  */
 function schedule(uid) {
-  const b = `g_schedule[${uid}]`;
+  const b = `Schedule[${uid}]`;
   const nodes = { stage_count: S(`${b}.StageCount`) };
   for (let s = 0; s <= 30; s++) {
     const sb = `${b}.Stages[${s}]`;
@@ -160,11 +160,11 @@ function schedule(uid) {
 
 /**
  * UI snapshot schedule for unit uid (1..10)
- * PLC variable: GVL_JC_Scheduler.g_sim_ui_schedule[uid]
+ * PLC variable: GVL_JC_Scheduler.SimUiSchedule[uid]
  * Stable copy written only at TSK phase 10000 rising edge.
  */
 function simSchedule(uid) {
-  const b = `g_sim_ui_schedule[${uid}]`;
+  const b = `SimUiSchedule[${uid}]`;
   const nodes = { stage_count: S(`${b}.StageCount`) };
   for (let s = 0; s <= 30; s++) {
     const sb = `${b}.Stages[${s}]`;
@@ -181,11 +181,11 @@ function simSchedule(uid) {
 
 /**
  * UI snapshot task queue for transporter tid (1..3)
- * PLC variable: GVL_JC_Scheduler.g_sim_ui_task[tid]
+ * PLC variable: GVL_JC_Scheduler.SimUiTask[tid]
  * Stable copy written only at TSK phase 10000 rising edge.
  */
 function simTaskQueue(tid) {
-  const b = `g_sim_ui_task[${tid}]`;
+  const b = `SimUiTask[${tid}]`;
   const nodes = { count: S(`${b}.Count`) };
   for (let q = 1; q <= 30; q++) {
     const qb = `${b}.Queue[${q}]`;
@@ -208,70 +208,70 @@ function simTaskQueue(tid) {
 
 const META = {
   station_count:    P('CountStations'),
-  production_queue: S('g_production_queue'),
-  time_seconds:     S('g_time_s'),
+  production_queue: S('ProductionQueue'),
+  time_seconds:     S('TimeS'),
 };
 
 const DEP = {
-  activated:     S('g_dep_activated'),
-  stable:        S('g_tsk_stable'),
-  waiting_count: S('g_dep_waiting_count'),
-  overlap_count: S('g_dep_overlap.Count'),
-  pending_valid: S('g_dep_pending.Valid'),
-  pending_unit:  S('g_dep_pending.BatchUnit'),
-  pending_stage: S('g_dep_pending.BatchStage'),
-  pending_time:  S('g_dep_pending.TimeStamp'),
+  activated:     S('DepActivated'),
+  stable:        S('TskStable'),
+  waiting_count: S('DepWaitingCount'),
+  overlap_count: S('DepOverlap.Count'),
+  pending_valid: S('DepPending.Valid'),
+  pendinUnit:  S('DepPending.BatchUnit'),
+  pending_stage: S('DepPending.BatchStage'),
+  pending_time:  S('DepPending.TimeStamp'),
 };
 
 // DEP waiting array (1..5)
 function depWaiting(idx) {
-  return S(`g_dep_waiting[${idx}]`);
+  return S(`DepWaiting[${idx}]`);
 }
 
 // UI snapshot scalar fields
 const SIM_UI = {
-  wait_unit:   S('g_sim_ui_wait_unit'),
-  wait_reason: S('g_sim_ui_wait_reason'),
+  wait_unit:   S('SimUiWaitUnit'),
+  wait_reason: S('SimUiWaitReason'),
 };
 
 const SCHED_DEBUG = {
-  tsk_phase:          S('g_sched_dbg_tsk_phase'),
-  dep_phase:          S('g_sched_dbg_dep_phase'),
-  turn:               S('g_sched_dbg_turn'),
-  skip_cnt:           S('g_sched_dbg_skip_cnt'),
-  conflict_resolved:  S('g_conflict_resolved'),
-  dep_reject_cnt:     S('g_sched_dbg_dep_reject_cnt'),
-  dep_fit_round:      S('g_sched_dbg_dep_fit_round'),
-  dep_cur_wait_unit:  S('g_sched_dbg_dep_cur_wait_unit'),
-  dep_wait_cnt:       S('g_sched_dbg_dep_wait_cnt'),
-  batch_cnt:          S('g_sched_dbg_batch_cnt'),
+  tsk_phase:          S('SchedDbgTskPhase'),
+  dep_phase:          S('SchedDbgDepPhase'),
+  turn:               S('SchedDbgTurn'),
+  skip_cnt:           S('SchedDbgSkipCnt'),
+  conflict_resolved:  S('ConflictResolved'),
+  dep_reject_cnt:     S('SchedDbgDepRejectCnt'),
+  dep_fit_round:      S('SchedDbgDepFitRound'),
+  dep_cur_wait_unit:  S('SchedDbgDepCurWaitUnit'),
+  dep_wait_cnt:       S('SchedDbgDepWaitCnt'),
+  batch_cnt:          S('SchedDbgBatchCnt'),
   // TSK conflict debug
-  conflict_type:      S('g_dbg_tsk_conflict_type'),
-  conflict_iter:      S('g_dbg_tsk_conflict_iter'),
-  conf_unit:          S('g_dbg_tsk_conf_unit'),
-  conf_stage:         S('g_dbg_tsk_conf_stage'),
-  blocked_unit:       S('g_dbg_tsk_blocked_unit'),
-  blocked_stage:      S('g_dbg_tsk_blocked_stage'),
-  deficit:            S('g_dbg_tsk_deficit'),
-  stretch_cnt:        S('g_dbg_tsk_stretch_cnt'),
-  total_adv:          S('g_dbg_tsk_total_adv'),
-  total_delay:        S('g_dbg_tsk_total_delay'),  tsk_round_ticks:      S('g_sched_dbg_tsk_round_ticks'),
-  dep_round_ticks:      S('g_sched_dbg_dep_round_ticks'),};
+  conflict_type:      S('DbgTskConflictType'),
+  conflict_iter:      S('DbgTskConflictIter'),
+  conf_unit:          S('DbgTskConfUnit'),
+  conf_stage:         S('DbgTskConfStage'),
+  blocked_unit:       S('DbgTskBlockedUnit'),
+  blocked_stage:      S('DbgTskBlockedStage'),
+  deficit:            S('DbgTskDeficit'),
+  stretch_cnt:        S('DbgTskStretchCnt'),
+  total_adv:          S('DbgTskTotalAdv'),
+  total_delay:        S('DbgTskTotalDelay'),  tsk_round_ticks:      S('SchedDbgTskRoundTicks'),
+  dep_round_ticks:      S('SchedDbgDepRoundTicks'),};
 
 // Program CalTime snapshot per unit (DINT, safe for OPC UA batch read)
 function progCalDebug(uid) {
-  return S(`g_dbg_prog_cal[${uid}]`);
+  return S(`DbgProgCal[${uid}]`);
 }
 
 // Event queue head (read-only from PLC)
 const EVENT = {
-  count:    S('g_event.Count'),
-  head_idx: S('g_event.Head'),
+  count:    S('Event.Count'),
+  head_idx: S('Event.Head'),
 };
 
 // Event message at buffer index (1..10)
 function eventMsg(idx) {
-  const b = `g_event.Buffer[${idx}]`;
+  const b = `Event.Buffer[${idx}]`;
   return {
     seq:     S(`${b}.Seq`),
     msg_type: S(`${b}.MsgType`),
@@ -281,33 +281,33 @@ function eventMsg(idx) {
 }
 
 function eventPayload(bufIdx, fieldIdx) {
-  return S(`g_event.Buffer[${bufIdx}].Payload[${fieldIdx}]`);
+  return S(`Event.Buffer[${bufIdx}].Payload[${fieldIdx}]`);
 }
 
 // Avoid status per station (100..130)
 function avoidStatus(stationNum) {
-  return P(`g_avoid_status[${stationNum}]`);
+  return P(`AvoidStatus[${stationNum}]`);
 }
 
 // ═══════════════════════════════════════════════════════════════
 // WRITE nodes — Gateway → PLC command inputs
-// All write variables live in GVL_JC_Scheduler (g_cmd_* protocol)
+// All write variables live in GVL_JC_Scheduler (CmdCode/CmdParam protocol)
 // ═══════════════════════════════════════════════════════════════
 
 const CMD = {
   // OPC UA command protocol — PLC processes when cmd_code <> 0, then clears
-  cmd_code:  S('g_cmd_code'),
-  cmd_param: S('g_cmd_param'),
+  cmd_code:  S('CmdCode'),
+  cmd_param: S('CmdParam'),
 
   // Event acknowledgment
-  event_ack_seq: S('g_event_ack_seq'),
+  event_ack_seq: S('EventAckSeq'),
 
   // Production queue flag
-  production_queue: S('g_production_queue'),
+  production_queue: S('ProductionQueue'),
 
   // Time sync (LINT)
-  time_s: S('g_time_s'),
-  time_sync: S('g_time_sync'),
+  time_s: S('TimeS'),
+  time_sync: S('TimeSync'),
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -387,11 +387,11 @@ function cfgWrite(tid) {
 }
 
 /**
- * Unit write targets (g_unit[uid])
- * PLC variable: GVL_JC_Parameters.g_unit[1..10]
+ * Unit write targets (Unit[uid])
+ * PLC variable: GVL_JC_Parameters.Unit[1..10]
  */
 function unitWrite(uid) {
-  const b = `g_unit[${uid}]`;
+  const b = `Unit[${uid}]`;
   return {
     location: P(`${b}.Location`),
     status:   P(`${b}.Status`),
@@ -400,11 +400,11 @@ function unitWrite(uid) {
 }
 
 /**
- * Batch write targets (g_batch[uid])
- * PLC variable: GVL_JC_Parameters.g_batch[1..10]
+ * Batch write targets (Batch[uid])
+ * PLC variable: GVL_JC_Parameters.Batch[1..10]
  */
 function batchWrite(uid) {
-  const b = `g_batch[${uid}]`;
+  const b = `Batch[${uid}]`;
   return {
     batch_code: P(`${b}.BatchCode`),
     state:      P(`${b}.State`),
@@ -445,11 +445,11 @@ function programWrite(uid) {
 }
 
 /**
- * NTT (no-treatment-task) write targets (g_ntt[tid])
- * PLC variable: GVL_JC_Scheduler.g_ntt[1..3]
+ * NTT (no-treatment-task) write targets (Ntt[tid])
+ * PLC variable: GVL_JC_Scheduler.Ntt[1..3]
  */
 function nttWrite(tid) {
-  const b = `g_ntt[${tid}]`;
+  const b = `Ntt[${tid}]`;
   const n = {};
   for (let tgt = 1; tgt <= 8; tgt++) {
     const tb = `${b}.Target[${tgt}]`;
@@ -466,11 +466,11 @@ function nttWrite(tid) {
 }
 
 /**
- * Manual task write targets (g_manual_task[tid])
- * PLC variable: GVL_JC_Scheduler.g_manual_task[1..3]
+ * Manual task write targets (ManualTask[tid])
+ * PLC variable: GVL_JC_Scheduler.ManualTask[1..3]
  */
 function manualTaskWrite(tid) {
-  const b = `g_manual_task[${tid}]`;
+  const b = `ManualTask[${tid}]`;
   return {
     liftStation: S(`${b}.LiftStation`),
     sinkStation: S(`${b}.SinkStation`),
@@ -479,10 +479,10 @@ function manualTaskWrite(tid) {
 }
 
 /**
- * Manual task read targets (g_manual_task[tid])
+ * Manual task read targets (ManualTask[tid])
  */
 function manualTaskRead(tid) {
-  const b = `g_manual_task[${tid}]`;
+  const b = `ManualTask[${tid}]`;
   return {
     lift_station: S(`${b}.LiftStation`),
     sink_station: S(`${b}.SinkStation`),
@@ -504,7 +504,7 @@ function manualTaskRead(tid) {
  * in buildLintReadList() and read separately.
  */
 const LINT_KEYS = new Set([
-  'meta.time_seconds',  // g_time_s : LINT
+  'meta.time_seconds',  // TimeS : LINT
 ]);
 
 function buildReadList() {
@@ -518,7 +518,7 @@ function buildReadList() {
   for (const [k, nid] of Object.entries(META)) add(`meta.${k}`, nid);
 
   // Transporters (1..3)
-  // NOTE: task_id (TaskId) and running_task_id (RunningTaskId) are LINT —
+  // NOTE: task_id (TaskId) and runninTask_id (RunningTaskId) are LINT —
   // CODESYS OPC UA server crashes when batch-reading LINT struct fields.
   // They are read separately via _readLintNodes in opcua_adapter.js.
   for (let t = 1; t <= 3; t++) {
@@ -529,7 +529,7 @@ function buildReadList() {
     }
     const st = simTransporter(t);
     for (const [k, nid] of Object.entries(st)) {
-      if (k === 'running_task_id') continue; // LINT field — read separately
+      if (k === 'runninTask_id') continue; // LINT field — read separately
       add(`sim.${t}.${k}`, nid);
     }
   }
@@ -569,10 +569,10 @@ function buildReadList() {
   // Scheduler debug
   for (const [k, nid] of Object.entries(SCHED_DEBUG)) add(`sched.${k}`, nid);
 
-  // Program CalTime snapshot per unit (from g_dbg_prog_cal)
+  // Program CalTime snapshot per unit (from DbgProgCal)
   for (let u = 1; u <= 10; u++) add(`sched.prog_cal.${u}`, progCalDebug(u));
 
-  // Manual task state (g_manual_task[1..3])
+  // Manual task state (ManualTask[1..3])
   for (let t = 1; t <= 3; t++) {
     const mt = manualTaskRead(t);
     for (const [k, nid] of Object.entries(mt)) add(`mt.${t}.${k}`, nid);
@@ -593,13 +593,13 @@ function buildReadList() {
 }
 
 /**
- * Movement times write targets (g_move[tid])
- * PLC variable: GVL_JC_Scheduler.g_move[1..3]
+ * Movement times write targets (Move[tid])
+ * PLC variable: GVL_JC_Scheduler.Move[1..3]
  * Station index: station_number - 100 (station 101 → index 1, max 30)
  * Times are INT ×10 = tenths of second
  */
 function moveTimesWrite(tid) {
-  const b = `g_move[${tid}]`;
+  const b = `Move[${tid}]`;
   const result = {};
   for (let idx = 1; idx <= 30; idx++) {
     result[`lift_${idx}`] = S(`${b}.LiftTime[${idx}]`);

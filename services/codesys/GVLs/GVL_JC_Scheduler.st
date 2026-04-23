@@ -1,100 +1,100 @@
+{attribute 'qualified_only'}
 (* GVL_JC_Scheduler — Simulator-internal global variables *)
-(* Identical names to globals.st VAR_GLOBAL — no renaming needed *)
 VAR_GLOBAL
   (* ===== Simulation Transporter State ===== *)
-  g_sim_trans                   : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;  (* physics + scheduler command state *)
+  SimTrans                   : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_SimTransporterType;  (* physics + scheduler command state *)
 
   (* ===== No-Treatment Task Destinations ===== *)
-  g_ntt                         : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;  (* no-treatment task destinations *)
+  Ntt                         : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_NttTransporterType;  (* no-treatment task destinations *)
 
   (* ===== Precomputed Movement Times ===== *)
-  g_move                        : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;  (* precomputed movement times per transporter *)
+  Move                        : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;  (* precomputed movement times per transporter *)
 
   (* ===== Actual (Measured) Move Times ===== *)
-  g_actual_move                 : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;  (* phase timestamps updated after each completed task *)
+  ActualMove                 : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_ActualMoveTimeType;  (* phase timestamps updated after each completed task *)
 
   (* ===== Unit Schedule ===== *)
-  g_schedule                    : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;  (* calculated schedule per unit *)
+  Schedule                    : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;  (* calculated schedule per unit *)
 
   (* ===== Task Queues ===== *)
-  g_task                        : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;  (* task queue per transporter *)
+  Task                        : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;  (* task queue per transporter *)
 
   (* ===== Departure Scheduler State ===== *)
-  g_dep_wk_schedule             : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;  (* DEP workspace: schedules *)
-  g_dep_wk_task                 : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;  (* DEP workspace: task queues *)
-  g_dep_wk_program              : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;  (* DEP workspace: programs *)
-  g_dep_wk_batch                : ARRAY[1..MAX_Units] OF UDT_BatchType;  (* DEP workspace: batch state *)
-  g_dep_idle_slot               : ARRAY[1..MAX_Transporters] OF UDT_JC_DepIdleSlotSetType;  (* idle slots per transporter *)
-  g_dep_waiting                 : ARRAY[1..DEP_MAX_WAITING] OF INT;  (* waiting batch unit indices *)
-  g_dep_waiting_count           : INT;  (* number of waiting batches *)
-  g_dep_overlap                 : UDT_JC_DepOverlapType;  (* overlap station flags *)
-  g_dep_pending                 : UDT_JC_DepPendingWriteType;  (* ACTIVATE write buffer *)
-  g_dep_activated               : BOOL;  (* handshake TSK ← DEP *)
-  g_tsk_stable                  : BOOL;  (* tasksStableFlag: TRUE when last TSK cycle reached READY+conflict_free, cleared only on DEP activation/reset *)
-  g_conflict_resolved           : BOOL;  (* TRUE when TSK Analyze found no conflicts — gate for DEP *)
+  DepWkSchedule             : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;  (* DEP workspace: schedules *)
+  DepWkTask                 : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;  (* DEP workspace: task queues *)
+  DepWkProgram              : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;  (* DEP workspace: programs *)
+  DepWkBatch                : ARRAY[1..MAX_UNITS] OF UDT_BatchType;  (* DEP workspace: batch state *)
+  DepIdleSlot               : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_DepIdleSlotSetType;  (* idle slots per transporter *)
+  DepWaiting                 : ARRAY[1..DEP_MAX_WAITING] OF INT;  (* waiting batch unit indices *)
+  DepWaitingCount           : INT;  (* number of waiting batches *)
+  DepOverlap                 : UDT_JC_DepOverlapType;  (* overlap station flags *)
+  DepPending                 : UDT_JC_DepPendingWriteType;  (* ACTIVATE write buffer *)
+  DepActivated               : BOOL;  (* handshake TSK ← DEP *)
+  TskStable                  : BOOL;  (* tasksStableFlag: TRUE when last TSK cycle reached READY+conflict_free, cleared only on DEP activation/reset *)
+  ConflictResolved           : BOOL;  (* TRUE when TSK Analyze found no conflicts — gate for DEP *)
 
 
   (* ===== Scheduler Debug Observability ===== *)
-  g_sched_dbg_tsk_phase         : INT;  (* TSK scheduler current phase *)
-  g_sched_dbg_dep_phase         : INT;  (* DEP scheduler current phase *)
-  g_sched_dbg_turn              : INT;  (* 1=TSK ran, 2=DEP ran this cycle *)
-  g_sched_dbg_skip_cnt          : INT;  (* DEP skip count *)
-  g_sched_dbg_dep_reject_cnt    : INT;  (* DEP reject count this cycle *)
-  g_sched_dbg_dep_fit_round     : INT;  (* DEP fit round counter *)
-  g_sched_dbg_dep_cur_wait_unit : INT;  (* DEP current waiting batch unit *)
-  g_sched_dbg_dep_wait_cnt      : INT;  (* DEP waiting batch count *)
-  g_sched_dbg_batch_cnt         : INT;  (* TSK active batch count *)
-  g_sched_dbg_tsk_round_ticks    : INT;  (* TSK ticks consumed by last completed round *)
-  g_sched_dbg_dep_round_ticks    : INT;  (* DEP ticks consumed by last completed round *)
+  SchedDbgTskPhase         : INT;  (* TSK scheduler current phase *)
+  SchedDbgDepPhase         : INT;  (* DEP scheduler current phase *)
+  SchedDbgTurn              : INT;  (* 1=TSK ran, 2=DEP ran this cycle *)
+  SchedDbgSkipCnt          : INT;  (* DEP skip count *)
+  SchedDbgDepRejectCnt    : INT;  (* DEP reject count this cycle *)
+  SchedDbgDepFitRound     : INT;  (* DEP fit round counter *)
+  SchedDbgDepCurWaitUnit : INT;  (* DEP current waiting batch unit *)
+  SchedDbgDepWaitCnt      : INT;  (* DEP waiting batch count *)
+  SchedDbgBatchCnt         : INT;  (* TSK active batch count *)
+  SchedDbgTskRoundTicks    : INT;  (* TSK ticks consumed by last completed round *)
+  SchedDbgDepRoundTicks    : INT;  (* DEP ticks consumed by last completed round *)
 
 
   (* ===== TSK Conflict Debug (non-LINT for OPC UA) ===== *)
-  g_dbg_tsk_conflict_type       : INT;   (* last analyze: 0=none, 1=TASK_SEQ, 2=COLLISION, 3=HANDOFF *)
-  g_dbg_tsk_conflict_iter       : INT;   (* resolve iterations this cycle *)
-  g_dbg_tsk_conf_unit           : INT;   (* conflict task unit *)
-  g_dbg_tsk_conf_stage          : INT;   (* conflict task stage *)
-  g_dbg_tsk_blocked_unit        : INT;   (* blocked task unit *)
-  g_dbg_tsk_blocked_stage       : INT;   (* blocked task stage *)
-  g_dbg_tsk_deficit             : DINT;  (* last deficit in seconds *)
-  g_dbg_tsk_stretch_cnt         : INT;   (* stretches applied this cycle *)
-  g_dbg_tsk_total_adv           : DINT;  (* total advance seconds this cycle *)
-  g_dbg_tsk_total_delay         : DINT;  (* total delay seconds this cycle *)
-  g_dbg_prog_cal                : ARRAY[1..MAX_Units] OF DINT;  (* current stage CalTime snapshot per unit *)
+  DbgTskConflictType       : INT;   (* last analyze: 0=none, 1=TASK_SEQ, 2=COLLISION, 3=HANDOFF *)
+  DbgTskConflictIter       : INT;   (* resolve iterations this cycle *)
+  DbgTskConfUnit           : INT;   (* conflict task unit *)
+  DbgTskConfStage          : INT;   (* conflict task stage *)
+  DbgTskBlockedUnit        : INT;   (* blocked task unit *)
+  DbgTskBlockedStage       : INT;   (* blocked task stage *)
+  DbgTskDeficit             : DINT;  (* last deficit in seconds *)
+  DbgTskStretchCnt         : INT;   (* stretches applied this cycle *)
+  DbgTskTotalAdv           : DINT;  (* total advance seconds this cycle *)
+  DbgTskTotalDelay         : DINT;  (* total delay seconds this cycle *)
+  DbgProgCal                : ARRAY[1..MAX_UNITS] OF DINT;  (* current stage CalTime snapshot per unit *)
 
   (* ===== Production Queue ===== *)
-  g_production_queue            : INT;  (* 1=batches in queue, 0=queue empty *)
+  ProductionQueue            : INT;  (* 1=batches in queue, 0=queue empty *)
 
   (* ===== Unix Time ===== *)
-  g_time_s                      : LINT;  (* absolute time in unix seconds *)
-  g_time_100ms                  : LINT;  (* absolute time in 0.1s ticks *)
-  g_time_sync                   : LINT;  (* gateway writes real unix seconds here at init *)
-  g_time_offset                 : LINT;  (* g_time_sync - uptime_s at init *)
+  TimeS                      : LINT;  (* absolute time in unix seconds *)
+  Time100ms                  : LINT;  (* absolute time in 0.1s ticks *)
+  TimeSync                   : LINT;  (* gateway writes real unix seconds here at init *)
+  TimeOffset                 : LINT;  (* TimeSync - uptime_s at init *)
 
   (* ===== Event Queue ===== *)
-  g_event                       : UDT_JC_EventQueueType;  (* circular event buffer *)
-  g_event_pending               : UDT_JC_EventMsgType;  (* staging slot — written by other FBs *)
-  g_event_pending_valid         : BOOL;  (* TRUE = pending message ready to enqueue *)
-  g_event_ack_seq               : INT;   (* Gateway writes ack_seq via OPC UA to consume head message *)
+  Event                       : UDT_JC_EventQueueType;  (* circular event buffer *)
+  EventPending               : UDT_JC_EventMsgType;  (* staging slot — written by other FBs *)
+  EventPendingValid         : BOOL;  (* TRUE = pending message ready to enqueue *)
+  EventAckSeq               : INT;   (* Gateway writes ack_seq via OPC UA to consume head message *)
 
   (* ===== UI Snapshot (SIM only — stable schedule for gateway reads) ===== *)
-  g_sim_ui_schedule             : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_sim_ui_task                 : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_sim_ui_wait_unit            : INT;   (* current waiting batch unit, 0 = none *)
-  g_sim_ui_wait_reason          : INT;   (* 0=pending, 1=NO_SLOT, 2=DELAY_TOO_LARGE, 3=STATION_CONFLICT, 4=MAX_ROUNDS *)
+  SimUiSchedule             : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  SimUiTask                 : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  SimUiWaitUnit            : INT;   (* current waiting batch unit, 0 = none *)
+  SimUiWaitReason          : INT;   (* 0=pending, 1=NO_SLOT, 2=DELAY_TOO_LARGE, 3=STATION_CONFLICT, 4=MAX_ROUNDS *)
 
   (* ===== Dispatched Task (Executor Input) ===== *)
-  g_dispatched_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_DispatchedTaskType;  (* filled by Dispatcher, read by Executor *)
+  DispatchedTask             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_DispatchedTaskType;  (* filled by Dispatcher, read by Executor *)
 
   (* ===== Manual Task Commands ===== *)
-  g_manual_task                 : ARRAY[1..MAX_Transporters] OF UDT_JC_ManualTaskType;  (* gateway writes, PLC clears Valid after execution *)
+  ManualTask                 : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_ManualTaskType;  (* gateway writes, PLC clears Valid after execution *)
 
   (* ===== OPC UA Gateway Command Interface ===== *)
-  (* Gateway writes g_cmd_code + g_cmd_param via OPC UA.
-     PLC processes when g_cmd_code <> 0, then clears it.
+  (* Gateway writes CmdCode + CmdParam via OPC UA.
+     PLC processes when CmdCode <> 0, then clears it.
      Commands:
        2 = init       (param = station_count)  — finalize config, start runtime
        3 = clear      — zero all config, stop runtime
   *)
-  g_cmd_code                    : INT;   (* command code, non-zero = trigger *)
-  g_cmd_param                   : INT;   (* command parameter *)
+  CmdCode                    : INT;   (* command code, non-zero = trigger *)
+  CmdParam                   : INT;   (* command parameter *)
 END_VAR
