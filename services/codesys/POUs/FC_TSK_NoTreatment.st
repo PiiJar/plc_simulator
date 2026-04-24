@@ -65,7 +65,7 @@ VAR
   cov_t                     : INT;
   ai                        : INT;
   vCovers                    : BOOL;
-  vDone                      : BOOL;
+  oDone                      : BOOL;
   vDest                      : UDT_JC_NttDestType;
   vNttIdx                   : INT;
   vOnPrimary                : BOOL;
@@ -139,7 +139,7 @@ FC_TSK_NoTreatment := TRUE;
 
 FOR ui := 1 TO MAX_UNITS DO
   tgt := g_unit[ui].Target;
-  vLoc := g_unit[ui].vLocation;
+  vLoc := g_unit[ui].Location;
 
   IF tgt >= 1 AND tgt <= 5 AND vLoc >= MIN_STATION_INDEX THEN
 
@@ -165,9 +165,9 @@ FOR ui := 1 TO MAX_UNITS DO
 
     IF NOT vAlready THEN
 
-    vDone := FALSE;
+    oDone := FALSE;
     FOR cov_t := 1 TO MAX_TRANSPORTERS DO
-      IF NOT vDone THEN
+      IF NOT oDone THEN
 
       vCovers := FALSE;
       FOR ai := 1 TO 4 DO
@@ -210,7 +210,7 @@ FOR ui := 1 TO MAX_UNITS DO
             IF vStationIdx <> vLoc AND vStationIdx >= MIN_STATION_INDEX AND vStationIdx <= MAX_STATION_INDEX THEN
               vStnFree := TRUE;
               FOR uj := 1 TO MAX_UNITS DO
-  IF g_unit[uj].vLocation = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
+  IF g_unit[uj].Location = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
               END_FOR;
   IF vStnFree THEN vPrimaryFree := TRUE; END_IF;
             END_IF;
@@ -227,7 +227,7 @@ FOR ui := 1 TO MAX_UNITS DO
                 IF vStationIdx <> vLoc AND vStationIdx >= MIN_STATION_INDEX AND vStationIdx <= MAX_STATION_INDEX THEN
                   vStnFree := TRUE;
                   FOR uj := 1 TO MAX_UNITS DO
-  IF g_unit[uj].vLocation = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
+  IF g_unit[uj].Location = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
                   END_FOR;
   IF vStnFree THEN vDestStn := vStationIdx; END_IF;
                 END_IF;
@@ -240,7 +240,7 @@ FOR ui := 1 TO MAX_UNITS DO
                 IF vStationIdx <> vLoc AND vStationIdx >= MIN_STATION_INDEX AND vStationIdx <= MAX_STATION_INDEX THEN
                   vStnFree := TRUE;
                   FOR uj := 1 TO MAX_UNITS DO
-  IF g_unit[uj].vLocation = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
+  IF g_unit[uj].Location = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
                   END_FOR;
   IF vStnFree THEN vDestStn := vStationIdx; END_IF;
                 END_IF;
@@ -254,7 +254,7 @@ FOR ui := 1 TO MAX_UNITS DO
                   IF vStationIdx <> vLoc AND vStationIdx >= MIN_STATION_INDEX AND vStationIdx <= MAX_STATION_INDEX THEN
                     vStnFree := TRUE;
                     FOR uj := 1 TO MAX_UNITS DO
-  IF g_unit[uj].vLocation = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
+  IF g_unit[uj].Location = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
                     END_FOR;
   IF vStnFree THEN vDestStn := vStationIdx; END_IF;
                   END_IF;
@@ -637,13 +637,13 @@ FOR ui := 1 TO MAX_UNITS DO
                 END_IF;
               END_FOR;
               ioTask[cov_t].Count := ioTask[cov_t].Count + 1;
-              vDone := TRUE;
+              oDone := TRUE;
             END_IF;
           END_IF;
 
         END_IF; (* NOT vOnPrimary *)
       END_IF; (* vCovers + idle *)
-      END_IF; (* NOT vDone *)
+      END_IF; (* NOT oDone *)
     END_FOR; (* transporter loop *)
     END_IF; (* NOT vAlready *)
   END_IF; (* valid target *)

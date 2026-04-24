@@ -195,7 +195,7 @@ ELSIF vPhase = 2 THEN
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 1000+i: CALC_SCHEDULE — one batch per scan             *)
 (*   i = 0..vBatchCount-1: calculate schedule                   *)
-(*   i >= vBatchCount: vDone → 2000                              *)
+(*   i >= vBatchCount: oDone → 2000                              *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF vPhase >= 1000 AND vPhase <= 1999 THEN
   vIdx := vPhase - 1000;
@@ -205,10 +205,10 @@ ELSIF vPhase >= 1000 AND vPhase <= 1999 THEN
 
     (* CalcSchedule handles elapsed-time normalisation — no pre-adjustment vNeeded here. *)
 
-    IF g_unit[ui].vLocation < MIN_STATION_INDEX THEN
-      vSchedTrans := g_unit[ui].vLocation;
+    IF g_unit[ui].Location < MIN_STATION_INDEX THEN
+      vSchedTrans := g_unit[ui].Location;
     ELSE
-      vFB_FindTransporter(iLiftStn := g_unit[ui].vLocation, iSinkStn := 0);
+      vFB_FindTransporter(iLiftStn := g_unit[ui].Location, iSinkStn := 0);
       vSchedTrans := vFB_FindTransporter.oTrans;
       IF vSchedTrans = 0 THEN vSchedTrans := 1; END_IF;
     END_IF;
@@ -233,7 +233,7 @@ ELSIF vPhase = 2000 THEN
 (* ══════════════════════════════════════════════════════════════ *)
 (* PHASE 2001+i: CREATE_TASKS — one batch per scan              *)
 (*   i = 0..vBatchCount-1: create tasks                         *)
-(*   i >= vBatchCount: vDone → 2100                              *)
+(*   i >= vBatchCount: oDone → 2100                              *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF vPhase >= 2001 AND vPhase <= 2099 THEN
   vIdx := vPhase - 2001;

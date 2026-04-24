@@ -138,14 +138,14 @@ IF g_cmd_code <> 0 THEN
     (* Calculate time offset: real unix time - uptime *)
     g_time_offset := g_time_sync - UDINT_TO_LINT(SysTimeGetMs()) / 1000;
 
-    (* Build g_station_occupancy from g_unit[].vLocation so FB_SIM_RunTasks
+    (* Build g_station_occupancy from g_unit[].Location so FB_SIM_RunTasks
        can find units on stations via g_station_occupancy[stn].UnitId.
        Gateway writes g_unit[] but not g_station_occupancy[]. *)
     FOR i := 1 TO MAX_UNITS DO
-      IF g_unit[i].vLocation >= MIN_STATION_INDEX
-         AND g_unit[i].vLocation <= MAX_STATION_INDEX THEN
-        g_station_occupancy[g_unit[i].vLocation].UnitId     := i;
-        g_station_occupancy[g_unit[i].vLocation].ChangeTime  := g_time_s;
+      IF g_unit[i].Location >= MIN_STATION_INDEX
+         AND g_unit[i].Location <= MAX_STATION_INDEX THEN
+        g_station_occupancy[g_unit[i].Location].UnitId     := i;
+        g_station_occupancy[g_unit[i].Location].ChangeTime  := g_time_s;
       END_IF;
     END_FOR;
 

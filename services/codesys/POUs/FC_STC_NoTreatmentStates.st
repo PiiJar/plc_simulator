@@ -90,7 +90,7 @@ END_VAR
       CONTINUE;
     END_IF;
 
-    vSnap[u].Location       := g_unit[u].vLocation;
+    vSnap[u].Location       := g_unit[u].Location;
     vSnap[u].Target       := g_unit[u].Target;
     vSnap[u].HasBatch := g_batch[u].BatchCode <> 0;
     vSnap[u].BatchState    := g_batch[u].State;
@@ -124,7 +124,7 @@ END_VAR
   END_FOR;
 
   (* ════════════════════════════════════════════════════════════
-     Section 1 — PROCESSED: mark batch vDone at last treatment stage
+     Section 1 — PROCESSED: mark batch oDone at last treatment stage
      ════════════════════════════════════════════════════════════ *)
   FOR u := 1 TO MAX_UNITS DO
     IF NOT vSnap[u].IsActive OR NOT vSnap[u].HasBatch THEN

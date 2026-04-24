@@ -132,7 +132,7 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
     IF t_unit = 0 THEN
       vUnitOk := TRUE;
     ELSIF t_unit >= 1 AND t_unit <= MAX_UNITS THEN
-      IF g_unit[t_unit].vLocation = t_lift THEN
+      IF g_unit[t_unit].Location = t_lift THEN
         vUnitOk := TRUE;
       END_IF;
     END_IF;
@@ -161,7 +161,7 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
       IF vSinkStn >= MIN_STATION_INDEX AND vSinkStn <= MAX_STATION_INDEX THEN
         vSinkFree := TRUE;
         FOR uj := 1 TO MAX_UNITS DO
-          IF g_unit[uj].vLocation = vSinkStn AND g_unit[uj].Status = USED THEN
+          IF g_unit[uj].Location = vSinkStn AND g_unit[uj].Status = USED THEN
             vSinkFree := FALSE;
           END_IF;
         END_FOR;
@@ -181,7 +181,7 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
               IF vCandStn >= MIN_STATION_INDEX AND vCandStn <= MAX_STATION_INDEX THEN
                 vCandFree := TRUE;
                 FOR uj := 1 TO MAX_UNITS DO
-                  IF g_unit[uj].vLocation = vCandStn AND g_unit[uj].Status = USED THEN
+                  IF g_unit[uj].Location = vCandStn AND g_unit[uj].Status = USED THEN
                     vCandFree := FALSE;
                   END_IF;
                 END_FOR;
@@ -220,7 +220,7 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
                   IF vCandStn >= MIN_STATION_INDEX AND vCandStn <= MAX_STATION_INDEX THEN
                     vCandFree := TRUE;
                     FOR uj := 1 TO MAX_UNITS DO
-                      IF g_unit[uj].vLocation = vCandStn AND g_unit[uj].Status = USED THEN
+                      IF g_unit[uj].Location = vCandStn AND g_unit[uj].Status = USED THEN
                         vCandFree := FALSE;
                       END_IF;
                     END_FOR;
@@ -243,7 +243,7 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
                   IF vCandStn >= MIN_STATION_INDEX AND vCandStn <= MAX_STATION_INDEX THEN
                     vCandFree := TRUE;
                     FOR uj := 1 TO MAX_UNITS DO
-                      IF g_unit[uj].vLocation = vCandStn AND g_unit[uj].Status = USED THEN
+                      IF g_unit[uj].Location = vCandStn AND g_unit[uj].Status = USED THEN
                         vCandFree := FALSE;
                       END_IF;
                     END_FOR;

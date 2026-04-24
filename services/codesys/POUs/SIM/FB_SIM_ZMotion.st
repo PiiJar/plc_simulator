@@ -22,7 +22,7 @@
      8: Slow sink    → 0 mm
 
    Caller sets z_stage and z_timer_s before first call.
-   Output 'vDone' pulses TRUE when sequence completes.
+   Output 'oDone' pulses TRUE when sequence completes.
    ------------------------------------------------------------
    Changes:
    ============================================================ *)
@@ -47,7 +47,7 @@ VAR_IN_OUT
   z_timer_s : REAL;        (* Delay timer — simulation internal *)
 END_VAR
 VAR_OUTPUT
-  vDone : BOOL;             (* TRUE when sequence complete *)
+  oDone : BOOL;             (* TRUE when sequence complete *)
 END_VAR
 VAR_EXTERNAL CONSTANT
   KIND_WET : INT;
@@ -65,7 +65,7 @@ VAR
   z_total_mm   : DINT;     (* computed: ZPosDown - ZPosUp *)
 END_VAR
 
-  vDone := FALSE;
+  oDone := FALSE;
   z_total_mm := ZPosDown - ZPosUp;
 
   (* Convert DINT/INT inputs to REAL for physics *)
@@ -124,7 +124,7 @@ END_VAR
       z_timer_s := z_timer_s - delta_t;
       IF z_timer_s <= 0.0 THEN
         z_stage := 0;
-        vDone := TRUE;
+        oDone := TRUE;
       END_IF;
 
     (* === SINK: stages 6-8 — lasku altaaseen (z pienenee: z_total → 0) === *)
@@ -147,7 +147,7 @@ END_VAR
       IF r_z <= 0.0 THEN
         z_mm := 0;
         z_stage := 0;
-        vDone := TRUE;
+        oDone := TRUE;
       ELSE
         z_mm := REAL_TO_DINT(r_z);
       END_IF;

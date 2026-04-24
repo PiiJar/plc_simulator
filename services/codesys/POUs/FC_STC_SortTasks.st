@@ -83,7 +83,7 @@ FOR ti := t_start TO t_end DO
         IF ioBatch[vTmpUnit].State = IN_PROCESS
            AND vTmpTask.Stage >= 1 THEN
           IF ioBatch[vTmpUnit].CurStage = vTmpTask.Stage
-             AND g_unit[vTmpUnit].vLocation = vTmpTask.LiftStationTarget
+             AND g_unit[vTmpUnit].Location = vTmpTask.LiftStationTarget
              AND ioBatch[vTmpUnit].StartTime > LINT#0
              AND ioBatch[vTmpUnit].MaxTime > 0 THEN
             vTmpRatio := LINT_TO_REAL(iTimeS - ioBatch[vTmpUnit].StartTime)
@@ -101,7 +101,7 @@ FOR ti := t_start TO t_end DO
           IF ioBatch[vCurUnit].State = IN_PROCESS
              AND ioTask[ti].Queue[vInsJ].Stage >= 1 THEN
             IF ioBatch[vCurUnit].CurStage = ioTask[ti].Queue[vInsJ].Stage
-               AND g_unit[vCurUnit].vLocation = ioTask[ti].Queue[vInsJ].LiftStationTarget
+               AND g_unit[vCurUnit].Location = ioTask[ti].Queue[vInsJ].LiftStationTarget
                AND ioBatch[vCurUnit].StartTime > LINT#0
                AND ioBatch[vCurUnit].MaxTime > 0 THEN
               vCurRatio := LINT_TO_REAL(iTimeS - ioBatch[vCurUnit].StartTime)

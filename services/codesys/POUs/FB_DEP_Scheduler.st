@@ -328,14 +328,14 @@ ELSIF vPhase = 200 THEN
 (* PHASE 1000+i: CALC_SCHEDULE — one schedule per scan         *)
 (*   i=0..vBatchCount-1: active batches FIRST                  *)
 (*   i=vBatchCount: waiting batch LAST (sees active schedules) *)
-(*   i>vBatchCount: vDone -> 2000                               *)
+(*   i>vBatchCount: oDone -> 2000                               *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase >= 1000 AND vPhase <= 1999 THEN
   vIdx := vPhase - 1000;
 
   IF vIdx < vBatchCount THEN
     (* Calculate schedule for active batch FIRST *)
-    vFB_FindTransporter(iLiftStn := g_unit[vBatchList[vIdx + 1]].vLocation, iSinkStn := 0);
+    vFB_FindTransporter(iLiftStn := g_unit[vBatchList[vIdx + 1]].Location, iSinkStn := 0);
     vSchedTrans := vFB_FindTransporter.oTrans;
   IF vSchedTrans = 0 THEN vSchedTrans := 1; END_IF;
 
@@ -369,7 +369,7 @@ ELSIF vPhase = 2000 THEN
 (* ════════════════════════════════════════════════════════════ *)
 (* PHASE 2001+i: CREATE_TASKS — active batches only            *)
 (*   i=0..vBatchCount-1: active batches                        *)
-(*   i>=vBatchCount: vDone -> 2100                              *)
+(*   i>=vBatchCount: oDone -> 2100                              *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase >= 2001 AND vPhase <= 2099 THEN
   vIdx := vPhase - 2001;
@@ -456,7 +456,7 @@ ELSIF vPhase = 2300 THEN
 (*   schedule (after idle slots are ready)                     *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 2400 THEN
-  vFB_FindTransporter(iLiftStn := g_unit[vCurWaitUnit].vLocation, iSinkStn := 0);
+  vFB_FindTransporter(iLiftStn := g_unit[vCurWaitUnit].Location, iSinkStn := 0);
   vSchedTrans := vFB_FindTransporter.oTrans;
   IF vSchedTrans = 0 THEN vSchedTrans := 1; END_IF;
 

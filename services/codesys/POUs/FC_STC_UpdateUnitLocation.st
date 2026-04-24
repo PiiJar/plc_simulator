@@ -6,7 +6,7 @@
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  Sets g_unit[iUnit].vLocation to the given new vLocation.
+ *  Sets g_unit[iUnit].Location to the given new vLocation.
  *  Updates g_station_occupancy[].UnitId + ChangeTime for both old
  *  and new vLocations.
  *
@@ -63,7 +63,7 @@ VAR
 END_VAR
 
 IF (iUnit >= 1) AND (iUnit <= MAX_UNITS) THEN
-  vOldLoc := g_unit[iUnit].vLocation;
+  vOldLoc := g_unit[iUnit].Location;
 
   (* --- Clear unit_id from old vLocation (unified: transporter or station) --- *)
   IF (vOldLoc >= 1) AND (vOldLoc <= MAX_STATION_INDEX) THEN
@@ -72,7 +72,7 @@ IF (iUnit >= 1) AND (iUnit <= MAX_UNITS) THEN
   END_IF;
 
   (* --- Update unit vLocation --- *)
-  g_unit[iUnit].vLocation := iLocation;
+  g_unit[iUnit].Location := iLocation;
 
   (* --- Set unit_id on new vLocation (unified: transporter or station) --- *)
   IF (iLocation >= 1) AND (iLocation <= MAX_STATION_INDEX) THEN

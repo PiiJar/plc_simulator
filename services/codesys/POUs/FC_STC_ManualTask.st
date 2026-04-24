@@ -137,7 +137,7 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
   (* Check sink station is free — no unit occupying it *)
   vCovers := TRUE;  (* reuse variable as vSinkFree flag *)
   FOR sh := 1 TO MAX_UNITS DO
-    IF g_unit[sh].vLocation = sink AND g_unit[sh].Status = USED THEN
+    IF g_unit[sh].Location = sink AND g_unit[sh].Status = USED THEN
       vCovers := FALSE;
     END_IF;
   END_FOR;

@@ -317,7 +317,7 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         z_stage       := vTmpZs,
         z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z1.vDone;
+      arrived_z := fb_z1.oDone;
     ELSIF i = 2 THEN
       fb_z2(
         delta_t       := iDeltaT,
@@ -335,7 +335,7 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         z_stage       := vTmpZs,
         z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z2.vDone;
+      arrived_z := fb_z2.oDone;
     ELSIF i = 3 THEN
       fb_z3(
         delta_t       := iDeltaT,
@@ -353,13 +353,13 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         z_stage       := vTmpZs,
         z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z3.vDone;
+      arrived_z := fb_z3.oDone;
     END_IF;
     g_transporter[i].ZPosition      := vTmpZ;
     g_sim_trans[i].ZStage   := vTmpZs;
     g_sim_trans[i].ZTimer := vTmpZt;
     IF arrived_z THEN
-      (* Record lift vDone timestamp *)
+      (* Record lift oDone timestamp *)
       ts_lift_done[i] := g_time_s;
       g_transporter[i].XFinalTarget := g_dispatched_task[i].SinkX;
       g_transporter[i].Phase := 3;
@@ -454,7 +454,7 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         z_stage       := vTmpZs,
         z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z1.vDone;
+      arrived_z := fb_z1.oDone;
     ELSIF i = 2 THEN
       fb_z2(
         delta_t       := iDeltaT,
@@ -472,7 +472,7 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         z_stage       := vTmpZs,
         z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z2.vDone;
+      arrived_z := fb_z2.oDone;
     ELSIF i = 3 THEN
       fb_z3(
         delta_t       := iDeltaT,
@@ -490,7 +490,7 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         z_stage       := vTmpZs,
         z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z3.vDone;
+      arrived_z := fb_z3.oDone;
     END_IF;
     g_transporter[i].ZPosition      := vTmpZ;
     g_sim_trans[i].ZStage   := vTmpZs;

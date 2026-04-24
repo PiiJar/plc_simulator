@@ -136,7 +136,7 @@ END_FOR;
 
 (* --- Clear all units --- *)
 FOR i := 1 TO MAX_UNITS DO
-  g_unit[i].vLocation := 0;
+  g_unit[i].Location := 0;
   g_unit[i].Status   := 0;
   g_unit[i].Target   := 0;
 END_FOR;

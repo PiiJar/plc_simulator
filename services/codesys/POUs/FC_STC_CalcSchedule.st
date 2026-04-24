@@ -93,7 +93,7 @@ IF iUnit < 1 OR iUnit > MAX_UNITS THEN RETURN; END_IF;
 IF iTrans < 1 OR iTrans > MAX_TRANSPORTERS THEN RETURN; END_IF;
 
 vCurStage := ioBatch[iUnit].CurStage;
-vLocation  := g_unit[iUnit].vLocation;
+vLocation  := g_unit[iUnit].Location;
 is_on_stn := vLocation >= MIN_STATION_INDEX;
 
 (* Clear old schedule *)
