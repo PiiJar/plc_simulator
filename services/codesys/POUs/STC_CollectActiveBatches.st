@@ -31,8 +31,8 @@ VAR_INPUT
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Units               : INT;
-    MAX_StationIndex        : INT;
+    MAX_UNITS               : INT;
+    MAX_STATION_INDEX        : INT;
     USED                    : INT;
     TO_NONE                 : INT;
     NOT_PROCESSED           : INT;
@@ -40,14 +40,14 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
+  g_batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  TreatmentPrograms                 : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  g_station_occupancy             : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
 END_VAR
 
 VAR_OUTPUT
-  o_list                    : ARRAY[1..MAX_Units] OF INT;  (* unit indices *)
+  o_list                    : ARRAY[1..MAX_UNITS] OF INT;  (* unit indices *)
 END_VAR
 
 VAR
@@ -56,14 +56,14 @@ VAR
 END_VAR
 
 cnt := 0;
-FOR ui := 1 TO MAX_Units DO
+FOR ui := 1 TO MAX_UNITS DO
   o_list[ui] := 0;
 END_FOR;
 
 IF i_mode = 1 THEN
   (* ── Waiting batch: direct lookup at station 114 ── *)
   ui := g_station_occupancy[114].UnitId;
-  IF ui >= 1 AND ui <= MAX_Units THEN
+  IF ui >= 1 AND ui <= MAX_UNITS THEN
     IF g_unit[ui].Status = USED
        AND g_unit[ui].Target = TO_NONE
        AND g_batch[ui].State = NOT_PROCESSED
@@ -78,7 +78,7 @@ IF i_mode = 1 THEN
 END_IF;
 
 (* ── Mode 0: active batches — loop ── *)
-FOR ui := 1 TO MAX_Units DO
+FOR ui := 1 TO MAX_UNITS DO
   IF g_unit[ui].Status = USED
      AND g_unit[ui].Target = TO_NONE
      AND g_batch[ui].ProgId = TreatmentPrograms[ui].ProgramId

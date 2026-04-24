@@ -33,21 +33,21 @@ VAR_INPUT
 END_VAR
 
 VAR_IN_OUT
-  io_task                   : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  io_task                   : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL
-  g_manual_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_ManualTaskType;
-  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  Stations                  : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  Transporters              : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
+  g_manual_task             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_ManualTaskType;
+  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  Stations                  : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  Transporters              : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
   MAX_TASK_QUEUE            : INT;
-  MAX_Units                 : INT;
+  MAX_UNITS                 : INT;
   USED                      : INT;
 END_VAR
 
@@ -68,7 +68,7 @@ END_VAR
 
 STC_ManualTask := TRUE;
 
-FOR ti := 1 TO MAX_Transporters DO
+FOR ti := 1 TO MAX_TRANSPORTERS DO
   IF NOT g_manual_task[ti].Valid THEN
     CONTINUE;
   END_IF;
@@ -77,8 +77,8 @@ FOR ti := 1 TO MAX_Transporters DO
   sink := g_manual_task[ti].SinkStation;
 
   (* Validate station range *)
-  IF lift < MIN_StationIndex OR lift > MAX_StationIndex
-     OR sink < MIN_StationIndex OR sink > MAX_StationIndex
+  IF lift < MIN_STATION_INDEX OR lift > MAX_STATION_INDEX
+     OR sink < MIN_STATION_INDEX OR sink > MAX_STATION_INDEX
      OR lift = sink THEN
     g_manual_task[ti].Valid := FALSE;
     CONTINUE;
@@ -136,7 +136,7 @@ FOR ti := 1 TO MAX_Transporters DO
 
   (* Check sink station is free — no unit occupying it *)
   covers := TRUE;  (* reuse variable as sink_free flag *)
-  FOR sh := 1 TO MAX_Units DO
+  FOR sh := 1 TO MAX_UNITS DO
     IF g_unit[sh].location = sink AND g_unit[sh].Status = USED THEN
       covers := FALSE;
     END_IF;

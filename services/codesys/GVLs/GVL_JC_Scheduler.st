@@ -2,29 +2,29 @@
 (* Identical names to globals.st VAR_GLOBAL — no renaming needed *)
 VAR_GLOBAL
   (* ===== Simulation Transporter State ===== *)
-  g_sim_trans                   : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;  (* physics + scheduler command state *)
+  g_sim_trans                   : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_SimTransporterType;  (* physics + scheduler command state *)
 
   (* ===== No-Treatment Task Destinations ===== *)
-  g_ntt                         : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;  (* no-treatment task destinations *)
+  g_ntt                         : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_NttTransporterType;  (* no-treatment task destinations *)
 
   (* ===== Precomputed Movement Times ===== *)
-  g_move                        : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;  (* precomputed movement times per transporter *)
+  g_move                        : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;  (* precomputed movement times per transporter *)
 
   (* ===== Actual (Measured) Move Times ===== *)
-  g_actual_move                 : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;  (* phase timestamps updated after each completed task *)
+  g_actual_move                 : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_ActualMoveTimeType;  (* phase timestamps updated after each completed task *)
 
   (* ===== Unit Schedule ===== *)
-  g_schedule                    : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;  (* calculated schedule per unit *)
+  g_schedule                    : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;  (* calculated schedule per unit *)
 
   (* ===== Task Queues ===== *)
-  g_task                        : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;  (* task queue per transporter *)
+  g_task                        : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;  (* task queue per transporter *)
 
   (* ===== Departure Scheduler State ===== *)
-  g_dep_wk_schedule             : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;  (* DEP workspace: schedules *)
-  g_dep_wk_task                 : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;  (* DEP workspace: task queues *)
-  g_dep_wk_program              : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;  (* DEP workspace: programs *)
-  g_dep_wk_batch                : ARRAY[1..MAX_Units] OF UDT_BatchType;  (* DEP workspace: batch state *)
-  g_dep_idle_slot               : ARRAY[1..MAX_Transporters] OF UDT_JC_DepIdleSlotSetType;  (* idle slots per transporter *)
+  g_dep_wk_schedule             : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;  (* DEP workspace: schedules *)
+  g_dep_wk_task                 : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;  (* DEP workspace: task queues *)
+  g_dep_wk_program              : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;  (* DEP workspace: programs *)
+  g_dep_wk_batch                : ARRAY[1..MAX_UNITS] OF UDT_BatchType;  (* DEP workspace: batch state *)
+  g_dep_idle_slot               : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_DepIdleSlotSetType;  (* idle slots per transporter *)
   g_dep_waiting                 : ARRAY[1..DEP_MAX_WAITING] OF INT;  (* waiting batch unit indices *)
   g_dep_waiting_count           : INT;  (* number of waiting batches *)
   g_dep_overlap                 : UDT_JC_DepOverlapType;  (* overlap station flags *)
@@ -59,7 +59,7 @@ VAR_GLOBAL
   g_dbg_tsk_stretch_cnt         : INT;   (* stretches applied this cycle *)
   g_dbg_tsk_total_adv           : DINT;  (* total advance seconds this cycle *)
   g_dbg_tsk_total_delay         : DINT;  (* total delay seconds this cycle *)
-  g_dbg_prog_cal                : ARRAY[1..MAX_Units] OF DINT;  (* current stage CalTime snapshot per unit *)
+  g_dbg_prog_cal                : ARRAY[1..MAX_UNITS] OF DINT;  (* current stage CalTime snapshot per unit *)
 
   (* ===== Production Queue ===== *)
   g_production_queue            : INT;  (* 1=batches in queue, 0=queue empty *)
@@ -77,16 +77,16 @@ VAR_GLOBAL
   g_event_ack_seq               : INT;   (* Gateway writes ack_seq via OPC UA to consume head message *)
 
   (* ===== UI Snapshot (SIM only — stable schedule for gateway reads) ===== *)
-  g_sim_ui_schedule             : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_sim_ui_task                 : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_sim_ui_schedule             : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  g_sim_ui_task                 : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
   g_sim_ui_wait_unit            : INT;   (* current waiting batch unit, 0 = none *)
   g_sim_ui_wait_reason          : INT;   (* 0=pending, 1=NO_SLOT, 2=DELAY_TOO_LARGE, 3=STATION_CONFLICT, 4=MAX_ROUNDS *)
 
   (* ===== Dispatched Task (Executor Input) ===== *)
-  g_dispatched_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_DispatchedTaskType;  (* filled by Dispatcher, read by Executor *)
+  g_dispatched_task             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_DispatchedTaskType;  (* filled by Dispatcher, read by Executor *)
 
   (* ===== Manual Task Commands ===== *)
-  g_manual_task                 : ARRAY[1..MAX_Transporters] OF UDT_JC_ManualTaskType;  (* gateway writes, PLC clears Valid after execution *)
+  g_manual_task                 : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_ManualTaskType;  (* gateway writes, PLC clears Valid after execution *)
 
   (* ===== OPC UA Gateway Command Interface ===== *)
   (* Gateway writes g_cmd_code + g_cmd_param via OPC UA.

@@ -29,11 +29,11 @@ FUNCTION STC_NoTreatmentStates : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_EXTERNAL CONSTANT
-    MAX_Units               : INT;
+    MAX_UNITS               : INT;
     MAX_STEPS_PER_PROGRAM   : INT;
     MAX_STATIONS_PER_STEP   : INT;
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
     IN_PROCESS              : INT;
     PROCESSED               : INT;
     NOT_USED                : INT;
@@ -49,11 +49,11 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  g_batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  TreatmentPrograms                 : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  g_station_occupancy             : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
   g_time_s                  : LINT;
   g_production_queue        : INT;
   g_event_pending           : UDT_JC_EventMsgType;
@@ -62,7 +62,7 @@ END_VAR
 
 VAR
   (* Snapshot *)
-  snap                      : ARRAY[1..MAX_Units] OF UDT_JC_UnitSnapType;
+  snap                      : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitSnapType;
   u                         : INT;        (* unit loop index *)
   has_loading               : BOOL;       (* any unit already has TO_LOADING *)
   (* Section 1+2 *)
@@ -84,7 +84,7 @@ END_VAR
      ════════════════════════════════════════════════════════════ *)
   has_loading := FALSE;
 
-  FOR u := 1 TO MAX_Units DO
+  FOR u := 1 TO MAX_UNITS DO
     snap[u].IsActive := g_unit[u].Status <> NOT_USED;
     IF NOT snap[u].IsActive THEN
       CONTINUE;
@@ -96,8 +96,8 @@ END_VAR
     snap[u].BatchState    := g_batch[u].State;
     snap[u].CurStage := g_batch[u].CurStage;
 
-    snap[u].OnStation := snap[u].Location >= MIN_StationIndex
-                          AND snap[u].Location <= MAX_StationIndex;
+    snap[u].OnStation := snap[u].Location >= MIN_STATION_INDEX
+                          AND snap[u].Location <= MAX_STATION_INDEX;
     IF snap[u].OnStation THEN
       snap[u].LocationOp    := Stations[snap[u].Location].StationType;
       snap[u].InBuffer := snap[u].LocationOp >= OP_BUFFER AND snap[u].LocationOp <= OP_BUFFER_PROCESSED;
@@ -126,7 +126,7 @@ END_VAR
   (* ════════════════════════════════════════════════════════════
      Section 1 — PROCESSED: mark batch done at last treatment stage
      ════════════════════════════════════════════════════════════ *)
-  FOR u := 1 TO MAX_Units DO
+  FOR u := 1 TO MAX_UNITS DO
     IF NOT snap[u].IsActive OR NOT snap[u].HasBatch THEN
       CONTINUE;
     END_IF;
@@ -172,7 +172,7 @@ END_VAR
   (* ════════════════════════════════════════════════════════════
      Section 2 — TO_AVOID: clear the way to next treatment station
      ════════════════════════════════════════════════════════════ *)
-  FOR u := 1 TO MAX_Units DO
+  FOR u := 1 TO MAX_UNITS DO
     IF NOT snap[u].IsActive OR NOT snap[u].HasBatch THEN
       CONTINUE;
     END_IF;
@@ -194,13 +194,13 @@ END_VAR
       IF next_stn = 0 THEN
         EXIT;
       END_IF;
-      IF next_stn >= MIN_StationIndex AND next_stn <= MAX_StationIndex THEN
+      IF next_stn >= MIN_STATION_INDEX AND next_stn <= MAX_STATION_INDEX THEN
         IF g_station_occupancy[next_stn].UnitId = 0 THEN
           free_found := TRUE;
           EXIT;
         END_IF;
         occ_uid := g_station_occupancy[next_stn].UnitId;
-        IF occ_uid >= 1 AND occ_uid <= MAX_Units THEN
+        IF occ_uid >= 1 AND occ_uid <= MAX_UNITS THEN
           IF snap[occ_uid].Target = TO_AVOID THEN
             free_found := TRUE;
             EXIT;
@@ -216,9 +216,9 @@ END_VAR
         IF next_stn = 0 THEN
           EXIT;
         END_IF;
-        IF next_stn >= MIN_StationIndex AND next_stn <= MAX_StationIndex THEN
+        IF next_stn >= MIN_STATION_INDEX AND next_stn <= MAX_STATION_INDEX THEN
           occ_uid := g_station_occupancy[next_stn].UnitId;
-          IF occ_uid >= 1 AND occ_uid <= MAX_Units THEN
+          IF occ_uid >= 1 AND occ_uid <= MAX_UNITS THEN
             IF NOT snap[occ_uid].HasBatch AND snap[occ_uid].Target = TO_NONE THEN
               avoid_uid := occ_uid;
               EXIT;
@@ -241,7 +241,7 @@ END_VAR
 
     (* Check if any loading station is free *)
     load_free := FALSE;
-    FOR stk := MIN_StationIndex TO MAX_StationIndex DO
+    FOR stk := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
       op := Stations[stk].StationType;
       IF (op = OP_LOADING OR op = OP_LOADING_UNLOADING)
          AND g_station_occupancy[stk].UnitId = 0 THEN
@@ -253,7 +253,7 @@ END_VAR
     IF load_free THEN
       load_uid    := 0;
       load_in_buf := FALSE;
-      FOR u := 1 TO MAX_Units DO
+      FOR u := 1 TO MAX_UNITS DO
         IF snap[u].IsActive AND NOT snap[u].HasBatch
            AND snap[u].Target = TO_NONE AND snap[u].OnStation THEN
           IF snap[u].InBuffer THEN

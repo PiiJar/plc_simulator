@@ -30,30 +30,30 @@ VAR_INPUT
   i_time_s                  : LINT;
 END_VAR
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_Units *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_UNITS *)
   io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
   io_batch                  : ARRAY[1..10] OF UDT_BatchType;
   io_program                : ARRAY[1..10] OF UDT_TreatmentProgramType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
-    MAX_Units               : INT;
-    MAX_Transporters        : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
+    MAX_UNITS               : INT;
+    MAX_TRANSPORTERS        : INT;
     MAX_STEPS_PER_PROGRAM   : INT;
     NOT_PROCESSED           : INT;
     USED                    : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  g_station_occupancy             : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
   CountStations              : INT;
-  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
-  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
 END_VAR
 
 VAR
@@ -89,12 +89,12 @@ VAR
 END_VAR
 
 STC_CalcSchedule := FALSE;
-IF i_unit < 1 OR i_unit > MAX_Units THEN RETURN; END_IF;
-IF i_trans < 1 OR i_trans > MAX_Transporters THEN RETURN; END_IF;
+IF i_unit < 1 OR i_unit > MAX_UNITS THEN RETURN; END_IF;
+IF i_trans < 1 OR i_trans > MAX_TRANSPORTERS THEN RETURN; END_IF;
 
 cur_stage := io_batch[i_unit].CurStage;
 location  := g_unit[i_unit].location;
-is_on_stn := location >= MIN_StationIndex;
+is_on_stn := location >= MIN_STATION_INDEX;
 
 (* Clear old schedule *)
 FOR stg := 0 TO MAX_STEPS_PER_PROGRAM DO
@@ -227,7 +227,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
         my_entry := exit_t + REAL_TO_LINT(xfer_t);
         my_exit  := my_entry + REAL_TO_LINT(calc_s);
 
-        FOR uj := 1 TO MAX_Units DO
+        FOR uj := 1 TO MAX_UNITS DO
           IF uj <> i_unit AND io_schedule[uj].StageCount > 0 THEN
             FOR sj := 0 TO io_schedule[uj].StageCount DO
               IF io_schedule[uj].Stages[sj].station = cand_arr[p] THEN
@@ -253,7 +253,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
       best_change_time := LINT#9999999999;
       FOR p := 1 TO cand_cnt DO
         IF NOT sched_occupied[p] THEN
-          IF cand_arr[p] >= MIN_StationIndex AND cand_arr[p] <= MAX_StationIndex THEN
+          IF cand_arr[p] >= MIN_STATION_INDEX AND cand_arr[p] <= MAX_STATION_INDEX THEN
             IF g_station_occupancy[cand_arr[p]].ChangeTime < best_change_time THEN
               best_change_time := g_station_occupancy[cand_arr[p]].ChangeTime;
               chosen_stn := cand_arr[p];
@@ -276,8 +276,8 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
   max_s  := DINT_TO_REAL(io_program[i_unit].Steps[stg].MaxTime);
 
   tmp_move := g_move[i_trans];
-  IF prev_stn >= MIN_StationIndex AND prev_stn <= MAX_StationIndex
-     AND stn_num >= MIN_StationIndex AND stn_num <= MAX_StationIndex THEN
+  IF prev_stn >= MIN_STATION_INDEX AND prev_stn <= MAX_STATION_INDEX
+     AND stn_num >= MIN_STATION_INDEX AND stn_num <= MAX_STATION_INDEX THEN
     IF Stations[prev_stn].Crosstransport > 0
        AND Stations[prev_stn].ChangeStation > 0
        AND Stations[prev_stn].YPosition <> Stations[stn_num].YPosition THEN

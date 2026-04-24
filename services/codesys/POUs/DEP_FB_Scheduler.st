@@ -70,12 +70,12 @@ VAR_INPUT
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MAX_Units               : INT;
+    MAX_TRANSPORTERS        : INT;
+    MAX_UNITS               : INT;
     DEP_MAX_WAITING         : INT;
     DEP_MAX_IDLE_SLOTS      : INT;
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
     NOT_PROCESSED           : INT;
     IN_PROCESS              : INT;
     USED                    : INT;
@@ -89,26 +89,26 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
-  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_dep_idle_slot           : ARRAY[1..MAX_Transporters] OF UDT_JC_DepIdleSlotSetType;
+  g_batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  TreatmentPrograms                 : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  g_schedule                : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  g_task                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  g_dep_idle_slot           : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_DepIdleSlotSetType;
   g_dep_overlap             : UDT_JC_DepOverlapType;
   g_dep_pending             : UDT_JC_DepPendingWriteType;
   g_dep_activated           : BOOL;
   g_tsk_stable              : BOOL;
-  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
   g_dep_waiting             : ARRAY[1..DEP_MAX_WAITING] OF INT;
   g_dep_waiting_count       : INT;
-  g_dep_wk_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_dep_wk_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_dep_wk_program          : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_dep_wk_batch            : ARRAY[1..MAX_Units] OF UDT_BatchType;
+  g_dep_wk_schedule         : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  g_dep_wk_task             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  g_dep_wk_program          : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  g_dep_wk_batch            : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
   g_event_pending           : UDT_JC_EventMsgType;
   g_event_pending_valid     : BOOL;
 END_VAR
@@ -128,13 +128,13 @@ VAR
   next_phase                : INT;
 
   (* ── Waiting batch management ── *)
-  waiting_list              : ARRAY[1..MAX_Units] OF INT;
+  waiting_list              : ARRAY[1..MAX_UNITS] OF INT;
   waiting_cnt               : INT;
   cur_wait_idx              : INT;
   cur_wait_unit             : INT;
 
   (* ── Active batch list for rebuild ── *)
-  batch_list                : ARRAY[1..MAX_Units] OF INT;
+  batch_list                : ARRAY[1..MAX_UNITS] OF INT;
   batch_count               : INT;
 
   (* ── Extracted waiting batch tasks ── *)
@@ -358,7 +358,7 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
 (* PHASE 2000: CLEAR_TASKS — clear sandbox task queues         *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2000 THEN
-  FOR ti := 1 TO MAX_Transporters DO
+  FOR ti := 1 TO MAX_TRANSPORTERS DO
     g_dep_wk_task[ti].Count := 0;
     FOR qi := 1 TO MAX_TASK_QUEUE DO
       g_dep_wk_task[ti].Queue[qi].Unit := 0;
@@ -403,7 +403,7 @@ ELSIF phase = 2101 THEN
 ELSIF phase = 2200 THEN
 
   (* Inject in-flight pseudo-tasks for active transporters *)
-  FOR ti := 1 TO MAX_Transporters DO
+  FOR ti := 1 TO MAX_TRANSPORTERS DO
     IF g_transporter[ti].Phase >= 1 AND g_transporter[ti].Phase <= 4 THEN
       est_finish := i_time_s + DINT_TO_LINT(g_transporter[ti].TaskRemainingTime);
       IF est_finish > i_time_s AND g_dep_wk_task[ti].Count < 30 THEN
@@ -444,7 +444,7 @@ ELSIF phase = 2200 THEN
 (* PHASE 2300: CALC_IDLE — calc idle slots for all transporters*)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2300 THEN
-  FOR ti := 1 TO MAX_Transporters DO
+  FOR ti := 1 TO MAX_TRANSPORTERS DO
     DEP_CalcIdleSlots(i_trans := ti, i_time_s := i_time_s,
                       io_task := g_dep_wk_task, io_idle_slot := g_dep_idle_slot);
   END_FOR;
@@ -480,7 +480,7 @@ ELSIF phase = 2500 THEN
 
   (* Extract waiting batch tasks from queues into w_tasks *)
   w_task_cnt := 0;
-  FOR ti := 1 TO MAX_Transporters DO
+  FOR ti := 1 TO MAX_TRANSPORTERS DO
     write_idx := 0;
     FOR qi := 1 TO g_dep_wk_task[ti].Count DO
       IF g_dep_wk_task[ti].Queue[qi].Unit = cur_wait_unit THEN
@@ -840,7 +840,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
               END_IF;
             END_FOR;
 
-            IF border_unit >= 1 AND border_unit <= MAX_Units
+            IF border_unit >= 1 AND border_unit <= MAX_UNITS
                AND border_unit <> cur_wait_unit
                AND border_src_stage >= 1 AND border_src_stage <= 30 THEN
               (* Flex cap: min + factor × (max - min); available room = flex_cap - CalTime *)
@@ -872,7 +872,7 @@ ELSIF phase >= 3100 AND phase <= 3199 THEN
                 END_IF;
               END_FOR;
 
-              IF border_unit >= 1 AND border_unit <= MAX_Units
+              IF border_unit >= 1 AND border_unit <= MAX_UNITS
                  AND border_unit <> cur_wait_unit
                  AND border_src_stage >= 1 AND border_src_stage <= 30 THEN
                 border_flex := DINT_TO_REAL(
@@ -942,11 +942,11 @@ ELSIF phase = 4000 THEN
 (* PHASE 8000: ACTIVATE — commit changes to pending write      *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF phase = 8000 THEN
-  FOR ui := 1 TO MAX_Units DO
+  FOR ui := 1 TO MAX_UNITS DO
     g_dep_pending.Programs[ui] := g_dep_wk_program[ui];
   END_FOR;
   (* Write active batch CalTimes from sandbox programs *)
-  FOR ui := 1 TO MAX_Units DO
+  FOR ui := 1 TO MAX_UNITS DO
     IF g_dep_wk_batch[ui].State = IN_PROCESS
        AND g_dep_wk_batch[ui].CurStage >= 1
        AND g_dep_wk_batch[ui].CurStage <= g_dep_wk_program[ui].StepCount THEN

@@ -57,11 +57,11 @@ SIMPLE_TYPES = {
 CONST_VALUES = {
     "MAX_LINES":                 "1",
     "MAX_STATIONS_PER_LINE":     "30",
-    "MAX_Transporters_PER_LINE": "3",
-    "MIN_StationIndex":          "100",
-    "MAX_StationIndex":          "130",
-    "MAX_Transporters":          "3",
-    "MAX_Units":                 "10",
+    "MAX_TRANSPORTERS_PER_LINE": "3",
+    "MIN_STATION_INDEX":         "100",
+    "MAX_STATION_INDEX":         "130",
+    "MAX_TRANSPORTERS":          "3",
+    "MAX_UNITS":                 "10",
     "MAX_STATIONS_PER_STEP":     "5",
     "MAX_STEPS_PER_PROGRAM":     "30",
     "MAX_TASK_QUEUE":            "30",
@@ -607,7 +607,7 @@ def build_project_xml(
         for gvl in gvls:
             raw = gvl.raw_text.strip()
             for const_name, const_val in CONST_VALUES.items():
-                # Replace e.g. "1..MAX_Transporters" -> "1..3"
+                # Replace e.g. "1..MAX_TRANSPORTERS" -> "1..3"
                 raw = raw.replace(const_name, const_val)
             lines.append(f'    <data name="{CODESYS_NS}/globalvarlist" handleUnknown="implementation">')
             lines.append(f'      <GlobalVarList Name="{gvl.name}">')

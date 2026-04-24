@@ -26,23 +26,23 @@ FUNCTION STC_TrackMoveTimes : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_trans                   : INT;   (* transporter index 1..MAX_Transporters *)
+  i_trans                   : INT;   (* transporter index 1..MAX_TRANSPORTERS *)
   i_prev                    : INT;   (* previous phase *)
   i_new                     : INT;   (* new phase *)
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
+    MAX_TRANSPORTERS        : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
-  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_actual_move             : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
+  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  g_actual_move             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_ActualMoveTimeType;
   g_time_s                  : LINT;
   g_time_100ms              : LINT;
 END_VAR
@@ -67,7 +67,7 @@ END_VAR
 t := i_trans;
 
 (* Bounds check *)
-IF t < 1 OR t > MAX_Transporters THEN
+IF t < 1 OR t > MAX_TRANSPORTERS THEN
     RETURN;
 END_IF;
 
@@ -121,9 +121,9 @@ IF i_prev = 4 AND i_new = 0 THEN
                 lift_stn  := g_actual_move[t].LiftStation;
                 sink_stn  := g_actual_move[t].SinkStation;
                 start_stn := g_actual_move[t].StartStation;
-                li   := lift_stn  - MIN_StationIndex;
-                si   := sink_stn  - MIN_StationIndex;
-                st_i := start_stn - MIN_StationIndex;
+                li   := lift_stn  - MIN_STATION_INDEX;
+                si   := sink_stn  - MIN_STATION_INDEX;
+                st_i := start_stn - MIN_STATION_INDEX;
 
                 (* Mechanical delays in 0.1s ticks *)
                 drip_x10 := Stations[lift_stn].DrippingTime;

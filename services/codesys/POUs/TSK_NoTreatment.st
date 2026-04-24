@@ -30,16 +30,16 @@ VAR_INPUT
   i_time_s                  : LINT;
 END_VAR
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
+    MAX_TRANSPORTERS        : INT;
     MAX_STATIONS_PER_STEP   : INT;
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
-    MAX_Units               : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
+    MAX_UNITS               : INT;
     MAX_TASK_QUEUE          : INT;
     SCH_DISPATCH_MARGIN_S   : REAL;
     NOT_PROCESSED           : INT;
@@ -48,14 +48,14 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
-  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
-  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
-  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  g_batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  g_ntt                     : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_NttTransporterType;
+  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  g_station_occupancy             : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
+  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
 END_VAR
 
 VAR
@@ -137,18 +137,18 @@ END_VAR
 
 TSK_NoTreatment := TRUE;
 
-FOR ui := 1 TO MAX_Units DO
+FOR ui := 1 TO MAX_UNITS DO
   tgt := g_unit[ui].Target;
   loc := g_unit[ui].location;
 
-  IF tgt >= 1 AND tgt <= 5 AND loc >= MIN_StationIndex THEN
+  IF tgt >= 1 AND tgt <= 5 AND loc >= MIN_STATION_INDEX THEN
 
     IF tgt = 3 AND (g_batch[ui].BatchCode = 0 OR g_batch[ui].State <> NOT_PROCESSED) THEN
       CONTINUE;
     END_IF;
 
     already := FALSE;
-    FOR ti := 1 TO MAX_Transporters DO
+    FOR ti := 1 TO MAX_TRANSPORTERS DO
       IF NOT already THEN
         IF g_transporter[ti].Phase > 0 AND g_station_occupancy[ti].UnitId = ui THEN
           already := TRUE;
@@ -166,7 +166,7 @@ FOR ui := 1 TO MAX_Units DO
     IF NOT already THEN
 
     done := FALSE;
-    FOR cov_t := 1 TO MAX_Transporters DO
+    FOR cov_t := 1 TO MAX_TRANSPORTERS DO
       IF NOT done THEN
 
       covers := FALSE;
@@ -207,9 +207,9 @@ FOR ui := 1 TO MAX_Units DO
           primary_free := FALSE;
           FOR si := 1 TO dest.StationCount DO
             station_idx := dest.Stations[si];
-            IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
+            IF station_idx <> loc AND station_idx >= MIN_STATION_INDEX AND station_idx <= MAX_STATION_INDEX THEN
               stn_free := TRUE;
-              FOR uj := 1 TO MAX_Units DO
+              FOR uj := 1 TO MAX_UNITS DO
   IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
               END_FOR;
   IF stn_free THEN primary_free := TRUE; END_IF;
@@ -224,9 +224,9 @@ FOR ui := 1 TO MAX_Units DO
             FOR si := 1 TO dest.StationCount DO
               IF dest_stn = 0 THEN
                 station_idx := dest.Stations[si];
-                IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
+                IF station_idx <> loc AND station_idx >= MIN_STATION_INDEX AND station_idx <= MAX_STATION_INDEX THEN
                   stn_free := TRUE;
-                  FOR uj := 1 TO MAX_Units DO
+                  FOR uj := 1 TO MAX_UNITS DO
   IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
                   END_FOR;
   IF stn_free THEN dest_stn := station_idx; END_IF;
@@ -237,9 +237,9 @@ FOR ui := 1 TO MAX_Units DO
             FOR si := 1 TO dest.StationCount DO
               IF dest_stn = 0 THEN
                 station_idx := dest.Stations[si];
-                IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
+                IF station_idx <> loc AND station_idx >= MIN_STATION_INDEX AND station_idx <= MAX_STATION_INDEX THEN
                   stn_free := TRUE;
-                  FOR uj := 1 TO MAX_Units DO
+                  FOR uj := 1 TO MAX_UNITS DO
   IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
                   END_FOR;
   IF stn_free THEN dest_stn := station_idx; END_IF;
@@ -251,9 +251,9 @@ FOR ui := 1 TO MAX_Units DO
               FOR si := 1 TO dest.FallbackCount DO
                 IF dest_stn = 0 THEN
                   station_idx := dest.FallbackStations[si];
-                  IF station_idx <> loc AND station_idx >= MIN_StationIndex AND station_idx <= MAX_StationIndex THEN
+                  IF station_idx <> loc AND station_idx >= MIN_STATION_INDEX AND station_idx <= MAX_STATION_INDEX THEN
                     stn_free := TRUE;
-                    FOR uj := 1 TO MAX_Units DO
+                    FOR uj := 1 TO MAX_UNITS DO
   IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
                     END_FOR;
   IF stn_free THEN dest_stn := station_idx; END_IF;
@@ -319,7 +319,7 @@ FOR ui := 1 TO MAX_Units DO
                   stretch_deficit := LINT_TO_DINT(task_end - latest_end);
                   IF stretch_deficit > 0 THEN
                     stretch_unit_id := io_task[cov_t].Queue[1].Unit;
-                    IF stretch_unit_id >= 1 AND stretch_unit_id <= MAX_Units THEN
+                    IF stretch_unit_id >= 1 AND stretch_unit_id <= MAX_UNITS THEN
                       stretch_avail := g_batch[stretch_unit_id].MaxTime
                                      - g_batch[stretch_unit_id].CalTime;
                       IF stretch_avail >= stretch_deficit THEN
@@ -366,7 +366,7 @@ FOR ui := 1 TO MAX_Units DO
             cov_min_x := Transporters[cov_t].DrivePosMin;
             cov_max_x := Transporters[cov_t].DrivePosMax;
 
-            FOR ot := 1 TO MAX_Transporters DO
+            FOR ot := 1 TO MAX_TRANSPORTERS DO
               IF ot <> cov_t AND NOT overlap_conflict
                  AND g_transporter[ot].IsActive THEN
                 ot_min_x := Transporters[ot].DrivePosMin;
@@ -389,7 +389,7 @@ FOR ui := 1 TO MAX_Units DO
                   shared_entry := task_start;
                   shared_time  := xfer_s;
                 ELSE
-                  loc_idx := loc - MIN_StationIndex;
+                  loc_idx := loc - MIN_STATION_INDEX;
                   IF loc_idx >= 1 AND loc_idx <= 25 THEN
                     phase2_s := INT_TO_REAL(g_move[cov_t].LiftTime[loc_idx]) / 10.0
                               + INT_TO_REAL(Stations[loc].DrippingTime) / 10.0
@@ -528,7 +528,7 @@ FOR ui := 1 TO MAX_Units DO
                       IF ot_stretch_need > LINT#0 THEN
                         ot_stretch_unit_id := io_task[ot].Queue[1].Unit;
                         IF ot_stretch_unit_id >= 1
-                           AND ot_stretch_unit_id <= MAX_Units THEN
+                           AND ot_stretch_unit_id <= MAX_UNITS THEN
                           ot_stretch_avail :=
                             g_batch[ot_stretch_unit_id].MaxTime
                           - g_batch[ot_stretch_unit_id].CalTime;
@@ -574,7 +574,7 @@ FOR ui := 1 TO MAX_Units DO
                           IF ot_stretch_need > LINT#0 THEN
                             ot_stretch_unit_id := io_task[ot].Queue[oq + 1].Unit;
                             IF ot_stretch_unit_id >= 1
-                               AND ot_stretch_unit_id <= MAX_Units THEN
+                               AND ot_stretch_unit_id <= MAX_UNITS THEN
                               ot_stretch_avail :=
                                 g_batch[ot_stretch_unit_id].MaxTime
                               - g_batch[ot_stretch_unit_id].CalTime;

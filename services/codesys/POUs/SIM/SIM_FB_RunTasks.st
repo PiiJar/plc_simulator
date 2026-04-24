@@ -27,29 +27,29 @@ VAR_INPUT
   i_delta_t : REAL;   (* actual cycle time in seconds *)
 END_VAR
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters    : INT;
-    MAX_Units           : INT;
+    MAX_TRANSPORTERS    : INT;
+    MAX_UNITS           : INT;
     MAX_STEPS_PER_PROGRAM          : INT;
-    MIN_StationIndex : INT;
-    MAX_StationIndex   : INT;
+    MIN_STATION_INDEX : INT;
+    MAX_STATION_INDEX   : INT;
     IN_PROCESS          : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_transporter  : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_sim_trans    : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
-  Stations      : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_occupancy  : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
-  Transporters          : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
-  g_move         : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_actual_move  : ARRAY[1..MAX_Transporters] OF UDT_JC_ActualMoveTimeType;
-  g_unit         : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  g_batch        : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  TreatmentPrograms      : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
+  g_transporter  : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  g_sim_trans    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_SimTransporterType;
+  Stations      : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  g_station_occupancy  : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
+  Transporters          : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_move         : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  g_actual_move  : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_ActualMoveTimeType;
+  g_unit         : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  g_batch        : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  TreatmentPrograms      : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
   g_time_s       : LINT;
   g_event_pending       : UDT_JC_EventMsgType;
   g_event_pending_valid : BOOL;
-  g_dispatched_task     : ARRAY[1..MAX_Transporters] OF UDT_JC_DispatchedTaskType;
+  g_dispatched_task     : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_DispatchedTaskType;
 END_VAR
 VAR
   i            : INT;
@@ -108,7 +108,7 @@ IF NOT i_run THEN
   RETURN;
 END_IF;
 
-FOR i := 1 TO MAX_Transporters DO
+FOR i := 1 TO MAX_TRANSPORTERS DO
   IF g_transporter[i].IsActive THEN
 
   (* ── Phase 0 → 1: Accept new task ───────────────────────── *)
@@ -203,7 +203,7 @@ FOR i := 1 TO MAX_Transporters DO
 
       (* Check treatment time *)
       lift_uid := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
-      IF lift_uid >= 1 AND lift_uid <= MAX_Units THEN
+      IF lift_uid >= 1 AND lift_uid <= MAX_UNITS THEN
         IF g_batch[lift_uid].State = IN_PROCESS
            AND g_batch[lift_uid].CurStage >= 1
            AND g_batch[lift_uid].CurStage <= MAX_STEPS_PER_PROGRAM THEN
@@ -598,7 +598,7 @@ FOR i := 1 TO MAX_Transporters DO
   (* ── Nearest station tracking ──────────────────────────── *)
   min_dist := 999999999;
   nearest_num := g_transporter[i].CurrentStation;
-  FOR idx := MIN_StationIndex TO MAX_StationIndex DO
+  FOR idx := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
     IF Stations[idx].TankId <> 0 THEN
       dx := Stations[idx].XPosition - g_transporter[i].XPosition;
       IF ABS(dx) < min_dist THEN

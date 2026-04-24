@@ -42,12 +42,12 @@ VAR_OUTPUT
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
+    MAX_TRANSPORTERS        : INT;
 END_VAR
 
 VAR_EXTERNAL
-  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
-  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_task                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR
@@ -72,7 +72,7 @@ o_trans := 0;
 cap_count := 0;
 
 (* Phase 1: Collect all capable transporters *)
-FOR ti := 1 TO MAX_Transporters DO
+FOR ti := 1 TO MAX_TRANSPORTERS DO
   FOR ai := 1 TO 4 DO
     IF cap_count < 3 THEN
       area := Transporters[ti].TaskArea[ai];

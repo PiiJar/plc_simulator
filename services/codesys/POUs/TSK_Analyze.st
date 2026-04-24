@@ -27,20 +27,20 @@ FUNCTION TSK_Analyze : BOOL
 
 (* Introduction of Variables ----------------------------------------------------------------*)
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MAX_Units               : INT;
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
+    MAX_TRANSPORTERS        : INT;
+    MAX_UNITS               : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
 END_VAR
 
 VAR_EXTERNAL
-  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
 END_VAR
 
 VAR_OUTPUT
@@ -105,13 +105,13 @@ o_deficit      := 0.0;
 checked_count  := 0;
 
 total_tasks := 0;
-FOR ti := 1 TO MAX_Transporters DO
+FOR ti := 1 TO MAX_TRANSPORTERS DO
   total_tasks := total_tasks + io_task[ti].Count;
 END_FOR;
 IF total_tasks = 0 THEN RETURN; END_IF;
 
 (* CHECK 1: TASK_SEQUENCE *)
-FOR ti := 1 TO MAX_Transporters DO
+FOR ti := 1 TO MAX_TRANSPORTERS DO
   FOR qi := 1 TO io_task[ti].Count - 1 DO
     IF io_task[ti].Queue[qi].Unit > 0 AND io_task[ti].Queue[qi + 1].Unit > 0 THEN
       prev_sink := io_task[ti].Queue[qi].SinkStationTarget;
@@ -137,13 +137,13 @@ FOR ti := 1 TO MAX_Transporters DO
 END_FOR;
 
 (* CHECK 2: CROSS_TRANSPORTER_HANDOFF *)
-FOR ti := 1 TO MAX_Transporters DO
+FOR ti := 1 TO MAX_TRANSPORTERS DO
   FOR qi := 1 TO io_task[ti].Count DO
     cur_unit  := io_task[ti].Queue[qi].Unit;
     cur_stage := io_task[ti].Queue[qi].Stage;
     IF cur_unit > 0 THEN
       found_next := FALSE;
-      FOR tj := 1 TO MAX_Transporters DO
+      FOR tj := 1 TO MAX_TRANSPORTERS DO
         IF tj <> ti AND NOT found_next THEN
           FOR qj := 1 TO io_task[tj].Count DO
             IF NOT found_next THEN
@@ -198,11 +198,11 @@ FOR ti := 1 TO MAX_Transporters DO
 END_FOR;
 
 (* CHECK 3: TRANSPORTER_COLLISION *)
-FOR ti := 1 TO MAX_Transporters DO
+FOR ti := 1 TO MAX_TRANSPORTERS DO
   FOR qi := 1 TO io_task[ti].Count DO
     IF io_task[ti].Queue[qi].Unit > 0 THEN
-      l_idx := io_task[ti].Queue[qi].LiftStationTarget - MIN_StationIndex;
-      s_idx := io_task[ti].Queue[qi].SinkStationTarget - MIN_StationIndex;
+      l_idx := io_task[ti].Queue[qi].LiftStationTarget - MIN_STATION_INDEX;
+      s_idx := io_task[ti].Queue[qi].SinkStationTarget - MIN_STATION_INDEX;
       IF l_idx >= 1 AND l_idx <= 30 THEN
         lift_x := DINT_TO_REAL(Stations[io_task[ti].Queue[qi].LiftStationTarget].XPosition);
   ELSE lift_x := 0.0; END_IF;
@@ -214,11 +214,11 @@ FOR ti := 1 TO MAX_Transporters DO
   ELSE x1_min := sink_x;
   x1_max := lift_x; END_IF;
 
-      FOR tj := ti + 1 TO MAX_Transporters DO
+      FOR tj := ti + 1 TO MAX_TRANSPORTERS DO
         FOR qj := 1 TO io_task[tj].Count DO
           IF io_task[tj].Queue[qj].Unit > 0 THEN
-            l_idx2 := io_task[tj].Queue[qj].LiftStationTarget - MIN_StationIndex;
-            s_idx2 := io_task[tj].Queue[qj].SinkStationTarget - MIN_StationIndex;
+            l_idx2 := io_task[tj].Queue[qj].LiftStationTarget - MIN_STATION_INDEX;
+            s_idx2 := io_task[tj].Queue[qj].SinkStationTarget - MIN_STATION_INDEX;
             IF l_idx2 >= 1 AND l_idx2 <= 30 THEN
               lift_x2 := DINT_TO_REAL(Stations[io_task[tj].Queue[qj].LiftStationTarget].XPosition);
   ELSE lift_x2 := 0.0; END_IF;

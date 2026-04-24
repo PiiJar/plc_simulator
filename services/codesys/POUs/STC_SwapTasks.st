@@ -25,12 +25,12 @@ FUNCTION STC_SwapTasks : INT   (* returns swap count *)
 
 (* Introduction of Variables ----------------------------------------------------------------*)
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
+    MAX_TRANSPORTERS        : INT;
 END_VAR
 
 VAR
@@ -43,7 +43,7 @@ END_VAR
 
 swaps := 0;
 
-FOR ti := 1 TO MAX_Transporters DO
+FOR ti := 1 TO MAX_TRANSPORTERS DO
   cnt := io_task[ti].Count;
   IF cnt >= 2 THEN
     FOR qi := 1 TO cnt - 1 DO

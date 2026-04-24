@@ -28,13 +28,13 @@ VAR_IN_OUT
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
+    MAX_TRANSPORTERS        : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
 END_VAR
 
 VAR_EXTERNAL
-  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
+  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
 END_VAR
 
 VAR
@@ -52,10 +52,10 @@ FOR station_idx := 0 TO 200 DO
   io_overlap.Flags[station_idx] := FALSE;
 END_FOR;
 
-FOR station_idx := MIN_StationIndex TO MAX_StationIndex DO
+FOR station_idx := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
   cover_count := 0;
 
-  FOR ti := 1 TO MAX_Transporters DO
+  FOR ti := 1 TO MAX_TRANSPORTERS DO
     covered := FALSE;
     FOR ai := 1 TO 4 DO
       IF NOT covered THEN

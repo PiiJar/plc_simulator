@@ -32,14 +32,14 @@ VAR_INPUT
   i_margin_s                : REAL;
 END_VAR
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
   io_overlap                : UDT_JC_DepOverlapType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MAX_Units               : INT;
+    MAX_TRANSPORTERS        : INT;
+    MAX_UNITS               : INT;
     DEP_MAX_DELAY_ACTS      : INT;
 END_VAR
 
@@ -84,9 +84,9 @@ FOR round := 1 TO DEP_MAX_DELAY_ACTS DO
   t_start  := i_task_start + REAL_TO_LINT(delay);
   t_end    := i_task_end + REAL_TO_LINT(delay);
 
-  FOR ti := 1 TO MAX_Transporters DO
+  FOR ti := 1 TO MAX_TRANSPORTERS DO
     IF ti <> i_trans_id THEN
-      FOR qi := 1 TO MAX_Units DO
+      FOR qi := 1 TO MAX_UNITS DO
         IF qi > io_task[ti].Count THEN EXIT; END_IF;
 
         e_lift  := io_task[ti].Queue[qi].LiftStationTarget;

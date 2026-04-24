@@ -38,7 +38,7 @@ VAR_INPUT
   i_deficit                 : REAL;
 END_VAR
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 50=MAX_LOCKS, 10=MAX_Units, 3=MAX_Transporters *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 50=MAX_LOCKS, 10=MAX_UNITS, 3=MAX_TRANSPORTERS *)
   io_locks                  : ARRAY[1..50] OF UDT_JC_TskLockType;
   io_lock_cnt               : INT;
   io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
@@ -47,8 +47,8 @@ VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 50=MAX_LOCKS, 10=MAX_Uni
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MAX_Units               : INT;
+    MAX_TRANSPORTERS        : INT;
+    MAX_UNITS               : INT;
     SCH_TSK_FLEX_FACTOR     : REAL;
 END_VAR
 
@@ -124,7 +124,7 @@ can_delay   := NOT is_locked_del;
 
 (* Map ProgramStage to schedule array index *)
 sched_blocked := 0;
-IF i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
+IF i_blocked_unit >= 1 AND i_blocked_unit <= MAX_UNITS THEN
   FOR tmp_si := 1 TO io_schedule[i_blocked_unit].StageCount DO
     IF io_schedule[i_blocked_unit].Stages[tmp_si].ProgramStage = i_blocked_stage THEN
       sched_blocked := tmp_si; EXIT;
@@ -133,7 +133,7 @@ IF i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
 END_IF;
 
 sched_conf := 0;
-IF i_conf_unit >= 1 AND i_conf_unit <= MAX_Units THEN
+IF i_conf_unit >= 1 AND i_conf_unit <= MAX_UNITS THEN
   FOR tmp_si := 1 TO io_schedule[i_conf_unit].StageCount DO
     IF io_schedule[i_conf_unit].Stages[tmp_si].ProgramStage = i_conf_stage THEN
       sched_conf := tmp_si; EXIT;
@@ -145,7 +145,7 @@ END_IF;
 (* PHASE 1: ADVANCE -- advance blocked batch                       *)
 (* ================================================================ *)
 IF can_advance
-   AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units
+   AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_UNITS
    AND i_blocked_stage >= 1 THEN
 IF sched_blocked >= 1 AND sched_blocked <= io_schedule[i_blocked_unit].StageCount THEN
 
@@ -248,7 +248,7 @@ END_IF;
 (* PHASE 2: DELAY -- delay conflict batch                          *)
 (* ================================================================ *)
 IF can_delay AND remain > 0.1
-   AND i_conf_unit >= 1 AND i_conf_unit <= MAX_Units
+   AND i_conf_unit >= 1 AND i_conf_unit <= MAX_UNITS
    AND i_conf_stage >= 1 THEN
 IF sched_conf >= 1 AND sched_conf <= io_schedule[i_conf_unit].StageCount THEN
 
@@ -312,7 +312,7 @@ END_IF;
 prev_conf_stage := i_conf_stage - 1;
 
 sched_prev_conf := 0;
-IF i_conf_unit >= 1 AND i_conf_unit <= MAX_Units AND prev_conf_stage >= 1 THEN
+IF i_conf_unit >= 1 AND i_conf_unit <= MAX_UNITS AND prev_conf_stage >= 1 THEN
   FOR tmp_si := 1 TO io_schedule[i_conf_unit].StageCount DO
     IF io_schedule[i_conf_unit].Stages[tmp_si].ProgramStage = prev_conf_stage THEN
   sched_prev_conf := tmp_si; EXIT;
@@ -320,7 +320,7 @@ IF i_conf_unit >= 1 AND i_conf_unit <= MAX_Units AND prev_conf_stage >= 1 THEN
   END_FOR;
 END_IF;
 
-IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <= MAX_Units
+IF remain > 0.1 AND prev_conf_stage >= 1 AND i_conf_unit >= 1 AND i_conf_unit <= MAX_UNITS
    AND sched_prev_conf >= 1 THEN
   is_pcs_locked := FALSE;
   FOR lock_i := 1 TO io_lock_cnt DO
@@ -383,10 +383,10 @@ END_IF;
 (* ================================================================ *)
 (* PHASE 4: DELAY_PREV_PAST_NEXT -- force order swap               *)
 (* ================================================================ *)
-IF remain > 0.1 AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_Units THEN
+IF remain > 0.1 AND i_blocked_unit >= 1 AND i_blocked_unit <= MAX_UNITS THEN
   prev_sink_stn := 0;
   next_lift_stn := 0;
-  IF i_conf_trans >= 1 AND i_conf_trans <= MAX_Transporters THEN
+  IF i_conf_trans >= 1 AND i_conf_trans <= MAX_TRANSPORTERS THEN
     FOR qi := 1 TO io_task[i_conf_trans].Count DO
       IF io_task[i_conf_trans].Queue[qi].Unit = i_blocked_unit
          AND io_task[i_conf_trans].Queue[qi].Stage = i_blocked_stage THEN

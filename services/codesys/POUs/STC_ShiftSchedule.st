@@ -35,14 +35,14 @@ VAR_INPUT
   i_amount                  : REAL;    (* seconds to shift (+ = later, - = earlier) *)
 END_VAR
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_Units, 3=MAX_Transporters *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_UNITS, 3=MAX_TRANSPORTERS *)
   io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MAX_Units               : INT;
+    MAX_TRANSPORTERS        : INT;
+    MAX_UNITS               : INT;
 END_VAR
 
 VAR_EXTERNAL
@@ -58,7 +58,7 @@ VAR
 END_VAR
 
 STC_ShiftSchedule := TRUE;
-IF i_unit < 1 OR i_unit > MAX_Units THEN RETURN; END_IF;
+IF i_unit < 1 OR i_unit > MAX_UNITS THEN RETURN; END_IF;
 IF ABS(i_amount) < 0.001 THEN RETURN; END_IF;
 
 (* -- Shift schedule stages entry/exit times -- *)
@@ -80,7 +80,7 @@ FOR si := 1 TO sc DO
 END_FOR;
 
 (* -- Shift matching tasks in all transporter queues -- *)
-FOR ti := 1 TO MAX_Transporters DO
+FOR ti := 1 TO MAX_TRANSPORTERS DO
   FOR qi := 1 TO io_task[ti].Count DO
     IF io_task[ti].Queue[qi].Unit = i_unit
        AND io_task[ti].Queue[qi].Stage >= i_from_stage THEN

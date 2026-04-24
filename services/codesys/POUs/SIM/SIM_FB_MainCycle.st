@@ -25,29 +25,29 @@ FUNCTION_BLOCK SIM_FB_MainCycle
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
+    MAX_TRANSPORTERS        : INT;
     MAX_STATIONS_PER_STEP   : INT;
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
-    MAX_Units               : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
+    MAX_UNITS               : INT;
     DEP_MAX_WAITING         : INT;
 END_VAR
 
 VAR_EXTERNAL
   CountStations             : INT;
-  Stations                  : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_occupancy       : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
-  Transporters              : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
-  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_sim_trans               : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  g_ntt                     : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
-  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  TreatmentPrograms         : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_avoid_status            : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
-  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
-  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  Stations                  : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  g_station_occupancy       : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
+  Transporters              : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  g_sim_trans               : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_SimTransporterType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  g_ntt                     : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_NttTransporterType;
+  g_batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  TreatmentPrograms         : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  g_avoid_status            : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF INT;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  g_schedule                : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  g_task                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
   g_dep_activated           : BOOL;
   g_tsk_stable              : BOOL;
   g_dep_waiting_count       : INT;
@@ -56,8 +56,8 @@ VAR_EXTERNAL
   g_dep_waiting             : ARRAY[1..DEP_MAX_WAITING] OF INT;
   g_sched_dbg_tsk_phase     : INT;
   g_sched_dbg_dep_phase     : INT;
-  g_sim_ui_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_sim_ui_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  g_sim_ui_schedule         : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  g_sim_ui_task             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
   g_sim_ui_wait_unit        : INT;
   g_sim_ui_wait_reason      : INT;
   g_sched_dbg_turn          : INT;
@@ -111,7 +111,7 @@ IF g_cmd_code <> 0 THEN
     (* ── Finish init: all config already uploaded via OPC UA ── *)
     CountStations := g_cmd_param;
 
-    FOR i := 1 TO MAX_Transporters DO
+    FOR i := 1 TO MAX_TRANSPORTERS DO
       IF Transporters[i].TaskArea[1].MinLift > 0 THEN
         g_transporter[i].IsActive := TRUE;
         g_transporter[i].Status := 3;  (* auto_idle *)
@@ -141,9 +141,9 @@ IF g_cmd_code <> 0 THEN
     (* Build g_station_occupancy from g_unit[].location so SIM_FB_RunTasks
        can find units on stations via g_station_occupancy[stn].UnitId.
        Gateway writes g_unit[] but not g_station_occupancy[]. *)
-    FOR i := 1 TO MAX_Units DO
-      IF g_unit[i].location >= MIN_StationIndex
-         AND g_unit[i].location <= MAX_StationIndex THEN
+    FOR i := 1 TO MAX_UNITS DO
+      IF g_unit[i].location >= MIN_STATION_INDEX
+         AND g_unit[i].location <= MAX_STATION_INDEX THEN
         g_station_occupancy[g_unit[i].location].UnitId     := i;
         g_station_occupancy[g_unit[i].location].ChangeTime  := g_time_s;
       END_IF;

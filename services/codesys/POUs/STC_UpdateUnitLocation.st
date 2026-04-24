@@ -36,24 +36,24 @@ VAR_INPUT
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Units               : INT;
-    MAX_Transporters        : INT;
+    MAX_UNITS               : INT;
+    MAX_TRANSPORTERS        : INT;
     MAX_STEPS_PER_PROGRAM   : INT;
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
     IN_PROCESS              : INT;
     USED                    : INT;
     TO_NONE                 : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_occupancy             : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
-  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_transporter             : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  g_station_occupancy             : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
+  g_batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  TreatmentPrograms                 : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
   g_time_s                  : LINT;
 END_VAR
 
@@ -62,11 +62,11 @@ VAR
   new_stg                   : INT;
 END_VAR
 
-IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
+IF (i_unit >= 1) AND (i_unit <= MAX_UNITS) THEN
   old_loc := g_unit[i_unit].location;
 
   (* --- Clear unit_id from old location (unified: transporter or station) --- *)
-  IF (old_loc >= 1) AND (old_loc <= MAX_StationIndex) THEN
+  IF (old_loc >= 1) AND (old_loc <= MAX_STATION_INDEX) THEN
     g_station_occupancy[old_loc].UnitId     := 0;
     g_station_occupancy[old_loc].ChangeTime := g_time_s;
   END_IF;
@@ -75,12 +75,12 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
   g_unit[i_unit].location := i_location;
 
   (* --- Set unit_id on new location (unified: transporter or station) --- *)
-  IF (i_location >= 1) AND (i_location <= MAX_StationIndex) THEN
+  IF (i_location >= 1) AND (i_location <= MAX_STATION_INDEX) THEN
     g_station_occupancy[i_location].UnitId     := i_unit;
     g_station_occupancy[i_location].ChangeTime := g_time_s;
 
     (* Station-specific: batch stage advance only when landing on a station *)
-    IF (i_location >= MIN_StationIndex) THEN
+    IF (i_location >= MIN_STATION_INDEX) THEN
 
     (* Advance batch stage if unit is USED with an active batch *)
     IF (g_unit[i_unit].Status = USED)  (* USED *)
@@ -119,7 +119,7 @@ IF (i_unit >= 1) AND (i_unit <= MAX_Units) THEN
       g_unit[i_unit].Target := TO_NONE;  (* primary reached → clear *)
     END_IF;
 
-    END_IF; (* i_location >= MIN_StationIndex — station-specific block *)
+    END_IF; (* i_location >= MIN_STATION_INDEX — station-specific block *)
   END_IF; (* i_location valid *)
 END_IF;
 

@@ -38,19 +38,19 @@ VAR_INPUT
   i_conflict_margin_s       : REAL;
 END_VAR
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
   io_idle_slot              : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
   o_result                  : UDT_JC_DepFitResultType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
+    MAX_TRANSPORTERS        : INT;
     DEP_MAX_IDLE_SLOTS      : INT;
     SCH_DISPATCH_MARGIN_S   : REAL;
 END_VAR
 
 VAR_EXTERNAL
-  g_move                    : ARRAY[1..MAX_Transporters] OF UDT_JC_MoveTimesType;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
 END_VAR
 
 VAR
@@ -86,7 +86,7 @@ o_result.OverflowSlotIdx := 0;
 o_result.TransporterId := i_trans_id;
 DEP_FitTaskToSlot := FALSE;
 
-IF i_trans_id < 1 OR i_trans_id > MAX_Transporters THEN RETURN; END_IF;
+IF i_trans_id < 1 OR i_trans_id > MAX_TRANSPORTERS THEN RETURN; END_IF;
 
 task_dur   := i_task_end - i_task_start;
 (* Absolute cap: flex based on full (max - min) range, not (max - calc).

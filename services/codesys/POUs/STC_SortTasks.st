@@ -29,19 +29,19 @@ VAR_INPUT
   i_time_s                  : LINT;
 END_VAR
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_Transporters, 10=MAX_Units *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS, 10=MAX_UNITS *)
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
   io_batch                  : ARRAY[1..10] OF UDT_BatchType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MAX_Units               : INT;
+    MAX_TRANSPORTERS        : INT;
+    MAX_UNITS               : INT;
     IN_PROCESS              : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
 END_VAR
 
 VAR
@@ -79,7 +79,7 @@ FOR ti := t_start TO t_end DO
 
       tmp_ratio := 0.0;
       tmp_unit  := tmp_task.Unit;
-      IF tmp_unit >= 1 AND tmp_unit <= MAX_Units THEN
+      IF tmp_unit >= 1 AND tmp_unit <= MAX_UNITS THEN
         IF io_batch[tmp_unit].State = IN_PROCESS
            AND tmp_task.Stage >= 1 THEN
           IF io_batch[tmp_unit].CurStage = tmp_task.Stage
@@ -97,7 +97,7 @@ FOR ti := t_start TO t_end DO
       FOR ins_j := ins_i - 1 TO 1 BY -1 DO
         cur_ratio := 0.0;
         cur_unit  := io_task[ti].Queue[ins_j].Unit;
-        IF cur_unit >= 1 AND cur_unit <= MAX_Units THEN
+        IF cur_unit >= 1 AND cur_unit <= MAX_UNITS THEN
           IF io_batch[cur_unit].State = IN_PROCESS
              AND io_task[ti].Queue[ins_j].Stage >= 1 THEN
             IF io_batch[cur_unit].CurStage = io_task[ti].Queue[ins_j].Stage

@@ -14,34 +14,34 @@
 
 FUNCTION_BLOCK SIM_FB_ClearConfig
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters    : INT;
+    MAX_TRANSPORTERS    : INT;
     MAX_STATIONS_PER_STEP       : INT;
     MAX_STEPS_PER_PROGRAM       : INT;
     MAX_TASK_QUEUE      : INT;
-    MIN_StationIndex : INT;
-    MAX_StationIndex   : INT;
-    MAX_Units           : INT;
+    MIN_STATION_INDEX : INT;
+    MAX_STATION_INDEX   : INT;
+    MAX_UNITS           : INT;
     DEP_MAX_WAITING     : INT;
     NOT_PROCESSED       : INT;
 END_VAR
 
 VAR_EXTERNAL
   CountStations       : INT;
-  Stations         : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
-  g_station_occupancy     : ARRAY[1..MAX_StationIndex] OF UDT_JC_UnitAtStationType;
-  Transporters              : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
-  g_transporter      : ARRAY[1..MAX_Transporters] OF UDT_TransporterStatusType;
-  g_sim_trans        : ARRAY[1..MAX_Transporters] OF UDT_JC_SimTransporterType;
-  g_dispatched_task  : ARRAY[1..MAX_Transporters] OF UDT_JC_DispatchedTaskType;
-  g_unit            : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  g_ntt             : ARRAY[1..MAX_Transporters] OF UDT_JC_NttTransporterType;
-  g_batch          : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  TreatmentPrograms         : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_avoid_status     : ARRAY[MIN_StationIndex..MAX_StationIndex] OF INT;
-  g_schedule         : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_task             : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_sim_ui_schedule  : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  g_sim_ui_task      : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
+  Stations         : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  g_station_occupancy     : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
+  Transporters              : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_transporter      : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  g_sim_trans        : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_SimTransporterType;
+  g_dispatched_task  : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_DispatchedTaskType;
+  g_unit            : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  g_ntt             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_NttTransporterType;
+  g_batch          : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  TreatmentPrograms         : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  g_avoid_status     : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF INT;
+  g_schedule         : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  g_task             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  g_sim_ui_schedule  : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  g_sim_ui_task      : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
   g_sim_ui_wait_unit : INT;
   g_sim_ui_wait_reason : INT;
   g_dep_pending      : UDT_JC_DepPendingWriteType;
@@ -57,7 +57,7 @@ VAR
 END_VAR
 
 (* --- Clear all stations --- *)
-FOR i := MIN_StationIndex TO MAX_StationIndex DO
+FOR i := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
   Stations[i].TankId       := 0;
   Stations[i].IsInUse       := FALSE;
   Stations[i].XPosition    := 0;
@@ -69,15 +69,15 @@ FOR i := MIN_StationIndex TO MAX_StationIndex DO
   Stations[i].DeviceDelay  := 0;
 END_FOR;
 
-(* --- Clear all location tracking (transporters 1..MAX_Transporters + stations MIN..MAX) --- *)
-FOR i := 1 TO MAX_StationIndex DO
+(* --- Clear all location tracking (transporters 1..MAX_TRANSPORTERS + stations MIN..MAX) --- *)
+FOR i := 1 TO MAX_STATION_INDEX DO
   g_station_occupancy[i].UnitId     := 0;
   g_station_occupancy[i].ChangeTime := 0;
 END_FOR;
 CountStations := 0;
 
 (* --- Clear all transporter configs --- *)
-FOR i := 1 TO MAX_Transporters DO
+FOR i := 1 TO MAX_TRANSPORTERS DO
   Transporters[i].DrivePosMin   := 0;
   Transporters[i].DrivePosMax   := 0;
   Transporters[i].YMinDriveLimit   := 0;
@@ -103,12 +103,12 @@ FOR i := 1 TO MAX_Transporters DO
 END_FOR;
 
 (* --- Clear avoid status --- *)
-FOR i := MIN_StationIndex TO MAX_StationIndex DO
+FOR i := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
   g_avoid_status[i] := 0;
 END_FOR;
 
 (* --- Clear all transporter states --- *)
-FOR i := 1 TO MAX_Transporters DO
+FOR i := 1 TO MAX_TRANSPORTERS DO
   g_transporter[i].IsActive          := FALSE;
   g_transporter[i].Status          := 0;
   g_transporter[i].Phase           := 0;
@@ -135,14 +135,14 @@ FOR i := 1 TO MAX_Transporters DO
 END_FOR;
 
 (* --- Clear all units --- *)
-FOR i := 1 TO MAX_Units DO
+FOR i := 1 TO MAX_UNITS DO
   g_unit[i].location := 0;
   g_unit[i].Status   := 0;
   g_unit[i].Target   := 0;
 END_FOR;
 
 (* --- Clear NTT destinations --- *)
-FOR i := 1 TO MAX_Transporters DO
+FOR i := 1 TO MAX_TRANSPORTERS DO
   FOR j := 1 TO 8 DO
     g_ntt[i].Target[j].StationCount := 0;
     g_ntt[i].Target[j].FallbackCount := 0;
@@ -154,7 +154,7 @@ FOR i := 1 TO MAX_Transporters DO
 END_FOR;
 
 (* --- Clear all batches --- *)
-FOR i := 1 TO MAX_Units DO
+FOR i := 1 TO MAX_UNITS DO
   g_batch[i].BatchCode  := 0;
   g_batch[i].State       := 0;
   g_batch[i].ProgId     := 0;
@@ -166,7 +166,7 @@ FOR i := 1 TO MAX_Units DO
 END_FOR;
 
 (* --- Clear all treatment programs --- *)
-FOR i := 1 TO MAX_Units DO
+FOR i := 1 TO MAX_UNITS DO
   TreatmentPrograms[i].ProgramId := 0;
   TreatmentPrograms[i].ProgramName := '';
   TreatmentPrograms[i].StepCount := 0;
@@ -182,7 +182,7 @@ FOR i := 1 TO MAX_Units DO
 END_FOR;
 
 (* --- Clear all schedules (g_schedule) --- *)
-FOR i := 1 TO MAX_Units DO
+FOR i := 1 TO MAX_UNITS DO
   g_schedule[i].StageCount := 0;
   FOR j := 0 TO MAX_STEPS_PER_PROGRAM DO
     g_schedule[i].Stages[j].station       := 0;
@@ -196,7 +196,7 @@ FOR i := 1 TO MAX_Units DO
 END_FOR;
 
 (* --- Clear all task queues (g_task) --- *)
-FOR i := 1 TO MAX_Transporters DO
+FOR i := 1 TO MAX_TRANSPORTERS DO
   g_task[i].Count := 0;
   FOR j := 1 TO MAX_TASK_QUEUE DO
     g_task[i].Queue[j].Unit         := 0;
@@ -212,10 +212,10 @@ FOR i := 1 TO MAX_Transporters DO
 END_FOR;
 
 (* --- Clear UI snapshot --- *)
-FOR i := 1 TO MAX_Units DO
+FOR i := 1 TO MAX_UNITS DO
   g_sim_ui_schedule[i].StageCount := 0;
 END_FOR;
-FOR i := 1 TO MAX_Transporters DO
+FOR i := 1 TO MAX_TRANSPORTERS DO
   g_sim_ui_task[i].Count := 0;
 END_FOR;
 g_sim_ui_wait_unit := 0;

@@ -30,14 +30,14 @@ END_VAR
 
 STC_TakeOut := TRUE;
 
-FOR ti := 1 TO MAX_Transporters DO
+FOR ti := 1 TO MAX_TRANSPORTERS DO
 
   IF g_transporter[ti].Phase <> 0 THEN CONTINUE; END_IF;
   IF g_transporter[ti].Status <> 3 THEN CONTINUE; END_IF;
   IF NOT g_transporter[ti].IsActive THEN CONTINUE; END_IF;
 
   current_station := g_transporter[ti].CurrentStation;
-  IF current_station < MIN_StationIndex OR current_station > MAX_StationIndex THEN CONTINUE; END_IF;
+  IF current_station < MIN_STATION_INDEX OR current_station > MAX_STATION_INDEX THEN CONTINUE; END_IF;
 
   take_out_delay := Stations[current_station].TakeOutDelay;
   IF take_out_delay = 0 THEN CONTINUE; END_IF;
@@ -84,7 +84,7 @@ FOR ti := 1 TO MAX_Transporters DO
   (* Find nearest station in move direction that is at least take_out_dist away *)
   best_stn := 0;
   best_dist := DINT#2147483647;
-  FOR si := MIN_StationIndex TO MIN_StationIndex + CountStations - 1 DO
+  FOR si := MIN_STATION_INDEX TO MIN_STATION_INDEX + CountStations - 1 DO
     stn_x := Stations[si].XPosition;
     IF stn_x = 0 THEN CONTINUE; END_IF;
     (* Station must be in the correct direction and at least take_out_dist from current *)
@@ -117,7 +117,7 @@ FOR ti := 1 TO MAX_Transporters DO
     time_to_start := g_task[ti].Queue[1].StartTime - i_time_s;
     IF time_to_start >= 0 AND time_to_start < DINT_TO_LINT(INT_TO_DINT(TAKE_OUT_MIN_WAIT_S)) THEN
       queued_lift_station := g_task[ti].Queue[1].LiftStationTarget;
-      IF queued_lift_station >= MIN_StationIndex AND queued_lift_station <= MAX_StationIndex THEN
+      IF queued_lift_station >= MIN_STATION_INDEX AND queued_lift_station <= MAX_STATION_INDEX THEN
         next_lift_x := Stations[queued_lift_station].XPosition;
         (* Check if take-out target is on the other side of lift station *)
         IF dir > 0 AND target_x > next_lift_x AND next_lift_x > current_x THEN

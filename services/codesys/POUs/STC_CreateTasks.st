@@ -28,22 +28,22 @@ VAR_INPUT
   i_unit                    : INT;
 END_VAR
 
-VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_Units, 3=MAX_Transporters *)
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_UNITS, 3=MAX_TRANSPORTERS *)
   io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
   io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MAX_Units               : INT;
+    MAX_TRANSPORTERS        : INT;
+    MAX_UNITS               : INT;
     MAX_TASK_QUEUE          : INT;
-    MIN_StationIndex        : INT;
-    MAX_StationIndex        : INT;
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
 END_VAR
 
 VAR_EXTERNAL
-  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
-  Stations                 : ARRAY[MIN_StationIndex..MAX_StationIndex] OF UDT_StationType;
+  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
 END_VAR
 
 VAR
@@ -58,7 +58,7 @@ VAR
 END_VAR
 
 STC_CreateTasks := FALSE;
-IF i_unit < 1 OR i_unit > MAX_Units THEN RETURN; END_IF;
+IF i_unit < 1 OR i_unit > MAX_UNITS THEN RETURN; END_IF;
 
 sc := io_schedule[i_unit].StageCount;
 IF sc < 1 THEN RETURN; END_IF;
@@ -73,8 +73,8 @@ FOR si := 0 TO sc - 1 DO
 
     IF lift_stn > 0 AND sink_stn > 0 THEN
       eff_lift_stn := lift_stn;
-      IF lift_stn >= MIN_StationIndex AND lift_stn <= MAX_StationIndex
-         AND sink_stn >= MIN_StationIndex AND sink_stn <= MAX_StationIndex THEN
+      IF lift_stn >= MIN_STATION_INDEX AND lift_stn <= MAX_STATION_INDEX
+         AND sink_stn >= MIN_STATION_INDEX AND sink_stn <= MAX_STATION_INDEX THEN
         IF Stations[lift_stn].Crosstransport > 0
            AND Stations[lift_stn].ChangeStation > 0
            AND Stations[lift_stn].YPosition <> Stations[sink_stn].YPosition THEN

@@ -54,18 +54,18 @@ VAR_INPUT
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_Transporters        : INT;
-    MAX_Units               : INT;
+    MAX_TRANSPORTERS        : INT;
+    MAX_UNITS               : INT;
     MAX_LOCKS               : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_batch                   : ARRAY[1..MAX_Units] OF UDT_BatchType;
-  g_unit                    : ARRAY[1..MAX_Units] OF UDT_JC_UnitType;
-  TreatmentPrograms                 : ARRAY[1..MAX_Units] OF UDT_TreatmentProgramType;
-  g_task                    : ARRAY[1..MAX_Transporters] OF UDT_JC_TskQueueType;
-  g_schedule                : ARRAY[1..MAX_Units] OF UDT_JC_TskScheduleType;
-  Transporters                     : ARRAY[0..MAX_Transporters] OF UDT_TransporterType;
+  g_batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  TreatmentPrograms                 : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  g_task                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  g_schedule                : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
   (* DEP handshake *)
   g_dep_pending             : UDT_JC_DepPendingWriteType;
   g_conflict_resolved       : BOOL;
@@ -81,7 +81,7 @@ VAR_EXTERNAL
   g_dbg_tsk_stretch_cnt     : INT;
   g_dbg_tsk_total_adv       : DINT;
   g_dbg_tsk_total_delay     : DINT;
-  g_dbg_prog_cal            : ARRAY[1..MAX_Units] OF DINT;
+  g_dbg_prog_cal            : ARRAY[1..MAX_UNITS] OF DINT;
 END_VAR
 
 VAR_OUTPUT
@@ -98,7 +98,7 @@ VAR
   next_phase                : INT;
   idx                       : INT;    (* derived from phase offset *)
   (* Batch list *)
-  batch_list                : ARRAY[1..MAX_Units] OF INT;
+  batch_list                : ARRAY[1..MAX_UNITS] OF INT;
   batch_count               : INT;
   (* Conflict iteration *)
   conflict_iter             : INT;
@@ -140,7 +140,7 @@ END_VAR
 
 IF NOT i_run THEN
   IF phase <> 0 THEN
-    FOR ti := 1 TO MAX_Transporters DO
+    FOR ti := 1 TO MAX_TRANSPORTERS DO
       g_task[ti].Count := 0;
     END_FOR;
   END_IF;
@@ -163,7 +163,7 @@ IF phase = 0 THEN
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 1 THEN
   (* Clear schedule for ALL units — start from clean slate *)
-  FOR ui := 1 TO MAX_Units DO
+  FOR ui := 1 TO MAX_UNITS DO
     g_schedule[ui].StageCount := 0;
   END_FOR;
   batch_count := STC_CollectActiveBatches(i_mode := 0, o_list => batch_list);
@@ -175,7 +175,7 @@ ELSIF phase = 1 THEN
   g_dbg_tsk_total_delay := 0;
 
   IF batch_count = 0 THEN
-    FOR ti := 1 TO MAX_Transporters DO
+    FOR ti := 1 TO MAX_TRANSPORTERS DO
       g_task[ti].Count := 0;
     END_FOR;
     g_conflict_resolved := TRUE;
@@ -205,7 +205,7 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
 
     (* CalcSchedule handles elapsed-time normalisation — no pre-adjustment needed here. *)
 
-    IF g_unit[ui].location < MIN_StationIndex THEN
+    IF g_unit[ui].location < MIN_STATION_INDEX THEN
       sched_trans := g_unit[ui].location;
     ELSE
       fb_find(i_lift_stn := g_unit[ui].location, i_sink_stn := 0);
@@ -225,7 +225,7 @@ ELSIF phase >= 1000 AND phase <= 1999 THEN
 (* PHASE 2000: CLEAR_TASKS — clear all task queues              *)
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2000 THEN
-  FOR ti := 1 TO MAX_Transporters DO
+  FOR ti := 1 TO MAX_TRANSPORTERS DO
     g_task[ti].Count := 0;
   END_FOR;
   (* phase + 1 → 2001 *)
@@ -353,7 +353,7 @@ ELSIF phase = 2200 THEN
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 2201 THEN
   FOR si := 1 TO stretch_cnt DO
-    IF stretches[si].Unit >= 1 AND stretches[si].Unit <= MAX_Units THEN
+    IF stretches[si].Unit >= 1 AND stretches[si].Unit <= MAX_UNITS THEN
      IF stretches[si].Stage >= 1
         AND stretches[si].Stage <= TreatmentPrograms[stretches[si].Unit].StepCount THEN
       new_cal := TreatmentPrograms[stretches[si].Unit].Steps[stretches[si].Stage].CalTime
@@ -392,7 +392,7 @@ ELSIF phase = 2202 THEN
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 10000 THEN
   total_tasks := 0;
-  FOR ti := 1 TO MAX_Transporters DO
+  FOR ti := 1 TO MAX_TRANSPORTERS DO
     total_tasks := total_tasks + g_task[ti].Count;
   END_FOR;
   o_task_cnt := total_tasks;
@@ -408,7 +408,7 @@ ELSIF phase = 10000 THEN
   g_dbg_tsk_conflict_iter := conflict_iter;
   g_dbg_tsk_stretch_cnt   := stretch_cnt;
 
-  FOR ui := 1 TO MAX_Units DO
+  FOR ui := 1 TO MAX_UNITS DO
     IF g_batch[ui].CurStage >= 1
        AND g_batch[ui].CurStage <= TreatmentPrograms[ui].StepCount THEN
       g_dbg_prog_cal[ui] := TreatmentPrograms[ui].Steps[g_batch[ui].CurStage].CalTime;
@@ -423,12 +423,12 @@ ELSIF phase = 10000 THEN
 (* ══════════════════════════════════════════════════════════════ *)
 ELSIF phase = 10001 THEN
   IF g_dep_pending.Valid THEN
-    FOR ui := 1 TO MAX_Units DO
+    FOR ui := 1 TO MAX_UNITS DO
       IF g_dep_pending.Programs[ui].ProgramId > 0 THEN
         TreatmentPrograms[ui] := g_dep_pending.Programs[ui];
       END_IF;
     END_FOR;
-    IF g_dep_pending.BatchUnit >= 1 AND g_dep_pending.BatchUnit <= MAX_Units THEN
+    IF g_dep_pending.BatchUnit >= 1 AND g_dep_pending.BatchUnit <= MAX_UNITS THEN
       g_batch[g_dep_pending.BatchUnit].CurStage   := g_dep_pending.BatchStage;
       g_batch[g_dep_pending.BatchUnit].State       := g_dep_pending.BatchState;
       g_batch[g_dep_pending.BatchUnit].StartTime   := g_dep_pending.TimeStamp;
@@ -437,7 +437,7 @@ ELSIF phase = 10001 THEN
       g_batch[g_dep_pending.BatchUnit].CalTime     := g_dep_pending.BatchCalTime;
     END_IF;
     (* Apply active batch CalTimes written by DEP *)
-    FOR ui := 1 TO MAX_Units DO
+    FOR ui := 1 TO MAX_UNITS DO
       IF g_dep_pending.ActiveBatchCalTime[ui] > 0
          AND ui <> g_dep_pending.BatchUnit THEN
         g_batch[ui].CalTime := g_dep_pending.ActiveBatchCalTime[ui];
