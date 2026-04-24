@@ -558,7 +558,7 @@ def build_project_xml(
     lines.append('      <configuration name="Config0">')
     lines.append('        <resource name="Res0">')
     lines.append(f'          <task name="MainTask" priority="{task_priority}" interval="{task_interval}">')
-    lines.append('            <pouInstance name="instance0" typeName="PLC_PRG"/>')
+    lines.append('            <pouInstance name="instance0" typeName="Main"/>')
     lines.append('          </task>')
 
     # Global Variable Lists — standard PLCopen <globalVars> inside <resource>
@@ -575,7 +575,7 @@ def build_project_xml(
     lines.append(f'            <data name="{CODESYS_NS}/taskconfiguration" handleUnknown="implementation">')
     lines.append('              <TaskConfiguration>')
     lines.append(f'                <Task Name="MainTask" Priority="{task_priority}" CycleTime="{task_interval}" KindOfTask="Cyclic">')
-    lines.append('                  <Pou Name="PLC_PRG"/>')
+    lines.append('                  <Pou Name="Main"/>')
     lines.append('                </Task>')
     lines.append('              </TaskConfiguration>')
     lines.append('            </data>')

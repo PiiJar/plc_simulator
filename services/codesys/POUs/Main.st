@@ -1,5 +1,5 @@
 (* ===========================================================================================
- *  PLC_PRG — Main program (CODESYS / OPC UA)
+ *  Main — Main program (CODESYS / OPC UA)
  *
  *  Company : Galvatek part of the John Cockerill Group
  *  Author  : Jarmo Piipponen
@@ -22,7 +22,7 @@
  *)
 
 
-PROGRAM PLC_PRG
+PROGRAM Main
 
 
 (* Introduction of Variables ----------------------------------------------------------------*)
