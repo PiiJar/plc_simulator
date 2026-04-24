@@ -368,38 +368,99 @@ Esimerkit:
 - funktionaalinen käytös ei muutu
 - PLCopenXML-build onnistuu jokaisen alavaiheen jälkeen
 
-## Vaihe 5 — Julkisten globaalien nimeäminen, vain erillispäätöksellä
+## Vaihe 5 — GVL-muuttujien nimeäminen guideen (CODESYS)
 
-### Tavoite
+### Arkkitehtuuri ja tavoite
 
-Mahdollinen GVL-muuttujien nimeämisen yhtenäistäminen vasta sen jälkeen kun sisäinen koodi on saatu guide-linjaan.
+CODESYS käyttää `VAR_GLOBAL`-muuttujia GVL-tiedostoissa. TIA Portal ei tue GVL-rakennetta — siellä samat tiedot tallennetaan Data Block (DB) -muotoon. **Nimeämiskäytännön pitää noudattaa guidea molemmissa ympäristöissä.**
 
-### Miksi tämä on korkean riskin vaihe
+Guide ei määrittele `g_`-prefiksiä globaaleille muuttujille. Guide määrittelee:
+- Struct-kentät: PascalCase
+- Lokaalit: `v`-prefix + PascalCase
+- Vakiot: ALL_CAPS
 
-Nykyinen gateway rakentaa NodeId-polut suoraan IEC-nimistä. Esimerkiksi `CountStations`, `g_cmd_param` ja muut vastaavat nimet näkyvät suoraan OPC UA -kartoituksessa. Jos ne muutetaan suoraan PLC:ssä ilman yhteensopivuuskerrosta, gatewayn reset, init, kirjoitus ja luku rikkoutuvat heti.
+GVL-muuttujat ovat rakenteellisesti lähimpänä struct-kenttiä (ne ovat DB-kenttiä TIA-maailmassa). **Tavoitenimi on PascalCase ilman prefiksiä.**
 
-### Pakollinen ennakkoehto
+### Rename-matriisi — GVL_JC_Scheduler
 
-Gatewayyn on rakennettava siirtymäajan yhteensopivuus:
+| Nykyinen | Tavoite | OPC UA -muutos |
+|----------|---------|----------------|
+| `g_batch` | `Batch` | kyllä |
+| `g_unit` | `Unit` | kyllä |
+| `g_schedule` | `Schedule` | kyllä |
+| `g_task` | `Task` | kyllä |
+| `g_transporter` | `Transporter` | kyllä |
+| `g_move` | `Move` | kyllä |
+| `g_ntt` | `Ntt` | kyllä |
+| `g_manual_task` | `ManualTask` | kyllä |
+| `g_dispatched_task` | `DispatchedTask` | kyllä |
+| `g_event` | `Event` | kyllä |
+| `g_event_ack_seq` | `EventAckSeq` | kyllä |
+| `g_event_pending` | `EventPending` | sisäinen |
+| `g_event_pending_valid` | `EventPendingValid` | sisäinen |
+| `g_cmd_code` | `CmdCode` | kyllä |
+| `g_cmd_param` | `CmdParam` | kyllä |
+| `g_production_queue` | `ProductionQueue` | kyllä |
+| `g_time_s` | `TimeS` | kyllä |
+| `g_time_sync` | `TimeSync` | kyllä |
+| `g_time_100ms` | `Time100ms` | sisäinen |
+| `g_time_offset` | `TimeOffset` | sisäinen |
+| `g_tsk_stable` | `TskStable` | kyllä |
+| `g_conflict_resolved` | `ConflictResolved` | sisäinen |
+| `g_dep_activated` | `DepActivated` | kyllä |
+| `g_dep_overlap` | `DepOverlap` | kyllä |
+| `g_dep_pending` | `DepPending` | sisäinen |
+| `g_dep_idle_slot` | `DepIdleSlot` | sisäinen |
+| `g_dep_waiting` | `DepWaiting` | sisäinen |
+| `g_dep_waiting_count` | `DepWaitingCount` | kyllä |
+| `g_dep_wk_schedule` | `DepWkSchedule` | sisäinen |
+| `g_dep_wk_task` | `DepWkTask` | sisäinen |
+| `g_dep_wk_program` | `DepWkProgram` | sisäinen |
+| `g_dep_wk_batch` | `DepWkBatch` | sisäinen |
+| `g_sim_trans` | `SimTrans` | kyllä |
+| `g_sim_ui_schedule` | `SimUiSchedule` | kyllä |
+| `g_sim_ui_task` | `SimUiTask` | kyllä |
+| `g_sim_ui_wait_reason` | `SimUiWaitReason` | kyllä |
+| `g_sim_ui_wait_unit` | `SimUiWaitUnit` | kyllä |
+| `g_station_occupancy` | `StationOccupancy` | sisäinen |
+| `g_actual_move` | `ActualMove` | sisäinen |
+| `g_sched_dbg_*` | `SchedDbg*` (PascalCase) | kyllä |
+| `g_dbg_tsk_*` | `DbgTsk*` (PascalCase) | kyllä |
 
-1. dual-name lookup tai vastaava fallback-logiikka
-2. selkeä konfiguroitava mapping vanha nimi ↔ uusi nimi
-3. mahdollisuus käyttää vanhoja nodepolkuja, kunnes PLC ja gateway on päivitetty yhdessä
+### Rename-matriisi — GVL_JC_Parameters
 
-### Vasta tämän jälkeen sallittavat muutokset
+| Nykyinen | Tavoite | OPC UA -muutos |
+|----------|---------|----------------|
+| `g_transporter` | `Transporter` | kyllä |
+| `g_unit` | `Unit` | kyllä |
+| `g_batch` | `Batch` | kyllä |
+| `Stations` | `Stations` | ei muutosta |
+| `g_avoid_status` | `AvoidStatus` | kyllä |
+| `CountStations` | `CountStations` | ei muutosta |
+| `Transporters` | `Transporters` | ei muutosta |
+| `TreatmentPrograms` | `TreatmentPrograms` | ei muutosta |
 
-Esimerkkejä mahdollisista myöhemmistä renameista:
+### Vaiheen rakenne
 
-| Nykyinen | Mahdollinen tavoite |
-|----------|---------------------|
-| `g_cmd_code` | projektipäätöksen mukainen uusi nimi |
-| `g_cmd_param` | projektipäätöksen mukainen uusi nimi |
-| `g_schedule` | projektipäätöksen mukainen uusi nimi |
-| `CountStations` | projektipäätöksen mukainen uusi nimi |
+Tämä vaihe tehdään kahdessa osassa:
 
-### Suositus
+**5A — PLC-puoli (CODESYS):**
+1. Nimeä GVL_JC_Scheduler.st ja GVL_JC_Parameters.st muuttujat
+2. Päivitä kaikki VAR_EXTERNAL-viittaukset kaikissa POUissa
+3. Päivitä `opcua_nodes.js` samanaikaisesti — ei erillistä vaihetta
+4. Build + deploy + gateway-testi
 
-Älä tee tätä vaihetta ennen kuin kaikki vaiheet 0–4 on viety maaliin ja järjestelmä toimii vakaasti uuden sisäisen nimistön kanssa.
+**5B — TIA Portal -muunto (erillinen projekti):**
+- GVL-rakenne muutetaan DB-rakenteeksi
+- Tätä **ei voida testata CODESYS-ympäristössä**
+- Nimeäminen on kuitenkin jo guidessa kun 5A on tehty
+
+### Hyväksymiskriteerit (5A)
+
+- PLCopenXML-build onnistuu
+- `opcua_nodes.js` päivitetty vastaamaan uusia nimiä
+- gateway reset/init/luku/kirjoitus toimivat uusilla nimillä
+- OPC UA -yhteys ei katkea
 
 ## Vaihe 6 — Headerit, kommentit ja dokumentaation viimeistely
 
