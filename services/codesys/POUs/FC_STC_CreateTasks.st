@@ -65,11 +65,11 @@ IF sc < 1 THEN RETURN; END_IF;
 
 (* Start from 0 if Stages[0] exists (prepend), else from 1 *)
 FOR si := 0 TO sc - 1 DO
-  IF io_schedule[i_unit].Stages[si].station = 0 THEN
+  IF io_schedule[i_unit].Stages[si].Station = 0 THEN
     (* Skip unused stage slot *)
   ELSE
-    lift_stn := io_schedule[i_unit].Stages[si].station;
-    sink_stn := io_schedule[i_unit].Stages[si + 1].station;
+    lift_stn := io_schedule[i_unit].Stages[si].Station;
+    sink_stn := io_schedule[i_unit].Stages[si + 1].Station;
 
     IF lift_stn > 0 AND sink_stn > 0 THEN
       eff_lift_stn := lift_stn;

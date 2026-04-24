@@ -185,7 +185,7 @@ END_FOR;
 FOR i := 1 TO MAX_UNITS DO
   g_schedule[i].StageCount := 0;
   FOR j := 0 TO MAX_STEPS_PER_PROGRAM DO
-    g_schedule[i].Stages[j].station       := 0;
+    g_schedule[i].Stages[j].Station       := 0;
     g_schedule[i].Stages[j].EntryTime    := 0;
     g_schedule[i].Stages[j].ExitTime     := 0;
     g_schedule[i].Stages[j].MinTime      := 0;

@@ -43,7 +43,7 @@ VAR
   ai                        : INT;
   cover_count               : INT;
   covered                   : BOOL;
-  area                      : UDT_TaskArea;
+  area                      : UDT_TaskAreaType;
 END_VAR
 
 io_overlap.Count := 0;

@@ -53,7 +53,7 @@ END_VAR
 VAR
   ti                        : INT;
   ai                        : INT;
-  area                      : UDT_TaskArea;
+  area                      : UDT_TaskAreaType;
   can_lift                  : BOOL;
   can_sink                  : BOOL;
   (* Multi-transporter scoring *)

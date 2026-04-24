@@ -514,7 +514,7 @@ ELSIF phase = 2600 THEN
   FOR cap_ws := 1 TO g_dep_wk_schedule[cur_wait_unit].StageCount DO
     IF cap_conflict THEN EXIT; END_IF;
 
-    cap_stn   := g_dep_wk_schedule[cur_wait_unit].Stages[cap_ws].station;
+    cap_stn   := g_dep_wk_schedule[cur_wait_unit].Stages[cap_ws].Station;
     cap_w_entry := g_dep_wk_schedule[cur_wait_unit].Stages[cap_ws].EntryTime;
     cap_w_exit  := g_dep_wk_schedule[cur_wait_unit].Stages[cap_ws].ExitTime;
     IF cap_stn = 0 OR cap_w_entry >= cap_w_exit THEN
@@ -528,7 +528,7 @@ ELSIF phase = 2600 THEN
       FOR cap_as := 1 TO g_dep_wk_schedule[ui].StageCount DO
         IF cap_conflict THEN EXIT; END_IF;
 
-        IF g_dep_wk_schedule[ui].Stages[cap_as].station = cap_stn THEN
+        IF g_dep_wk_schedule[ui].Stages[cap_as].Station = cap_stn THEN
           cap_a_entry := g_dep_wk_schedule[ui].Stages[cap_as].EntryTime;
           cap_a_exit  := g_dep_wk_schedule[ui].Stages[cap_as].ExitTime;
 

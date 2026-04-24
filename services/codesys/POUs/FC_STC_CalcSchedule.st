@@ -98,7 +98,7 @@ is_on_stn := location >= MIN_STATION_INDEX;
 
 (* Clear old schedule *)
 FOR stg := 0 TO MAX_STEPS_PER_PROGRAM DO
-  io_schedule[i_unit].Stages[stg].station := 0;
+  io_schedule[i_unit].Stages[stg].Station := 0;
   io_schedule[i_unit].Stages[stg].ProgramStage := 0;
   io_schedule[i_unit].Stages[stg].EntryTime := 0;
   io_schedule[i_unit].Stages[stg].ExitTime := 0;
@@ -143,7 +143,7 @@ IF is_on_stn AND start_st >= 1 THEN
     END_IF;
   END_FOR;
   IF stn_num = 0 THEN
-    io_schedule[i_unit].Stages[0].station       := location;
+    io_schedule[i_unit].Stages[0].Station       := location;
     io_schedule[i_unit].Stages[0].ProgramStage := 0;
     io_schedule[i_unit].Stages[0].EntryTime    := exit_t;
     io_schedule[i_unit].Stages[0].TransferTime := 0;
@@ -230,7 +230,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
         FOR uj := 1 TO MAX_UNITS DO
           IF uj <> i_unit AND io_schedule[uj].StageCount > 0 THEN
             FOR sj := 0 TO io_schedule[uj].StageCount DO
-              IF io_schedule[uj].Stages[sj].station = cand_arr[p] THEN
+              IF io_schedule[uj].Stages[sj].Station = cand_arr[p] THEN
                 ov_start := my_entry;
                 IF io_schedule[uj].Stages[sj].EntryTime > ov_start THEN
                   ov_start := io_schedule[uj].Stages[sj].EntryTime;
@@ -327,7 +327,7 @@ FOR stg := start_st TO io_program[i_unit].StepCount DO
   END_IF;
 
   IF stg <= 30 THEN
-    io_schedule[i_unit].Stages[stg].station       := stn_num;
+    io_schedule[i_unit].Stages[stg].Station       := stn_num;
     io_schedule[i_unit].Stages[stg].ProgramStage := stg;
     io_schedule[i_unit].Stages[stg].EntryTime    := entry_t;
     io_schedule[i_unit].Stages[stg].ExitTime     := exit_t;
