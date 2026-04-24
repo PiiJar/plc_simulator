@@ -6,7 +6,7 @@
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  Simulator version: delegates SIM-specific logic to SIM_FB_MainCycle.
+ *  Simulator version: delegates SIM-specific logic to FB_SIM_MainCycle.
  *
  *  Production version would replace sim_main with:
  *    - Real PLC clock → g_time_s
@@ -32,8 +32,8 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  sim_main                  : SIM_FB_MainCycle;
-  main_scheduler            : STC_FB_MainScheduler;
+  sim_main                  : FB_SIM_MainCycle;
+  main_scheduler            : FB_STC_MainScheduler;
 END_VAR
 
 (* ── Simulator: command handler, time, TWA, physics, UI snapshot, events ── *)

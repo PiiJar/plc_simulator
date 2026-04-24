@@ -1,0 +1,87 @@
+(* ===========================================================================================
+ *  FC_DEP_Sandbox — Sandbox snapshot / restore / clear
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Copies batch and program data between live globals and
+ *  DEP workspace arrays via VAR_IN_OUT.
+ *  Schedule is NOT copied — DEP calculates it fresh (phases 1000+i).
+ *  Task queues are NOT copied — DEP rebuilds them (phases 2000+).
+ *
+ *  Commands:
+ *  1 = SNAPSHOT  — live batch+program → workspace
+ *  2 = RESTORE   — workspace batch+program → live
+ *  3 = CLEAR     — noop for array-based workspace
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
+
+
+FUNCTION FC_DEP_Sandbox : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
+VAR_INPUT
+  i_cmd                     : INT;
+END_VAR
+
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_UNITS, 3=MAX_TRANSPORTERS *)
+  io_wk_schedule            : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  io_wk_batch               : ARRAY[1..10] OF UDT_BatchType;
+  io_wk_program             : ARRAY[1..10] OF UDT_TreatmentProgramType;
+  io_wk_task                : ARRAY[1..3] OF UDT_JC_TskQueueType;
+END_VAR
+
+VAR_EXTERNAL CONSTANT
+    MAX_TRANSPORTERS        : INT;
+    MAX_UNITS               : INT;
+END_VAR
+
+VAR_EXTERNAL
+  g_schedule                : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  g_batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  TreatmentPrograms                 : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  g_task                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+END_VAR
+
+VAR
+  ui                        : INT;
+END_VAR
+
+FC_DEP_Sandbox := TRUE;
+
+IF i_cmd = 1 THEN
+  (* SNAPSHOT: clear workspace, then copy live batch+program *)
+  FOR ui := 1 TO MAX_UNITS DO
+    io_wk_schedule[ui].StageCount := 0;
+    io_wk_batch[ui]    := g_batch[ui];
+    io_wk_program[ui]  := TreatmentPrograms[ui];
+  END_FOR;
+  FOR ui := 1 TO MAX_TRANSPORTERS DO
+    io_wk_task[ui].Count := 0;
+  END_FOR;
+ELSIF i_cmd = 2 THEN
+  (* RESTORE: workspace batch+program → live (for REJECT rollback) *)
+  FOR ui := 1 TO MAX_UNITS DO
+    IF io_wk_batch[ui].BatchCode > 0 THEN
+      g_batch[ui] := io_wk_batch[ui];
+    END_IF;
+    IF io_wk_program[ui].ProgramId > 0 THEN
+      TreatmentPrograms[ui] := io_wk_program[ui];
+    END_IF;
+  END_FOR;
+ELSIF i_cmd = 3 THEN
+  ;  (* CLEAR: nothing needed *)
+
+END_IF;
+
+END_FUNCTION

@@ -1,0 +1,348 @@
+(* ===========================================================================================
+ *  FC_STC_CalcSchedule — Calculate batch schedule for one unit
+ *
+ *  Company : Galvatek part of the John Cockerill Group
+ *  Author  : Jarmo Piipponen
+ *  Created : 25.03.2026
+ *
+ * -------------------------------------------------------------------------------------------
+ *  Shared FC: both TSK and DEP call this with different arrays.
+ *  Calculates start/finish times for each treatment stage based
+ *  on elapsed time, cal_time and transfer durations.
+ *
+ *  ------------------------------------------------------------------------------------------
+ *
+ *  Changes:
+ *
+ *
+ *
+ *)
+
+
+FUNCTION FC_STC_CalcSchedule : BOOL
+
+
+(* Introduction of Variables ----------------------------------------------------------------*)
+
+VAR_INPUT
+  i_unit                    : INT;
+  i_trans                   : INT;
+  i_time_s                  : LINT;
+END_VAR
+
+VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_UNITS *)
+  io_schedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  io_batch                  : ARRAY[1..10] OF UDT_BatchType;
+  io_program                : ARRAY[1..10] OF UDT_TreatmentProgramType;
+END_VAR
+
+VAR_EXTERNAL CONSTANT
+    MIN_STATION_INDEX        : INT;
+    MAX_STATION_INDEX        : INT;
+    MAX_UNITS               : INT;
+    MAX_TRANSPORTERS        : INT;
+    MAX_STEPS_PER_PROGRAM   : INT;
+    NOT_PROCESSED           : INT;
+    USED                    : INT;
+END_VAR
+
+VAR_EXTERNAL
+  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  g_station_occupancy             : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
+  CountStations              : INT;
+  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+END_VAR
+
+VAR
+  stg                       : INT;
+  stn_num                   : INT;
+  prev_stn                  : INT;
+  cur_stage                 : INT;
+  location                  : INT;
+  start_st                  : INT;
+  entry_t                   : LINT;
+  exit_t                    : LINT;
+  xfer_t                    : REAL;
+  calc_s                    : REAL;
+  min_s                     : REAL;
+  max_s                     : REAL;
+  is_on_stn                 : BOOL;
+  is_first                  : BOOL;
+  remain_s                  : REAL;
+  elapsed_s                 : REAL;
+  p                         : INT;
+  chosen_stn                : INT;
+  tmp_move                  : UDT_JC_MoveTimesType;
+  cand_arr                  : ARRAY[1..5] OF INT;
+  cand_cnt                  : INT;
+  sched_occupied            : ARRAY[1..5] OF BOOL;
+  best_change_time          : LINT;
+  my_entry                  : LINT;
+  my_exit                   : LINT;
+  ov_start                  : LINT;
+  ov_end                    : LINT;
+  uj                        : INT;
+  sj                        : INT;
+END_VAR
+
+FC_STC_CalcSchedule := FALSE;
+IF i_unit < 1 OR i_unit > MAX_UNITS THEN RETURN; END_IF;
+IF i_trans < 1 OR i_trans > MAX_TRANSPORTERS THEN RETURN; END_IF;
+
+cur_stage := io_batch[i_unit].CurStage;
+location  := g_unit[i_unit].location;
+is_on_stn := location >= MIN_STATION_INDEX;
+
+(* Clear old schedule *)
+FOR stg := 0 TO MAX_STEPS_PER_PROGRAM DO
+  io_schedule[i_unit].Stages[stg].station := 0;
+  io_schedule[i_unit].Stages[stg].ProgramStage := 0;
+  io_schedule[i_unit].Stages[stg].EntryTime := 0;
+  io_schedule[i_unit].Stages[stg].ExitTime := 0;
+  io_schedule[i_unit].Stages[stg].MinTime := 0;
+  io_schedule[i_unit].Stages[stg].CalcTime := 0;
+  io_schedule[i_unit].Stages[stg].MaxTime := 0;
+  io_schedule[i_unit].Stages[stg].TransferTime := 0;
+END_FOR;
+io_schedule[i_unit].StageCount := 0;
+
+(* Waiting batch (state = NOT_PROCESSED): treat as stage 0 *)
+IF io_batch[i_unit].State = NOT_PROCESSED THEN
+  cur_stage := 0;
+END_IF;
+
+IF is_on_stn THEN
+  start_st := cur_stage;
+ELSE
+  start_st := cur_stage + 1;
+END_IF;
+IF start_st < 1 THEN
+  start_st := 1;
+END_IF;
+
+IF is_on_stn THEN
+  prev_stn := location;
+ELSIF cur_stage >= 1 AND cur_stage <= 30 THEN
+  prev_stn := io_program[i_unit].Steps[cur_stage].Stations[0];
+ELSE
+  prev_stn := 0;
+END_IF;
+
+exit_t := i_time_s;
+is_first := TRUE;
+
+(* Prepend current location to Stages[0] when unit needs pre-positioning *)
+IF is_on_stn AND start_st >= 1 THEN
+  stn_num := 0;
+  FOR p := 0 TO 4 DO
+    IF io_program[i_unit].Steps[start_st].Stations[p] = location THEN
+      stn_num := location;
+    END_IF;
+  END_FOR;
+  IF stn_num = 0 THEN
+    io_schedule[i_unit].Stages[0].station       := location;
+    io_schedule[i_unit].Stages[0].ProgramStage := 0;
+    io_schedule[i_unit].Stages[0].EntryTime    := exit_t;
+    io_schedule[i_unit].Stages[0].TransferTime := 0;
+
+    IF io_batch[i_unit].CurStage = 0 AND io_batch[i_unit].CalTime > 0 THEN
+      IF io_batch[i_unit].StartTime > 0 AND io_batch[i_unit].StartTime < i_time_s THEN
+        elapsed_s := LINT_TO_REAL(i_time_s - io_batch[i_unit].StartTime);
+      ELSE
+        elapsed_s := 0.0;
+      END_IF;
+      remain_s := DINT_TO_REAL(io_batch[i_unit].CalTime) - elapsed_s;
+  IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
+      exit_t := i_time_s + REAL_TO_LINT(remain_s);
+      io_schedule[i_unit].Stages[0].ExitTime  := exit_t;
+      io_schedule[i_unit].Stages[0].CalcTime  := REAL_TO_DINT(remain_s);
+      io_schedule[i_unit].Stages[0].MinTime   := io_batch[i_unit].MinTime;
+      io_schedule[i_unit].Stages[0].MaxTime   := io_batch[i_unit].MaxTime;
+    ELSE
+      (* Pickup wait: transporter horizontal travel time to this station, min 5s *)
+      calc_s := FC_STC_CalcHorizontalTravel(
+        i_from_stn := g_transporter[i_trans].CurrentStation,
+        i_to_stn   := location,
+        i_move     := g_move[i_trans]);
+      IF calc_s < 5.0 THEN calc_s := 5.0; END_IF;
+      exit_t := i_time_s + REAL_TO_LINT(calc_s);
+      io_schedule[i_unit].Stages[0].ExitTime  := exit_t;
+      io_schedule[i_unit].Stages[0].CalcTime  := REAL_TO_DINT(calc_s);
+      io_schedule[i_unit].Stages[0].MinTime   := REAL_TO_DINT(calc_s);
+      io_schedule[i_unit].Stages[0].MaxTime   := REAL_TO_DINT(2.0 * calc_s);
+    END_IF;
+
+    is_first := FALSE;
+  END_IF;
+END_IF;
+
+(* ============================================================
+   MAIN LOOP: Calculate schedule for each program stage
+   ============================================================ *)
+FOR stg := start_st TO io_program[i_unit].StepCount DO
+
+  cand_cnt := 0;
+  FOR p := 0 TO 4 DO
+    IF io_program[i_unit].Steps[stg].Stations[p] > 0 THEN
+      cand_cnt := cand_cnt + 1;
+      cand_arr[cand_cnt] := io_program[i_unit].Steps[stg].Stations[p];
+      sched_occupied[cand_cnt] := FALSE;
+    END_IF;
+  END_FOR;
+
+  IF cand_cnt = 0 THEN
+    EXIT;
+  END_IF;
+
+  chosen_stn := 0;
+  IF is_first AND is_on_stn AND stg = cur_stage THEN
+    FOR p := 1 TO cand_cnt DO
+      IF cand_arr[p] = location THEN
+        chosen_stn := location;
+      END_IF;
+    END_FOR;
+  END_IF;
+
+  IF chosen_stn = 0 THEN
+    IF cand_cnt = 1 THEN
+      chosen_stn := cand_arr[1];
+    ELSE
+      (* Estimate this batch's time window per candidate for overlap check *)
+      calc_s := DINT_TO_REAL(io_program[i_unit].Steps[stg].CalTime);
+      tmp_move := g_move[i_trans];
+
+      FOR p := 1 TO cand_cnt DO
+        (* Calculate entry/exit per candidate station individually *)
+        xfer_t := FC_STC_CalcTransferTime(
+          i_from_stn            := prev_stn,
+          i_to_stn              := cand_arr[p],
+          i_move                := tmp_move,
+          i_from_dropping_x10   := Stations[prev_stn].DrippingTime,
+          i_to_device_delay_x10 := Stations[cand_arr[p]].DeviceDelay,
+          i_drip_tray_delay_x10 := Transporters[i_trans].DripTrayDelay
+        );
+        my_entry := exit_t + REAL_TO_LINT(xfer_t);
+        my_exit  := my_entry + REAL_TO_LINT(calc_s);
+
+        FOR uj := 1 TO MAX_UNITS DO
+          IF uj <> i_unit AND io_schedule[uj].StageCount > 0 THEN
+            FOR sj := 0 TO io_schedule[uj].StageCount DO
+              IF io_schedule[uj].Stages[sj].station = cand_arr[p] THEN
+                ov_start := my_entry;
+                IF io_schedule[uj].Stages[sj].EntryTime > ov_start THEN
+                  ov_start := io_schedule[uj].Stages[sj].EntryTime;
+                END_IF;
+                ov_end := my_exit;
+                IF io_schedule[uj].Stages[sj].ExitTime < ov_end THEN
+                  ov_end := io_schedule[uj].Stages[sj].ExitTime;
+                END_IF;
+                IF ov_end > ov_start THEN
+                  sched_occupied[p] := TRUE;
+                END_IF;
+              END_IF;
+            END_FOR;
+          END_IF;
+        END_FOR;
+
+      END_FOR;
+
+      (* Pass 1: prefer schedule-free station, pick earliest ChangeTime *)
+      best_change_time := LINT#9999999999;
+      FOR p := 1 TO cand_cnt DO
+        IF NOT sched_occupied[p] THEN
+          IF cand_arr[p] >= MIN_STATION_INDEX AND cand_arr[p] <= MAX_STATION_INDEX THEN
+            IF g_station_occupancy[cand_arr[p]].ChangeTime < best_change_time THEN
+              best_change_time := g_station_occupancy[cand_arr[p]].ChangeTime;
+              chosen_stn := cand_arr[p];
+            END_IF;
+          END_IF;
+        END_IF;
+      END_FOR;
+
+      (* Pass 2: all sched-occupied — pick first candidate *)
+      IF chosen_stn = 0 THEN
+        chosen_stn := cand_arr[1];
+      END_IF;
+    END_IF;
+  END_IF;
+
+  stn_num := chosen_stn;
+
+  calc_s := DINT_TO_REAL(io_program[i_unit].Steps[stg].CalTime);
+  min_s  := DINT_TO_REAL(io_program[i_unit].Steps[stg].MinTime);
+  max_s  := DINT_TO_REAL(io_program[i_unit].Steps[stg].MaxTime);
+
+  tmp_move := g_move[i_trans];
+  IF prev_stn >= MIN_STATION_INDEX AND prev_stn <= MAX_STATION_INDEX
+     AND stn_num >= MIN_STATION_INDEX AND stn_num <= MAX_STATION_INDEX THEN
+    IF Stations[prev_stn].Crosstransport > 0
+       AND Stations[prev_stn].ChangeStation > 0
+       AND Stations[prev_stn].YPosition <> Stations[stn_num].YPosition THEN
+      xfer_t := INT_TO_REAL(Stations[prev_stn].CrossTransportTime)
+              + FC_STC_CalcTransferTime(
+                  i_from_stn            := Stations[prev_stn].ChangeStation,
+                  i_to_stn              := stn_num,
+                  i_move                := tmp_move,
+                  i_from_dropping_x10   := Stations[Stations[prev_stn].ChangeStation].DrippingTime,
+                  i_to_device_delay_x10 := Stations[stn_num].DeviceDelay,
+                  i_drip_tray_delay_x10 := Transporters[i_trans].DripTrayDelay
+                );
+    ELSE
+      xfer_t := FC_STC_CalcTransferTime(
+        i_from_stn            := prev_stn,
+        i_to_stn              := stn_num,
+        i_move                := tmp_move,
+        i_from_dropping_x10   := Stations[prev_stn].DrippingTime,
+        i_to_device_delay_x10 := Stations[stn_num].DeviceDelay,
+        i_drip_tray_delay_x10 := Transporters[i_trans].DripTrayDelay
+      );
+    END_IF;
+  ELSE
+    xfer_t := 60.0;
+  END_IF;
+
+  IF is_first AND is_on_stn AND stg = cur_stage THEN
+    entry_t := i_time_s;
+    IF io_batch[i_unit].StartTime > 0 THEN
+      elapsed_s := LINT_TO_REAL(i_time_s - io_batch[i_unit].StartTime);
+    ELSE
+      elapsed_s := 0.0;
+    END_IF;
+    remain_s := DINT_TO_REAL(io_batch[i_unit].CalTime) - elapsed_s;
+  IF remain_s < 1.0 THEN remain_s := 1.0; END_IF;
+    exit_t := i_time_s + REAL_TO_LINT(remain_s);
+  ELSIF is_first AND NOT is_on_stn THEN
+    IF io_batch[i_unit].StartTime > 0 AND io_batch[i_unit].CalTime > 0 THEN
+      entry_t := io_batch[i_unit].StartTime + DINT_TO_LINT(io_batch[i_unit].CalTime);
+    ELSE
+      entry_t := i_time_s + REAL_TO_LINT(xfer_t);
+    END_IF;
+    exit_t  := entry_t + REAL_TO_LINT(calc_s);
+  ELSE
+    entry_t := exit_t + REAL_TO_LINT(xfer_t);
+    exit_t  := entry_t + REAL_TO_LINT(calc_s);
+  END_IF;
+
+  IF stg <= 30 THEN
+    io_schedule[i_unit].Stages[stg].station       := stn_num;
+    io_schedule[i_unit].Stages[stg].ProgramStage := stg;
+    io_schedule[i_unit].Stages[stg].EntryTime    := entry_t;
+    io_schedule[i_unit].Stages[stg].ExitTime     := exit_t;
+    io_schedule[i_unit].Stages[stg].MinTime      := REAL_TO_DINT(min_s);
+    io_schedule[i_unit].Stages[stg].CalcTime     := REAL_TO_DINT(calc_s);
+    io_schedule[i_unit].Stages[stg].MaxTime      := REAL_TO_DINT(max_s);
+    io_schedule[i_unit].Stages[stg].TransferTime := REAL_TO_DINT(xfer_t);
+    io_schedule[i_unit].StageCount := stg;
+  END_IF;
+
+  prev_stn := stn_num;
+  is_first := FALSE;
+
+END_FOR;
+
+FC_STC_CalcSchedule := TRUE;
+
+END_FUNCTION
