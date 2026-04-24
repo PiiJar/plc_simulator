@@ -6,11 +6,11 @@
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  Returns count of matching batches; fills o_list via VAR_OUTPUT.
+ *  Returns count of matching batches; fills oList via VAR_OUTPUT.
  *
  *  Mode:
- *  i_mode = 0 — active (in-production) batches
- *  i_mode = 1 — waiting batches (station 114 lookup)
+ *  iMode = 0 — active (in-production) batches
+ *  iMode = 1 — waiting batches (station 114 lookup)
  *
  *  ------------------------------------------------------------------------------------------
  *
@@ -27,7 +27,7 @@ FUNCTION FC_STC_CollectActiveBatches : INT   (* returns count *)
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_mode                    : INT;    (* 0 = all active, 1 = waiting only *)
+  iMode                    : INT;    (* 0 = all active, 1 = waiting only *)
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -47,20 +47,20 @@ VAR_EXTERNAL
 END_VAR
 
 VAR_OUTPUT
-  o_list                    : ARRAY[1..MAX_UNITS] OF INT;  (* unit indices *)
+  oList                    : ARRAY[1..MAX_UNITS] OF INT;  (* unit indices *)
 END_VAR
 
 VAR
   ui                        : INT;
-  cnt                       : INT;
+  vCnt                       : INT;
 END_VAR
 
-cnt := 0;
+vCnt := 0;
 FOR ui := 1 TO MAX_UNITS DO
-  o_list[ui] := 0;
+  oList[ui] := 0;
 END_FOR;
 
-IF i_mode = 1 THEN
+IF iMode = 1 THEN
   (* ── Waiting batch: direct lookup at station 114 ── *)
   ui := g_station_occupancy[114].UnitId;
   IF ui >= 1 AND ui <= MAX_UNITS THEN
@@ -69,11 +69,11 @@ IF i_mode = 1 THEN
        AND g_batch[ui].State = NOT_PROCESSED
        AND g_batch[ui].ProgId = TreatmentPrograms[ui].ProgramId
        AND TreatmentPrograms[ui].ProgramId > 0 THEN
-      cnt := 1;
-      o_list[1] := ui;
+      vCnt := 1;
+      oList[1] := ui;
     END_IF;
   END_IF;
-  FC_STC_CollectActiveBatches := cnt;
+  FC_STC_CollectActiveBatches := vCnt;
   RETURN;
 END_IF;
 
@@ -87,12 +87,12 @@ FOR ui := 1 TO MAX_UNITS DO
     IF g_batch[ui].State = IN_PROCESS
        AND g_batch[ui].CurStage >= 0
        AND g_batch[ui].CurStage <= 99 THEN
-      cnt := cnt + 1;
-      o_list[cnt] := ui;
+      vCnt := vCnt + 1;
+      oList[vCnt] := ui;
     END_IF;
   END_IF;
 END_FOR;
 
-FC_STC_CollectActiveBatches := cnt;
+FC_STC_CollectActiveBatches := vCnt;
 
 END_FUNCTION

@@ -1,13 +1,13 @@
 (* ===========================================================================================
- *  FC_DEP_OverlapDelay — Overlap conflict delay calculation
+ *  FC_DEP_OverlapDelay — Overlap vConflict vDelay calculation
  *
  *  Company : Galvatek part of the John Cockerill Group
  *  Author  : Jarmo Piipponen
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  Returns delay needed to avoid overlap conflicts.
- *  Reads task queues via io_task (sandbox or live).
+ *  Returns vDelay vNeeded to avoid overlap conflicts.
+ *  Reads task queues via ioTask (sandbox or live).
  *
  *  ------------------------------------------------------------------------------------------
  *
@@ -18,23 +18,23 @@
  *)
 
 
-FUNCTION FC_DEP_OverlapDelay : REAL   (* returns delay_s, 0 = no conflict *)
+FUNCTION FC_DEP_OverlapDelay : REAL   (* returns delay_s, 0 = no vConflict *)
 
 
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_lift_stn                : INT;
-  i_sink_stn                : INT;
-  i_trans_id                : INT;
-  i_task_start              : LINT;
-  i_task_end                : LINT;
-  i_margin_s                : REAL;
+  iLiftStn                : INT;
+  iSinkStn                : INT;
+  iTransId                : INT;
+  iTaskStart              : LINT;
+  iTaskEnd                : LINT;
+  iMarginS                : REAL;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
-  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
-  io_overlap                : UDT_JC_DepOverlapType;
+  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioOverlap                : UDT_JC_DepOverlapType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -44,68 +44,68 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR
-  lift_is_overlap           : BOOL;
-  sink_is_overlap           : BOOL;
-  round                     : INT;
+  vLiftIsOverlap           : BOOL;
+  vSinkIsOverlap           : BOOL;
+  vRound                     : INT;
   ti                        : INT;
   qi                        : INT;
-  max_conf                  : REAL;
+  vMaxConf                  : REAL;
   t_start                   : LINT;
   t_end                     : LINT;
   e_start                   : LINT;
   e_end                     : LINT;
   e_lift                    : INT;
   e_sink                    : INT;
-  has_ovlp                  : BOOL;
-  needed                    : REAL;
-  delay                     : REAL;
+  vHasOvlp                  : BOOL;
+  vNeeded                    : REAL;
+  vDelay                     : REAL;
 END_VAR
 
-delay := 0.0;
+vDelay := 0.0;
 
-IF i_lift_stn >= 0 AND i_lift_stn <= 200 THEN
-  lift_is_overlap := io_overlap.Flags[i_lift_stn];
+IF iLiftStn >= 0 AND iLiftStn <= 200 THEN
+  vLiftIsOverlap := ioOverlap.Flags[iLiftStn];
 ELSE
-  lift_is_overlap := FALSE;
+  vLiftIsOverlap := FALSE;
 END_IF;
-IF i_sink_stn >= 0 AND i_sink_stn <= 200 THEN
-  sink_is_overlap := io_overlap.Flags[i_sink_stn];
+IF iSinkStn >= 0 AND iSinkStn <= 200 THEN
+  vSinkIsOverlap := ioOverlap.Flags[iSinkStn];
 ELSE
-  sink_is_overlap := FALSE;
+  vSinkIsOverlap := FALSE;
 END_IF;
 
-IF NOT lift_is_overlap AND NOT sink_is_overlap THEN
+IF NOT vLiftIsOverlap AND NOT vSinkIsOverlap THEN
   FC_DEP_OverlapDelay := 0.0;
   RETURN;
 END_IF;
 
-FOR round := 1 TO DEP_MAX_DELAY_ACTS DO
-  max_conf := 0.0;
-  t_start  := i_task_start + REAL_TO_LINT(delay);
-  t_end    := i_task_end + REAL_TO_LINT(delay);
+FOR vRound := 1 TO DEP_MAX_DELAY_ACTS DO
+  vMaxConf := 0.0;
+  t_start  := iTaskStart + REAL_TO_LINT(vDelay);
+  t_end    := iTaskEnd + REAL_TO_LINT(vDelay);
 
   FOR ti := 1 TO MAX_TRANSPORTERS DO
-    IF ti <> i_trans_id THEN
+    IF ti <> iTransId THEN
       FOR qi := 1 TO MAX_UNITS DO
-        IF qi > io_task[ti].Count THEN EXIT; END_IF;
+        IF qi > ioTask[ti].Count THEN EXIT; END_IF;
 
-        e_lift  := io_task[ti].Queue[qi].LiftStationTarget;
-        e_sink  := io_task[ti].Queue[qi].SinkStationTarget;
-        e_start := io_task[ti].Queue[qi].StartTime;
-        e_end   := io_task[ti].Queue[qi].FinishTime;
+        e_lift  := ioTask[ti].Queue[qi].LiftStationTarget;
+        e_sink  := ioTask[ti].Queue[qi].SinkStationTarget;
+        e_start := ioTask[ti].Queue[qi].StartTime;
+        e_end   := ioTask[ti].Queue[qi].FinishTime;
 
-        has_ovlp := FALSE;
+        vHasOvlp := FALSE;
         IF e_lift >= 0 AND e_lift <= 200 THEN
-  IF io_overlap.Flags[e_lift] THEN has_ovlp := TRUE; END_IF;
+  IF ioOverlap.Flags[e_lift] THEN vHasOvlp := TRUE; END_IF;
         END_IF;
-        IF NOT has_ovlp AND e_sink >= 0 AND e_sink <= 200 THEN
-  IF io_overlap.Flags[e_sink] THEN has_ovlp := TRUE; END_IF;
+        IF NOT vHasOvlp AND e_sink >= 0 AND e_sink <= 200 THEN
+  IF ioOverlap.Flags[e_sink] THEN vHasOvlp := TRUE; END_IF;
         END_IF;
 
-        IF has_ovlp THEN
-          IF t_start < (e_end + REAL_TO_LINT(i_margin_s)) AND t_end > (e_start - REAL_TO_LINT(i_margin_s)) THEN
-            needed := LINT_TO_REAL(e_end - t_start) + i_margin_s;
-  IF needed > max_conf THEN max_conf := needed; END_IF;
+        IF vHasOvlp THEN
+          IF t_start < (e_end + REAL_TO_LINT(iMarginS)) AND t_end > (e_start - REAL_TO_LINT(iMarginS)) THEN
+            vNeeded := LINT_TO_REAL(e_end - t_start) + iMarginS;
+  IF vNeeded > vMaxConf THEN vMaxConf := vNeeded; END_IF;
           END_IF;
         END_IF;
 
@@ -113,10 +113,10 @@ FOR round := 1 TO DEP_MAX_DELAY_ACTS DO
     END_IF;
   END_FOR;
 
-  IF max_conf <= 0.0 THEN EXIT; END_IF;
-  delay := delay + max_conf;
+  IF vMaxConf <= 0.0 THEN EXIT; END_IF;
+  vDelay := vDelay + vMaxConf;
 END_FOR;
 
-FC_DEP_OverlapDelay := delay;
+FC_DEP_OverlapDelay := vDelay;
 
 END_FUNCTION

@@ -12,7 +12,7 @@
  *  (same pattern as FC_TSK_NoTreatment).
  *  Clears Valid after task is created, or on invalid input.
  *
- *  Called from FB_TSK_Scheduler phase 2200 (before NTT).
+ *  Called from FB_TSK_Scheduler vPhase 2200 (before NTT).
  *
  * ------------------------------------------------------------------------------------------
  *
@@ -29,11 +29,11 @@ FUNCTION FC_STC_ManualTask : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_time_s                  : LINT;
+  iTimeS                  : LINT;
 END_VAR
 
 VAR_IN_OUT
-  io_task                   : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  ioTask                   : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL
@@ -57,13 +57,13 @@ VAR
   sh                        : INT;
   lift                      : INT;
   sink                      : INT;
-  covers                    : BOOL;
-  trans_pos                 : INT;
-  tmp_move                  : UDT_JC_MoveTimesType;
-  xfer_s                    : REAL;
-  travel_to_lift_s          : REAL;
-  task_start                : LINT;
-  task_end                  : LINT;
+  vCovers                    : BOOL;
+  vTransPos                 : INT;
+  vTmpMove                  : UDT_JC_MoveTimesType;
+  vXferS                    : REAL;
+  vTravelToLiftS          : REAL;
+  vTaskStart                : LINT;
+  vTaskEnd                  : LINT;
 END_VAR
 
 FC_STC_ManualTask := TRUE;
@@ -95,73 +95,73 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
   END_IF;
 
   (* Check lift station is within transporter TaskArea *)
-  covers := FALSE;
+  vCovers := FALSE;
   FOR ai := 1 TO 4 DO
     IF Transporters[ti].TaskArea[ai].MinLift > 0
        OR Transporters[ti].TaskArea[ai].MaxLift > 0 THEN
       IF lift >= Transporters[ti].TaskArea[ai].MinLift
          AND lift <= Transporters[ti].TaskArea[ai].MaxLift THEN
-        covers := TRUE;
+        vCovers := TRUE;
       END_IF;
     END_IF;
   END_FOR;
 
-  IF NOT covers THEN
+  IF NOT vCovers THEN
     g_manual_task[ti].Valid := FALSE;
     CONTINUE;
   END_IF;
 
   (* Calculate transfer time *)
-  tmp_move := g_move[ti];
-  xfer_s := FC_STC_CalcTransferTime(
-    i_from_stn            := lift,
-    i_to_stn              := sink,
-    i_move                := tmp_move,
+  vTmpMove := g_move[ti];
+  vXferS := FC_STC_CalcTransferTime(
+    iFromStn            := lift,
+    iToStn              := sink,
+    iMove                := vTmpMove,
     i_from_dropping_x10   := Stations[lift].DrippingTime,
     i_to_device_delay_x10 := Stations[sink].DeviceDelay,
-    i_drip_tray_delay_x10 := Transporters[ti].DripTrayDelay);
+    iDripTrayDelayX10 := Transporters[ti].DripTrayDelay);
 
-  (* Calculate travel-to-lift: time for transporter to reach lift station *)
-  travel_to_lift_s := 0.0;
-  trans_pos := g_transporter[ti].CurrentStation;
-  IF trans_pos > 0 AND trans_pos <> lift THEN
-    travel_to_lift_s := FC_STC_CalcHorizontalTravel(
-      i_from_stn := trans_pos,
-      i_to_stn   := lift,
-      i_move     := tmp_move);
+  (* Calculate vTravel-to-lift: time for transporter to reach lift station *)
+  vTravelToLiftS := 0.0;
+  vTransPos := g_transporter[ti].CurrentStation;
+  IF vTransPos > 0 AND vTransPos <> lift THEN
+    vTravelToLiftS := FC_STC_CalcHorizontalTravel(
+      iFromStn := vTransPos,
+      iToStn   := lift,
+      iMove     := vTmpMove);
   END_IF;
 
-  task_start := i_time_s + REAL_TO_LINT(travel_to_lift_s);
-  task_end   := task_start + REAL_TO_LINT(xfer_s);
+  vTaskStart := iTimeS + REAL_TO_LINT(vTravelToLiftS);
+  vTaskEnd   := vTaskStart + REAL_TO_LINT(vXferS);
 
   (* Check sink station is free — no unit occupying it *)
-  covers := TRUE;  (* reuse variable as sink_free flag *)
+  vCovers := TRUE;  (* reuse variable as vSinkFree flag *)
   FOR sh := 1 TO MAX_UNITS DO
-    IF g_unit[sh].location = sink AND g_unit[sh].Status = USED THEN
-      covers := FALSE;
+    IF g_unit[sh].vLocation = sink AND g_unit[sh].Status = USED THEN
+      vCovers := FALSE;
     END_IF;
   END_FOR;
-  IF NOT covers THEN
+  IF NOT vCovers THEN
     g_manual_task[ti].Valid := FALSE;
     CONTINUE;
   END_IF;
 
   (* Insert task at queue position 1 *)
-  IF io_task[ti].Count < MAX_TASK_QUEUE THEN
-    FOR sh := io_task[ti].Count TO 1 BY -1 DO
-      io_task[ti].Queue[sh + 1] := io_task[ti].Queue[sh];
+  IF ioTask[ti].Count < MAX_TASK_QUEUE THEN
+    FOR sh := ioTask[ti].Count TO 1 BY -1 DO
+      ioTask[ti].Queue[sh + 1] := ioTask[ti].Queue[sh];
     END_FOR;
-    io_task[ti].Queue[1].Unit              := 0;
-    io_task[ti].Queue[1].Stage             := 0;
-    io_task[ti].Queue[1].LiftStationTarget := lift;
-    io_task[ti].Queue[1].SinkStationTarget := sink;
-    io_task[ti].Queue[1].StartTime         := task_start;
-    io_task[ti].Queue[1].FinishTime        := task_end;
-    io_task[ti].Queue[1].CalcTime          := 0;
-    io_task[ti].Queue[1].MinTime           := 0;
-    io_task[ti].Queue[1].MaxTime           := 0;
-    io_task[ti].Queue[1].NttPrimary        := 0;
-    io_task[ti].Count := io_task[ti].Count + 1;
+    ioTask[ti].Queue[1].Unit              := 0;
+    ioTask[ti].Queue[1].Stage             := 0;
+    ioTask[ti].Queue[1].LiftStationTarget := lift;
+    ioTask[ti].Queue[1].SinkStationTarget := sink;
+    ioTask[ti].Queue[1].StartTime         := vTaskStart;
+    ioTask[ti].Queue[1].FinishTime        := vTaskEnd;
+    ioTask[ti].Queue[1].CalcTime          := 0;
+    ioTask[ti].Queue[1].MinTime           := 0;
+    ioTask[ti].Queue[1].MaxTime           := 0;
+    ioTask[ti].Queue[1].NttPrimary        := 0;
+    ioTask[ti].Count := ioTask[ti].Count + 1;
   END_IF;
 
   g_manual_task[ti].Valid := FALSE;

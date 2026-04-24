@@ -26,7 +26,7 @@ FUNCTION FC_STC_SwapTasks : INT   (* returns swap count *)
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
-  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -36,28 +36,28 @@ END_VAR
 VAR
   ti                        : INT;
   qi                        : INT;
-  cnt                       : INT;
-  tmp                       : UDT_JC_TskTaskType;
-  swaps                     : INT;
+  vCnt                       : INT;
+  vTmp                       : UDT_JC_TskTaskType;
+  vSwaps                     : INT;
 END_VAR
 
-swaps := 0;
+vSwaps := 0;
 
 FOR ti := 1 TO MAX_TRANSPORTERS DO
-  cnt := io_task[ti].Count;
-  IF cnt >= 2 THEN
-    FOR qi := 1 TO cnt - 1 DO
-      IF io_task[ti].Queue[qi].Unit <> io_task[ti].Queue[qi + 1].Unit
-         AND io_task[ti].Queue[qi].SinkStationTarget = io_task[ti].Queue[qi + 1].LiftStationTarget THEN
-        tmp := io_task[ti].Queue[qi];
-        io_task[ti].Queue[qi] := io_task[ti].Queue[qi + 1];
-        io_task[ti].Queue[qi + 1] := tmp;
-        swaps := swaps + 1;
+  vCnt := ioTask[ti].Count;
+  IF vCnt >= 2 THEN
+    FOR qi := 1 TO vCnt - 1 DO
+      IF ioTask[ti].Queue[qi].Unit <> ioTask[ti].Queue[qi + 1].Unit
+         AND ioTask[ti].Queue[qi].SinkStationTarget = ioTask[ti].Queue[qi + 1].LiftStationTarget THEN
+        vTmp := ioTask[ti].Queue[qi];
+        ioTask[ti].Queue[qi] := ioTask[ti].Queue[qi + 1];
+        ioTask[ti].Queue[qi + 1] := vTmp;
+        vSwaps := vSwaps + 1;
       END_IF;
     END_FOR;
   END_IF;
 END_FOR;
 
-FC_STC_SwapTasks := swaps;
+FC_STC_SwapTasks := vSwaps;
 
 END_FUNCTION

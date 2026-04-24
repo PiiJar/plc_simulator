@@ -23,8 +23,8 @@
 
 FUNCTION_BLOCK FB_SIM_RunTasks
 VAR_INPUT
-  i_run     : BOOL;   (* enable — typically init_done *)
-  i_delta_t : REAL;   (* actual cycle time in seconds *)
+  iRun     : BOOL;   (* enable — typically vInitDone *)
+  iDeltaT : REAL;   (* actual cycle time in seconds *)
 END_VAR
 VAR_EXTERNAL CONSTANT
     MAX_TRANSPORTERS    : INT;
@@ -53,7 +53,7 @@ VAR_EXTERNAL
 END_VAR
 VAR
   i            : INT;
-  idx          : INT;
+  vIdx          : INT;
   (* Physics FB instances — one per transporter (MATIEC needs separate instances) *)
   fb_x1        : FB_SIM_XMotion;
   fb_x2        : FB_SIM_XMotion;
@@ -62,49 +62,49 @@ VAR
   fb_z2        : FB_SIM_ZMotion;
   fb_z3        : FB_SIM_ZMotion;
   (* Temp vars for VAR_IN_OUT passing *)
-  tmp_x        : DINT;
-  tmp_vx       : DINT;
-  tmp_z        : DINT;
-  tmp_zs       : INT;
-  tmp_zt       : REAL;
+  vTmpX        : DINT;
+  vTmpVx       : DINT;
+  vTmpZ        : DINT;
+  vTmpZs       : INT;
+  vTmpZt       : REAL;
   arrived_x    : BOOL;
   at_station   : BOOL;    (* TRUE only when actually at station, not just at drive limit *)
   arrived_z    : BOOL;
-  station_kind : INT;
+  vStationKind : INT;
   device_delay : REAL;
-  drop_time    : REAL;
-  pick_unit_id : INT;     (* unit_id picked up from lift station *)
-  xfer_total   : REAL;    (* transfer time for UI progress bar *)
-  sink_unit_id : INT;     (* unit_id being placed at sink station *)
+  vDropTime    : REAL;
+  vPickUnitId : INT;     (* unit_id picked up from lift station *)
+  vXferTotal   : REAL;    (* transfer time for UI progress bar *)
+  vSinkUnitId : INT;     (* unit_id being placed at sink station *)
   (* Nearest-station calculation *)
-  nearest_num  : INT;
-  min_dist     : DINT;
+  vNearestNum  : INT;
+  vMinDist     : DINT;
   dx           : DINT;
-  (* Actual move time tracker — now FC FC_STC_TrackMoveTimes, no instance needed *)
-  (* Unit location update — now FC FC_STC_UpdateUnitLocation, no instance needed *)
+  (* Actual move time tracker — now FC FC_STC_TrackMoveTimes, no instance vNeeded *)
+  (* Unit vLocation update — now FC FC_STC_UpdateUnitLocation, no instance vNeeded *)
   (* Event helpers *)
   evt_unit     : INT;
   evt_diff     : LINT;
   (* Treatment time wait *)
-  can_lift       : BOOL;
-  lift_uid       : INT;      (* unit at lift station *)
+  vCanLift       : BOOL;
+  vLiftUid       : INT;      (* unit at lift station *)
   treat_cal      : DINT;      (* treatment cal_time for current stage *)
   treat_elapsed  : LINT;     (* seconds spent at lift station *)
-  (* ── TASK_COMPLETE event: phase timestamps per transporter ── *)
+  (* ── TASK_COMPLETE event: vPhase timestamps per transporter ── *)
   ts_task_start  : ARRAY[1..3] OF LINT;  (* Phase 0→1: task accepted *)
   ts_at_lift     : ARRAY[1..3] OF LINT;  (* Phase 1 at_station: arrived at lift *)
-  ts_lift_begin  : ARRAY[1..3] OF LINT;  (* Phase 1→2: can_lift, begin lift *)
+  ts_lift_begin  : ARRAY[1..3] OF LINT;  (* Phase 1→2: vCanLift, begin lift *)
   ts_lift_done   : ARRAY[1..3] OF LINT;  (* Phase 2→3: lift complete *)
   ts_at_sink     : ARRAY[1..3] OF LINT;  (* Phase 3→4: arrived at sink *)
   (* TASK_COMPLETE temp vars *)
   dd_lift_s      : INT;   (* lift device_delay in seconds *)
   dropping_s     : INT;   (* dropping/valutus time in seconds *)
-  trip_s         : INT;   (* drip tray delay in seconds, 0 if not used *)
-  dur_nosto      : INT;   (* computed nosto duration *)
-  dur_lasku      : INT;   (* computed lasku duration *)
+  trip_s         : INT;   (* drip tray vDelay in seconds, 0 if not used *)
+  vDurNosto      : INT;   (* computed nosto vDuration *)
+  vDurLasku      : INT;   (* computed lasku vDuration *)
 END_VAR
 
-IF NOT i_run THEN
+IF NOT iRun THEN
   RETURN;
 END_IF;
 
@@ -117,7 +117,7 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
     g_transporter[i].XFinalTarget := g_dispatched_task[i].LiftX;
     g_transporter[i].Status := 4;  (* auto_run — must be set before TrackMoveTimes *)
     g_transporter[i].Phase := 1;
-    FC_STC_TrackMoveTimes(i_trans := i, i_prev := 0, i_new := 1);
+    FC_STC_TrackMoveTimes(iTrans := i, iPrev := 0, iNew := 1);
     g_sim_trans[i].ZStage := 0;
     g_sim_trans[i].ZTimer := 0.0;
     (* Record task start timestamp *)
@@ -126,53 +126,53 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
 
   (* ── Phase 1: Drive X towards lift station ──────────────── *)
   ELSIF g_transporter[i].Phase = 1 THEN
-    tmp_x  := g_transporter[i].XPosition;
-    tmp_vx := g_sim_trans[i].XVelocity;
+    vTmpX  := g_transporter[i].XPosition;
+    vTmpVx := g_sim_trans[i].XVelocity;
     IF i = 1 THEN
       fb_x1(
-        delta_t  := i_delta_t,
+        delta_t  := iDeltaT,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
         v_max    := Transporters[i].SpeedMax_X,
         t_acc    := Transporters[i].Acceleration_X,
         t_dec    := Transporters[i].Deceleration_X,
-        x_pos    := tmp_x,
-        v_x      := tmp_vx
+        x_pos    := vTmpX,
+        v_x      := vTmpVx
       );
       arrived_x := fb_x1.arrived;
       g_transporter[i].XDriveTarget := fb_x1.x_drive;
     ELSIF i = 2 THEN
       fb_x2(
-        delta_t  := i_delta_t,
+        delta_t  := iDeltaT,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
         v_max    := Transporters[i].SpeedMax_X,
         t_acc    := Transporters[i].Acceleration_X,
         t_dec    := Transporters[i].Deceleration_X,
-        x_pos    := tmp_x,
-        v_x      := tmp_vx
+        x_pos    := vTmpX,
+        v_x      := vTmpVx
       );
       arrived_x := fb_x2.arrived;
       g_transporter[i].XDriveTarget := fb_x2.x_drive;
     ELSIF i = 3 THEN
       fb_x3(
-        delta_t  := i_delta_t,
+        delta_t  := iDeltaT,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
         v_max    := Transporters[i].SpeedMax_X,
         t_acc    := Transporters[i].Acceleration_X,
         t_dec    := Transporters[i].Deceleration_X,
-        x_pos    := tmp_x,
-        v_x      := tmp_vx
+        x_pos    := vTmpX,
+        v_x      := vTmpVx
       );
       arrived_x := fb_x3.arrived;
       g_transporter[i].XDriveTarget := fb_x3.x_drive;
     END_IF;
-    g_transporter[i].XPosition  := tmp_x;
-    g_sim_trans[i].XVelocity := tmp_vx;
+    g_transporter[i].XPosition  := vTmpX;
+    g_sim_trans[i].XVelocity := vTmpVx;
 
     (* Only transition when actually at station, not just at drive limit *)
     at_station := arrived_x
@@ -184,7 +184,7 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
       IF g_transporter[i].Status = 3 THEN
         g_transporter[i].Phase := 0;
         g_transporter[i].IdleStartTime := g_time_s;
-        FC_STC_TrackMoveTimes(i_trans := i, i_prev := 1, i_new := 0);
+        FC_STC_TrackMoveTimes(iTrans := i, iPrev := 1, iNew := 0);
       ELSE
       (* Record arrival at lift station (first time only) *)
       IF ts_at_lift[i] = LINT#0 THEN
@@ -194,52 +194,52 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
       (* ── Wait for treatment time AND device_delay before lifting ──
          Z-movement starts when the LONGER of two has elapsed:
          1. Remaining treatment time (unit must finish treatment)
-         2. Station device_delay (covers must be open)
+         2. Station device_delay (vCovers must be open)
          Both timers run simultaneously from transporter arrival.
          This matches JS behavior: max(treatment, device_delay). *)
-      can_lift := TRUE;
+      vCanLift := TRUE;
       device_delay := INT_TO_REAL(g_dispatched_task[i].LiftDeviceDelay_x10) / 10.0;
-      drop_time := INT_TO_REAL(g_dispatched_task[i].DroppingTime_x10) / 10.0;
+      vDropTime := INT_TO_REAL(g_dispatched_task[i].DroppingTime_x10) / 10.0;
 
       (* Check treatment time *)
-      lift_uid := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
-      IF lift_uid >= 1 AND lift_uid <= MAX_UNITS THEN
-        IF g_batch[lift_uid].State = IN_PROCESS
-           AND g_batch[lift_uid].CurStage >= 1
-           AND g_batch[lift_uid].CurStage <= MAX_STEPS_PER_PROGRAM THEN
-          treat_cal := TreatmentPrograms[lift_uid].Steps[g_batch[lift_uid].CurStage].CalTime;
+      vLiftUid := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
+      IF vLiftUid >= 1 AND vLiftUid <= MAX_UNITS THEN
+        IF g_batch[vLiftUid].State = IN_PROCESS
+           AND g_batch[vLiftUid].CurStage >= 1
+           AND g_batch[vLiftUid].CurStage <= MAX_STEPS_PER_PROGRAM THEN
+          treat_cal := TreatmentPrograms[vLiftUid].Steps[g_batch[vLiftUid].CurStage].CalTime;
           IF treat_cal > 0 THEN
             treat_elapsed := g_time_s - g_station_occupancy[g_transporter[i].LiftStationTarget].ChangeTime;
             IF treat_elapsed < DINT_TO_LINT(treat_cal) THEN
-              can_lift := FALSE;
+              vCanLift := FALSE;
             END_IF;
           END_IF;
         END_IF;
       END_IF;
 
-      (* Check device_delay — covers must have had time to open since arrival *)
-      IF can_lift AND device_delay > 0.0 THEN
+      (* Check device_delay — vCovers must have had time to open since arrival *)
+      IF vCanLift AND device_delay > 0.0 THEN
         IF LINT_TO_REAL(g_time_s - ts_at_lift[i]) < device_delay THEN
-          can_lift := FALSE;
+          vCanLift := FALSE;
         END_IF;
       END_IF;
 
-      IF can_lift THEN
+      IF vCanLift THEN
       (* Record lift begin timestamp *)
       ts_lift_begin[i] := g_time_s;
-      (* drop_time already captured by STC_FindStation above *)
-      (* Skip stage 1 — device_delay already overlapped above.
+      (* vDropTime vAlready captured by STC_FindStation above *)
+      (* Skip stage 1 — device_delay vAlready overlapped above.
          Z-movement starts immediately (stage 2).
          dropping_time and drip_tray_delay happen at the TOP. *)
       g_transporter[i].ZPosition := 0;
       g_sim_trans[i].ZTimer := 0.0;
       g_sim_trans[i].ZStage := 2;
       g_transporter[i].Phase := 2;
-      FC_STC_TrackMoveTimes(i_trans := i, i_prev := 1, i_new := 2);
+      FC_STC_TrackMoveTimes(iTrans := i, iPrev := 1, iNew := 2);
 
       (* ── Calculate transfer time (used by event + batch times) ── *)
-      xfer_total := DINT_TO_REAL(g_dispatched_task[i].TransferTime_x10) / 10.0;
-      IF xfer_total < 5.0 THEN xfer_total := 60.0; END_IF;
+      vXferTotal := DINT_TO_REAL(g_dispatched_task[i].TransferTime_x10) / 10.0;
+      IF vXferTotal < 5.0 THEN vXferTotal := 60.0; END_IF;
 
       (* ── Emit LIFT event (msg_type=2) ── *)
       evt_unit := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
@@ -274,36 +274,36 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
           g_event_pending.Payload[10] := 0;
           g_event_pending.Payload[11] := 0;
         END_IF;
-        g_event_pending.Payload[12] := REAL_TO_INT(xfer_total);
+        g_event_pending.Payload[12] := REAL_TO_INT(vXferTotal);
         g_event_pending_valid := TRUE;
       END_IF;
 
       (* Unit moves from lift station → transporter *)
-      pick_unit_id := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
-      IF pick_unit_id >= 1 THEN
-        FC_STC_UpdateUnitLocation(i_unit := pick_unit_id, i_location := i, i_ntt_primary := 0);
+      vPickUnitId := g_station_occupancy[g_transporter[i].LiftStationTarget].UnitId;
+      IF vPickUnitId >= 1 THEN
+        FC_STC_UpdateUnitLocation(iUnit := vPickUnitId, iLocation := i, iNttPrimary := 0);
 
         (* Set batch transfer times for UI progress bar — matches JS behavior *)
-        g_batch[pick_unit_id].StartTime := g_time_s;
-        g_batch[pick_unit_id].CalTime   := REAL_TO_DINT(xfer_total);
-        g_batch[pick_unit_id].MinTime   := g_batch[pick_unit_id].CalTime;
-        g_batch[pick_unit_id].MaxTime   := 600;
+        g_batch[vPickUnitId].StartTime := g_time_s;
+        g_batch[vPickUnitId].CalTime   := REAL_TO_DINT(vXferTotal);
+        g_batch[vPickUnitId].MinTime   := g_batch[vPickUnitId].CalTime;
+        g_batch[vPickUnitId].MaxTime   := 600;
       END_IF;
-      END_IF;  (* can_lift *)
+      END_IF;  (* vCanLift *)
       END_IF;  (* Status=3 ELSE branch *)
     END_IF;
     (* If arrived_x but not at_station → at drive limit, wait for clearance *)
 
   (* ── Phase 2: Lift Z at lift station ────────────────────── *)
   ELSIF g_transporter[i].Phase = 2 THEN
-    station_kind := g_dispatched_task[i].LiftKind;
-    tmp_z  := g_transporter[i].ZPosition;
-    tmp_zs := g_sim_trans[i].ZStage;
-    tmp_zt := g_sim_trans[i].ZTimer;
+    vStationKind := g_dispatched_task[i].LiftKind;
+    vTmpZ  := g_transporter[i].ZPosition;
+    vTmpZs := g_sim_trans[i].ZStage;
+    vTmpZt := g_sim_trans[i].ZTimer;
     IF i = 1 THEN
       fb_z1(
-        delta_t       := i_delta_t,
-        station_kind  := station_kind,
+        delta_t       := iDeltaT,
+        vStationKind  := vStationKind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
         ZPosSlowUp      := Transporters[i].ZPosSlowUp,
@@ -313,15 +313,15 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
         DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := g_dispatched_task[i].DroppingTime_x10,
-        z_mm          := tmp_z,
-        z_stage       := tmp_zs,
-        z_timer_s     := tmp_zt
+        z_mm          := vTmpZ,
+        z_stage       := vTmpZs,
+        z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z1.done;
+      arrived_z := fb_z1.vDone;
     ELSIF i = 2 THEN
       fb_z2(
-        delta_t       := i_delta_t,
-        station_kind  := station_kind,
+        delta_t       := iDeltaT,
+        vStationKind  := vStationKind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
         ZPosSlowUp      := Transporters[i].ZPosSlowUp,
@@ -331,15 +331,15 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
         DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := g_dispatched_task[i].DroppingTime_x10,
-        z_mm          := tmp_z,
-        z_stage       := tmp_zs,
-        z_timer_s     := tmp_zt
+        z_mm          := vTmpZ,
+        z_stage       := vTmpZs,
+        z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z2.done;
+      arrived_z := fb_z2.vDone;
     ELSIF i = 3 THEN
       fb_z3(
-        delta_t       := i_delta_t,
-        station_kind  := station_kind,
+        delta_t       := iDeltaT,
+        vStationKind  := vStationKind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
         ZPosSlowUp      := Transporters[i].ZPosSlowUp,
@@ -349,72 +349,72 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
         DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := g_dispatched_task[i].DroppingTime_x10,
-        z_mm          := tmp_z,
-        z_stage       := tmp_zs,
-        z_timer_s     := tmp_zt
+        z_mm          := vTmpZ,
+        z_stage       := vTmpZs,
+        z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z3.done;
+      arrived_z := fb_z3.vDone;
     END_IF;
-    g_transporter[i].ZPosition      := tmp_z;
-    g_sim_trans[i].ZStage   := tmp_zs;
-    g_sim_trans[i].ZTimer := tmp_zt;
+    g_transporter[i].ZPosition      := vTmpZ;
+    g_sim_trans[i].ZStage   := vTmpZs;
+    g_sim_trans[i].ZTimer := vTmpZt;
     IF arrived_z THEN
-      (* Record lift done timestamp *)
+      (* Record lift vDone timestamp *)
       ts_lift_done[i] := g_time_s;
       g_transporter[i].XFinalTarget := g_dispatched_task[i].SinkX;
       g_transporter[i].Phase := 3;
-      FC_STC_TrackMoveTimes(i_trans := i, i_prev := 2, i_new := 3);
+      FC_STC_TrackMoveTimes(iTrans := i, iPrev := 2, iNew := 3);
     END_IF;
 
   (* ── Phase 3: Drive X towards sink station ─────────────── *)
   ELSIF g_transporter[i].Phase = 3 THEN
-    tmp_x  := g_transporter[i].XPosition;
-    tmp_vx := g_sim_trans[i].XVelocity;
+    vTmpX  := g_transporter[i].XPosition;
+    vTmpVx := g_sim_trans[i].XVelocity;
     IF i = 1 THEN
       fb_x1(
-        delta_t  := i_delta_t,
+        delta_t  := iDeltaT,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
         v_max    := Transporters[i].SpeedMax_X,
         t_acc    := Transporters[i].Acceleration_X,
         t_dec    := Transporters[i].Deceleration_X,
-        x_pos    := tmp_x,
-        v_x      := tmp_vx
+        x_pos    := vTmpX,
+        v_x      := vTmpVx
       );
       arrived_x := fb_x1.arrived;
       g_transporter[i].XDriveTarget := fb_x1.x_drive;
     ELSIF i = 2 THEN
       fb_x2(
-        delta_t  := i_delta_t,
+        delta_t  := iDeltaT,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
         v_max    := Transporters[i].SpeedMax_X,
         t_acc    := Transporters[i].Acceleration_X,
         t_dec    := Transporters[i].Deceleration_X,
-        x_pos    := tmp_x,
-        v_x      := tmp_vx
+        x_pos    := vTmpX,
+        v_x      := vTmpVx
       );
       arrived_x := fb_x2.arrived;
       g_transporter[i].XDriveTarget := fb_x2.x_drive;
     ELSIF i = 3 THEN
       fb_x3(
-        delta_t  := i_delta_t,
+        delta_t  := iDeltaT,
         x_target := g_transporter[i].XFinalTarget,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
         v_max    := Transporters[i].SpeedMax_X,
         t_acc    := Transporters[i].Acceleration_X,
         t_dec    := Transporters[i].Deceleration_X,
-        x_pos    := tmp_x,
-        v_x      := tmp_vx
+        x_pos    := vTmpX,
+        v_x      := vTmpVx
       );
       arrived_x := fb_x3.arrived;
       g_transporter[i].XDriveTarget := fb_x3.x_drive;
     END_IF;
-    g_transporter[i].XPosition  := tmp_x;
-    g_sim_trans[i].XVelocity := tmp_vx;
+    g_transporter[i].XPosition  := vTmpX;
+    g_sim_trans[i].XVelocity := vTmpVx;
 
     (* Only transition when actually at station, not just at drive limit *)
     at_station := arrived_x
@@ -427,20 +427,20 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
       g_sim_trans[i].ZTimer := device_delay + INT_TO_REAL(g_dispatched_task[i].DripTrayDelay_x10) / 10.0;
       g_sim_trans[i].ZStage := 6;
       g_transporter[i].Phase := 4;
-      FC_STC_TrackMoveTimes(i_trans := i, i_prev := 3, i_new := 4);
+      FC_STC_TrackMoveTimes(iTrans := i, iPrev := 3, iNew := 4);
     END_IF;
     (* If arrived_x but not at_station → at drive limit, wait for clearance *)
 
   (* ── Phase 4: Sink Z at sink station ───────────────────── *)
   ELSIF g_transporter[i].Phase = 4 THEN
-    station_kind := g_dispatched_task[i].SinkKind;
-    tmp_z  := g_transporter[i].ZPosition;
-    tmp_zs := g_sim_trans[i].ZStage;
-    tmp_zt := g_sim_trans[i].ZTimer;
+    vStationKind := g_dispatched_task[i].SinkKind;
+    vTmpZ  := g_transporter[i].ZPosition;
+    vTmpZs := g_sim_trans[i].ZStage;
+    vTmpZt := g_sim_trans[i].ZTimer;
     IF i = 1 THEN
       fb_z1(
-        delta_t       := i_delta_t,
-        station_kind  := station_kind,
+        delta_t       := iDeltaT,
+        vStationKind  := vStationKind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
         ZPosSlowUp      := Transporters[i].ZPosSlowUp,
@@ -450,15 +450,15 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
         DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := 0,
-        z_mm          := tmp_z,
-        z_stage       := tmp_zs,
-        z_timer_s     := tmp_zt
+        z_mm          := vTmpZ,
+        z_stage       := vTmpZs,
+        z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z1.done;
+      arrived_z := fb_z1.vDone;
     ELSIF i = 2 THEN
       fb_z2(
-        delta_t       := i_delta_t,
-        station_kind  := station_kind,
+        delta_t       := iDeltaT,
+        vStationKind  := vStationKind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
         ZPosSlowUp      := Transporters[i].ZPosSlowUp,
@@ -468,15 +468,15 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
         DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := 0,
-        z_mm          := tmp_z,
-        z_stage       := tmp_zs,
-        z_timer_s     := tmp_zt
+        z_mm          := vTmpZ,
+        z_stage       := vTmpZs,
+        z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z2.done;
+      arrived_z := fb_z2.vDone;
     ELSIF i = 3 THEN
       fb_z3(
-        delta_t       := i_delta_t,
-        station_kind  := station_kind,
+        delta_t       := iDeltaT,
+        vStationKind  := vStationKind,
         ZPosDown        := Transporters[i].ZPosDown,
         ZPosUp          := 0,
         ZPosSlowUp      := Transporters[i].ZPosSlowUp,
@@ -486,34 +486,34 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         SpeedLiftFast_Z := Transporters[i].SpeedLiftFast_Z,
         DripTrayDelay   := Transporters[i].DripTrayDelay,
         DroppingTime    := 0,
-        z_mm          := tmp_z,
-        z_stage       := tmp_zs,
-        z_timer_s     := tmp_zt
+        z_mm          := vTmpZ,
+        z_stage       := vTmpZs,
+        z_timer_s     := vTmpZt
       );
-      arrived_z := fb_z3.done;
+      arrived_z := fb_z3.vDone;
     END_IF;
-    g_transporter[i].ZPosition      := tmp_z;
-    g_sim_trans[i].ZStage   := tmp_zs;
-    g_sim_trans[i].ZTimer := tmp_zt;
+    g_transporter[i].ZPosition      := vTmpZ;
+    g_sim_trans[i].ZStage   := vTmpZs;
+    g_sim_trans[i].ZTimer := vTmpZt;
     IF arrived_z THEN
       (* ── Emit TASK_COMPLETE event (msg_type=3) before Phase reset ── *)
       IF NOT g_event_pending_valid THEN
-        (* Config-based sub-phase durations *)
+        (* Config-based sub-vPhase durations *)
         dropping_s := g_transporter[i].DrippingTime / 10;
         IF Transporters[i].DripTrayInUse THEN
           trip_s := Transporters[i].DripTrayDelay / 10;
         ELSE
           trip_s := 0;
         END_IF;
-        (* Nosto = total lift phase - dropping - trip_close
-           device_delay no longer in lift phase (overlapped in Phase 1) *)
-        dur_nosto := LINT_TO_INT(ts_lift_done[i] - ts_lift_begin[i])
+        (* Nosto = total lift vPhase - dropping - trip_close
+           device_delay no longer in lift vPhase (overlapped in Phase 1) *)
+        vDurNosto := LINT_TO_INT(ts_lift_done[i] - ts_lift_begin[i])
                      - dropping_s - trip_s;
-        IF dur_nosto < 0 THEN dur_nosto := 0; END_IF;
-        (* Lasku = total sink phase - device_delay - trip_open *)
+        IF vDurNosto < 0 THEN vDurNosto := 0; END_IF;
+        (* Lasku = total sink vPhase - device_delay - trip_open *)
         dd_lift_s := g_dispatched_task[i].SinkDeviceDelay_x10 / 10;
-        dur_lasku := LINT_TO_INT(g_time_s - ts_at_sink[i]) - dd_lift_s - trip_s;
-        IF dur_lasku < 0 THEN dur_lasku := 0; END_IF;
+        vDurLasku := LINT_TO_INT(g_time_s - ts_at_sink[i]) - dd_lift_s - trip_s;
+        IF vDurLasku < 0 THEN vDurLasku := 0; END_IF;
 
         g_event_pending.MsgType := 3;
         g_event_pending.TsHi := LINT_TO_UINT(g_time_s / LINT#65536);
@@ -523,26 +523,26 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
         g_event_pending.Payload[3]  := i;                                                     (* transporter *)
         g_event_pending.Payload[4]  := LINT_TO_INT(ts_at_lift[i] - ts_task_start[i]);         (* siirto nostoasemalle *)
         g_event_pending.Payload[5]  := LINT_TO_INT(ts_lift_begin[i] - ts_at_lift[i]);         (* odotus ennen nostoa (max(treat,dev_delay)) *)
-        g_event_pending.Payload[6]  := dur_nosto;                                             (* nosto *)
+        g_event_pending.Payload[6]  := vDurNosto;                                             (* nosto *)
         g_event_pending.Payload[7]  := dropping_s;                                            (* valutus *)
         g_event_pending.Payload[8]  := trip_s;                                                (* trip close *)
         g_event_pending.Payload[9]  := LINT_TO_INT(ts_at_sink[i] - ts_lift_done[i]);          (* siirto laskuasemalle *)
         g_event_pending.Payload[10] := trip_s;                                                (* trip open *)
-        g_event_pending.Payload[11] := dur_lasku;                                             (* lasku *)
+        g_event_pending.Payload[11] := vDurLasku;                                             (* lasku *)
         g_event_pending.Payload[12] := LINT_TO_INT(g_time_s - ts_task_start[i]);              (* total *)
         g_event_pending_valid := TRUE;
       END_IF;
 
       (* Unit moves from transporter → sink station *)
-      sink_unit_id := g_station_occupancy[i].UnitId;
-      IF sink_unit_id >= 1 THEN
-        FC_STC_UpdateUnitLocation(i_unit := sink_unit_id, i_location := g_transporter[i].SinkStationTarget, i_ntt_primary := g_dispatched_task[i].NttPrimary);
+      vSinkUnitId := g_station_occupancy[i].UnitId;
+      IF vSinkUnitId >= 1 THEN
+        FC_STC_UpdateUnitLocation(iUnit := vSinkUnitId, iLocation := g_transporter[i].SinkStationTarget, iNttPrimary := g_dispatched_task[i].NttPrimary);
       END_IF;
 
       g_transporter[i].Phase := 0;
       g_transporter[i].CurrentTaskFinishTime := 0;
       g_dispatched_task[i].Active := FALSE;
-      FC_STC_TrackMoveTimes(i_trans := i, i_prev := 4, i_new := 0);
+      FC_STC_TrackMoveTimes(iTrans := i, iPrev := 4, iNew := 0);
       g_transporter[i].Status := 3;  (* auto_idle *)
       g_transporter[i].IdleStartTime := g_time_s;  (* move-away idle timer *)
 
@@ -551,63 +551,63 @@ FOR i := 1 TO MAX_TRANSPORTERS DO
 
   (* ── Phase 0 idle: drive back inside limits if outside ────── *)
   IF g_transporter[i].Phase = 0 THEN
-    tmp_x  := g_transporter[i].XPosition;
-    tmp_vx := g_sim_trans[i].XVelocity;
+    vTmpX  := g_transporter[i].XPosition;
+    vTmpVx := g_sim_trans[i].XVelocity;
     (* Use current position as target — XMotion will clamp to nearest limit if outside *)
     IF i = 1 THEN
       fb_x1(
-        delta_t  := i_delta_t,
-        x_target := tmp_x,
+        delta_t  := iDeltaT,
+        x_target := vTmpX,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
         v_max    := Transporters[i].SpeedMax_X,
         t_acc    := Transporters[i].Acceleration_X,
         t_dec    := Transporters[i].Deceleration_X,
-        x_pos    := tmp_x,
-        v_x      := tmp_vx
+        x_pos    := vTmpX,
+        v_x      := vTmpVx
       );
     ELSIF i = 2 THEN
       fb_x2(
-        delta_t  := i_delta_t,
-        x_target := tmp_x,
+        delta_t  := iDeltaT,
+        x_target := vTmpX,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
         v_max    := Transporters[i].SpeedMax_X,
         t_acc    := Transporters[i].Acceleration_X,
         t_dec    := Transporters[i].Deceleration_X,
-        x_pos    := tmp_x,
-        v_x      := tmp_vx
+        x_pos    := vTmpX,
+        v_x      := vTmpVx
       );
     ELSIF i = 3 THEN
       fb_x3(
-        delta_t  := i_delta_t,
-        x_target := tmp_x,
+        delta_t  := iDeltaT,
+        x_target := vTmpX,
         x_min    := g_transporter[i].XMinDriveLimit,
         x_max    := g_transporter[i].XMaxDriveLimit,
         v_max    := Transporters[i].SpeedMax_X,
         t_acc    := Transporters[i].Acceleration_X,
         t_dec    := Transporters[i].Deceleration_X,
-        x_pos    := tmp_x,
-        v_x      := tmp_vx
+        x_pos    := vTmpX,
+        v_x      := vTmpVx
       );
     END_IF;
-    g_transporter[i].XPosition  := tmp_x;
-    g_sim_trans[i].XVelocity := tmp_vx;
+    g_transporter[i].XPosition  := vTmpX;
+    g_sim_trans[i].XVelocity := vTmpVx;
   END_IF;
 
   (* ── Nearest station tracking ──────────────────────────── *)
-  min_dist := 999999999;
-  nearest_num := g_transporter[i].CurrentStation;
-  FOR idx := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
-    IF Stations[idx].TankId <> 0 THEN
-      dx := Stations[idx].XPosition - g_transporter[i].XPosition;
-      IF ABS(dx) < min_dist THEN
-        min_dist := ABS(dx);
-        nearest_num := idx;
+  vMinDist := 999999999;
+  vNearestNum := g_transporter[i].CurrentStation;
+  FOR vIdx := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
+    IF Stations[vIdx].TankId <> 0 THEN
+      dx := Stations[vIdx].XPosition - g_transporter[i].XPosition;
+      IF ABS(dx) < vMinDist THEN
+        vMinDist := ABS(dx);
+        vNearestNum := vIdx;
       END_IF;
     END_IF;
   END_FOR;
-  g_transporter[i].CurrentStation := nearest_num;
+  g_transporter[i].CurrentStation := vNearestNum;
 
   END_IF;  (* active *)
 END_FOR;

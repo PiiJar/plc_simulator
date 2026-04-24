@@ -9,7 +9,7 @@
  *  Manages non-treatment target states for all units.
  *
  *  Structure:
- *  Pass 0 — SNAPSHOT: read unit/batch/station state into snap[]
+ *  Pass 0 — SNAPSHOT: read unit/batch/station state into vSnap[]
  *  Section 1 — PROCESSED: mark last-stage units as PROCESSED
  *  Section 2 — TO_AVOID: clear occupied next-stage stations
  *  Section 3 — TO_LOADING: route one empty unit to loading
@@ -62,82 +62,82 @@ END_VAR
 
 VAR
   (* Snapshot *)
-  snap                      : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitSnapType;
+  vSnap                      : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitSnapType;
   u                         : INT;        (* unit loop index *)
-  has_loading               : BOOL;       (* any unit already has TO_LOADING *)
+  vHasLoading               : BOOL;       (* any unit vAlready has TO_LOADING *)
   (* Section 1+2 *)
   p                         : INT;        (* parallel station loop *)
-  next_stn                  : INT;        (* next stage station *)
-  occ_uid                   : INT;        (* unit_id at an occupied station *)
-  free_found                : BOOL;       (* any next-stage station is free *)
-  avoid_uid                 : INT;        (* unit to mark TO_AVOID *)
+  vNextStn                  : INT;        (* next stage station *)
+  vOccUid                   : INT;        (* unit_id at an occupied station *)
+  vFreeFound                : BOOL;       (* any next-stage station is free *)
+  vAvoidUid                 : INT;        (* unit to mark TO_AVOID *)
   (* Section 3 *)
-  load_free                 : BOOL;       (* a loading station is free *)
-  load_uid                  : INT;        (* best candidate for TO_LOADING *)
-  load_in_buf               : BOOL;       (* current candidate is in buffer *)
-  stk                       : INT;        (* station loop *)
+  vLoadFree                 : BOOL;       (* a loading station is free *)
+  vLoadUid                  : INT;        (* best candidate for TO_LOADING *)
+  vLoadInBuf               : BOOL;       (* current candidate is in buffer *)
+  vStk                       : INT;        (* station loop *)
   op                        : INT;        (* station operation code *)
 END_VAR
 
   (* ════════════════════════════════════════════════════════════
      Pass 0 — SNAPSHOT: collect per-unit state in one pass
      ════════════════════════════════════════════════════════════ *)
-  has_loading := FALSE;
+  vHasLoading := FALSE;
 
   FOR u := 1 TO MAX_UNITS DO
-    snap[u].IsActive := g_unit[u].Status <> NOT_USED;
-    IF NOT snap[u].IsActive THEN
+    vSnap[u].IsActive := g_unit[u].Status <> NOT_USED;
+    IF NOT vSnap[u].IsActive THEN
       CONTINUE;
     END_IF;
 
-    snap[u].Location       := g_unit[u].location;
-    snap[u].Target       := g_unit[u].Target;
-    snap[u].HasBatch := g_batch[u].BatchCode <> 0;
-    snap[u].BatchState    := g_batch[u].State;
-    snap[u].CurStage := g_batch[u].CurStage;
+    vSnap[u].Location       := g_unit[u].vLocation;
+    vSnap[u].Target       := g_unit[u].Target;
+    vSnap[u].HasBatch := g_batch[u].BatchCode <> 0;
+    vSnap[u].BatchState    := g_batch[u].State;
+    vSnap[u].CurStage := g_batch[u].CurStage;
 
-    snap[u].OnStation := snap[u].Location >= MIN_STATION_INDEX
-                          AND snap[u].Location <= MAX_STATION_INDEX;
-    IF snap[u].OnStation THEN
-      snap[u].LocationOp    := Stations[snap[u].Location].StationType;
-      snap[u].InBuffer := snap[u].LocationOp >= OP_BUFFER AND snap[u].LocationOp <= OP_BUFFER_PROCESSED;
-      IF g_station_occupancy[snap[u].Location].ChangeTime > 0 THEN
-        snap[u].Elapsed := g_time_s - g_station_occupancy[snap[u].Location].ChangeTime;
+    vSnap[u].OnStation := vSnap[u].Location >= MIN_STATION_INDEX
+                          AND vSnap[u].Location <= MAX_STATION_INDEX;
+    IF vSnap[u].OnStation THEN
+      vSnap[u].LocationOp    := Stations[vSnap[u].Location].StationType;
+      vSnap[u].InBuffer := vSnap[u].LocationOp >= OP_BUFFER AND vSnap[u].LocationOp <= OP_BUFFER_PROCESSED;
+      IF g_station_occupancy[vSnap[u].Location].ChangeTime > 0 THEN
+        vSnap[u].Elapsed := g_time_s - g_station_occupancy[vSnap[u].Location].ChangeTime;
       ELSE
-        snap[u].Elapsed := 0;
+        vSnap[u].Elapsed := 0;
       END_IF;
-      IF snap[u].CurStage >= 1 THEN
-        snap[u].CalTime := TreatmentPrograms[u].Steps[snap[u].CurStage].CalTime;
+      IF vSnap[u].CurStage >= 1 THEN
+        vSnap[u].CalTime := TreatmentPrograms[u].Steps[vSnap[u].CurStage].CalTime;
       ELSE
-        snap[u].CalTime := 0;
+        vSnap[u].CalTime := 0;
       END_IF;
     ELSE
-      snap[u].LocationOp    := 0;
-      snap[u].InBuffer := FALSE;
-      snap[u].Elapsed   := 0;
-      snap[u].CalTime       := 0;
+      vSnap[u].LocationOp    := 0;
+      vSnap[u].InBuffer := FALSE;
+      vSnap[u].Elapsed   := 0;
+      vSnap[u].CalTime       := 0;
     END_IF;
 
-    IF snap[u].Target = TO_LOADING THEN
-      has_loading := TRUE;
+    IF vSnap[u].Target = TO_LOADING THEN
+      vHasLoading := TRUE;
     END_IF;
   END_FOR;
 
   (* ════════════════════════════════════════════════════════════
-     Section 1 — PROCESSED: mark batch done at last treatment stage
+     Section 1 — PROCESSED: mark batch vDone at last treatment stage
      ════════════════════════════════════════════════════════════ *)
   FOR u := 1 TO MAX_UNITS DO
-    IF NOT snap[u].IsActive OR NOT snap[u].HasBatch THEN
+    IF NOT vSnap[u].IsActive OR NOT vSnap[u].HasBatch THEN
       CONTINUE;
     END_IF;
-    IF snap[u].BatchState <> IN_PROCESS OR NOT snap[u].OnStation THEN
+    IF vSnap[u].BatchState <> IN_PROCESS OR NOT vSnap[u].OnStation THEN
       CONTINUE;
     END_IF;
-    IF snap[u].CurStage >= 1 AND snap[u].CurStage < MAX_STEPS_PER_PROGRAM THEN
-      IF snap[u].CurStage >= TreatmentPrograms[u].StepCount THEN
-        IF snap[u].Elapsed > 0 AND snap[u].Elapsed >= DINT_TO_LINT(snap[u].CalTime) THEN
+    IF vSnap[u].CurStage >= 1 AND vSnap[u].CurStage < MAX_STEPS_PER_PROGRAM THEN
+      IF vSnap[u].CurStage >= TreatmentPrograms[u].StepCount THEN
+        IF vSnap[u].Elapsed > 0 AND vSnap[u].Elapsed >= DINT_TO_LINT(vSnap[u].CalTime) THEN
           g_batch[u].State := PROCESSED;
-          snap[u].BatchState   := PROCESSED;  (* update snapshot *)
+          vSnap[u].BatchState   := PROCESSED;  (* update snapshot *)
 
           (* ── Emit BATCH_COMPLETED event (msg_type=5) ── *)
           IF NOT g_event_pending_valid THEN
@@ -147,7 +147,7 @@ END_VAR
             g_event_pending.Payload[1]  := u;                                  (* unit_id *)
             g_event_pending.Payload[2]  := g_batch[u].BatchCode;               (* batch_code *)
             g_event_pending.Payload[3]  := TreatmentPrograms[u].StepCount;             (* stage_count *)
-            g_event_pending.Payload[4]  := snap[u].Location;                   (* final_station *)
+            g_event_pending.Payload[4]  := vSnap[u].Location;                   (* final_station *)
             g_event_pending.Payload[5]  := 0;
             g_event_pending.Payload[6]  := 0;
             g_event_pending.Payload[7]  := 0;
@@ -160,9 +160,9 @@ END_VAR
           END_IF;
 
           (* Route to unloading station *)
-          IF snap[u].Target = TO_NONE THEN
+          IF vSnap[u].Target = TO_NONE THEN
             g_unit[u].Target := TO_UNLOAD;
-            snap[u].Target   := TO_UNLOAD;
+            vSnap[u].Target   := TO_UNLOAD;
           END_IF;
         END_IF;
       END_IF;
@@ -173,36 +173,36 @@ END_VAR
      Section 2 — TO_AVOID: clear the way to next treatment station
      ════════════════════════════════════════════════════════════ *)
   FOR u := 1 TO MAX_UNITS DO
-    IF NOT snap[u].IsActive OR NOT snap[u].HasBatch THEN
+    IF NOT vSnap[u].IsActive OR NOT vSnap[u].HasBatch THEN
       CONTINUE;
     END_IF;
-    IF snap[u].BatchState <> IN_PROCESS THEN
+    IF vSnap[u].BatchState <> IN_PROCESS THEN
       CONTINUE;
     END_IF;
-    IF snap[u].CurStage < 1 OR snap[u].CurStage >= MAX_STEPS_PER_PROGRAM THEN
+    IF vSnap[u].CurStage < 1 OR vSnap[u].CurStage >= MAX_STEPS_PER_PROGRAM THEN
       CONTINUE;
     END_IF;
-    IF snap[u].CurStage >= TreatmentPrograms[u].StepCount THEN
+    IF vSnap[u].CurStage >= TreatmentPrograms[u].StepCount THEN
       CONTINUE;  (* no next stage *)
     END_IF;
 
     (* — Pass 1: any next-stage station free or being cleared? — *)
-    free_found := FALSE;
-    avoid_uid  := 0;
+    vFreeFound := FALSE;
+    vAvoidUid  := 0;
     FOR p := 0 TO MAX_STATIONS_PER_STEP - 1 DO
-      next_stn := TreatmentPrograms[u].Steps[snap[u].CurStage + 1].Stations[p];
-      IF next_stn = 0 THEN
+      vNextStn := TreatmentPrograms[u].Steps[vSnap[u].CurStage + 1].Stations[p];
+      IF vNextStn = 0 THEN
         EXIT;
       END_IF;
-      IF next_stn >= MIN_STATION_INDEX AND next_stn <= MAX_STATION_INDEX THEN
-        IF g_station_occupancy[next_stn].UnitId = 0 THEN
-          free_found := TRUE;
+      IF vNextStn >= MIN_STATION_INDEX AND vNextStn <= MAX_STATION_INDEX THEN
+        IF g_station_occupancy[vNextStn].UnitId = 0 THEN
+          vFreeFound := TRUE;
           EXIT;
         END_IF;
-        occ_uid := g_station_occupancy[next_stn].UnitId;
-        IF occ_uid >= 1 AND occ_uid <= MAX_UNITS THEN
-          IF snap[occ_uid].Target = TO_AVOID THEN
-            free_found := TRUE;
+        vOccUid := g_station_occupancy[vNextStn].UnitId;
+        IF vOccUid >= 1 AND vOccUid <= MAX_UNITS THEN
+          IF vSnap[vOccUid].Target = TO_AVOID THEN
+            vFreeFound := TRUE;
             EXIT;
           END_IF;
         END_IF;
@@ -210,26 +210,26 @@ END_VAR
     END_FOR;
 
     (* — Pass 2: all occupied → mark ONE movable unit TO_AVOID — *)
-    IF NOT free_found THEN
+    IF NOT vFreeFound THEN
       FOR p := 0 TO MAX_STATIONS_PER_STEP - 1 DO
-        next_stn := TreatmentPrograms[u].Steps[snap[u].CurStage + 1].Stations[p];
-        IF next_stn = 0 THEN
+        vNextStn := TreatmentPrograms[u].Steps[vSnap[u].CurStage + 1].Stations[p];
+        IF vNextStn = 0 THEN
           EXIT;
         END_IF;
-        IF next_stn >= MIN_STATION_INDEX AND next_stn <= MAX_STATION_INDEX THEN
-          occ_uid := g_station_occupancy[next_stn].UnitId;
-          IF occ_uid >= 1 AND occ_uid <= MAX_UNITS THEN
-            IF NOT snap[occ_uid].HasBatch AND snap[occ_uid].Target = TO_NONE THEN
-              avoid_uid := occ_uid;
+        IF vNextStn >= MIN_STATION_INDEX AND vNextStn <= MAX_STATION_INDEX THEN
+          vOccUid := g_station_occupancy[vNextStn].UnitId;
+          IF vOccUid >= 1 AND vOccUid <= MAX_UNITS THEN
+            IF NOT vSnap[vOccUid].HasBatch AND vSnap[vOccUid].Target = TO_NONE THEN
+              vAvoidUid := vOccUid;
               EXIT;
             END_IF;
           END_IF;
         END_IF;
       END_FOR;
 
-      IF avoid_uid >= 1 THEN
-        g_unit[avoid_uid].Target := TO_AVOID;
-        snap[avoid_uid].Target     := TO_AVOID;  (* update snapshot *)
+      IF vAvoidUid >= 1 THEN
+        g_unit[vAvoidUid].Target := TO_AVOID;
+        vSnap[vAvoidUid].Target     := TO_AVOID;  (* update snapshot *)
       END_IF;
     END_IF;
   END_FOR;
@@ -237,45 +237,45 @@ END_VAR
   (* ════════════════════════════════════════════════════════════
      Section 3 — TO_LOADING: route one empty unit to loading station
      ════════════════════════════════════════════════════════════ *)
-  IF g_production_queue = 1 AND NOT has_loading THEN
+  IF g_production_queue = 1 AND NOT vHasLoading THEN
 
     (* Check if any loading station is free *)
-    load_free := FALSE;
-    FOR stk := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
-      op := Stations[stk].StationType;
+    vLoadFree := FALSE;
+    FOR vStk := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
+      op := Stations[vStk].StationType;
       IF (op = OP_LOADING OR op = OP_LOADING_UNLOADING)
-         AND g_station_occupancy[stk].UnitId = 0 THEN
-        load_free := TRUE;
+         AND g_station_occupancy[vStk].UnitId = 0 THEN
+        vLoadFree := TRUE;
         EXIT;
       END_IF;
     END_FOR;
 
-    IF load_free THEN
-      load_uid    := 0;
-      load_in_buf := FALSE;
+    IF vLoadFree THEN
+      vLoadUid    := 0;
+      vLoadInBuf := FALSE;
       FOR u := 1 TO MAX_UNITS DO
-        IF snap[u].IsActive AND NOT snap[u].HasBatch
-           AND snap[u].Target = TO_NONE AND snap[u].OnStation THEN
-          IF snap[u].InBuffer THEN
-            IF load_uid = 0 THEN
-              load_uid    := u;
-              load_in_buf := TRUE;
+        IF vSnap[u].IsActive AND NOT vSnap[u].HasBatch
+           AND vSnap[u].Target = TO_NONE AND vSnap[u].OnStation THEN
+          IF vSnap[u].InBuffer THEN
+            IF vLoadUid = 0 THEN
+              vLoadUid    := u;
+              vLoadInBuf := TRUE;
             END_IF;
           ELSE
-            IF load_uid = 0 OR load_in_buf THEN
-              load_uid    := u;
-              load_in_buf := FALSE;
+            IF vLoadUid = 0 OR vLoadInBuf THEN
+              vLoadUid    := u;
+              vLoadInBuf := FALSE;
             END_IF;
           END_IF;
         END_IF;
       END_FOR;
 
-      IF load_uid >= 1 THEN
-        g_unit[load_uid].Target := TO_LOADING;
+      IF vLoadUid >= 1 THEN
+        g_unit[vLoadUid].Target := TO_LOADING;
       END_IF;
-    END_IF; (* load_free *)
+    END_IF; (* vLoadFree *)
 
-  END_IF; (* production_queue AND NOT has_loading *)
+  END_IF; (* production_queue AND NOT vHasLoading *)
 
   FC_STC_NoTreatmentStates := TRUE;
 

@@ -31,14 +31,14 @@ FUNCTION FC_DEP_Sandbox : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_cmd                     : INT;
+  iCmd                     : INT;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_UNITS, 3=MAX_TRANSPORTERS *)
-  io_wk_schedule            : ARRAY[1..10] OF UDT_JC_TskScheduleType;
-  io_wk_batch               : ARRAY[1..10] OF UDT_BatchType;
-  io_wk_program             : ARRAY[1..10] OF UDT_TreatmentProgramType;
-  io_wk_task                : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioWkSchedule            : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  ioWkBatch               : ARRAY[1..10] OF UDT_BatchType;
+  ioWkProgram             : ARRAY[1..10] OF UDT_TreatmentProgramType;
+  ioWkTask                : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -59,28 +59,28 @@ END_VAR
 
 FC_DEP_Sandbox := TRUE;
 
-IF i_cmd = 1 THEN
+IF iCmd = 1 THEN
   (* SNAPSHOT: clear workspace, then copy live batch+program *)
   FOR ui := 1 TO MAX_UNITS DO
-    io_wk_schedule[ui].StageCount := 0;
-    io_wk_batch[ui]    := g_batch[ui];
-    io_wk_program[ui]  := TreatmentPrograms[ui];
+    ioWkSchedule[ui].StageCount := 0;
+    ioWkBatch[ui]    := g_batch[ui];
+    ioWkProgram[ui]  := TreatmentPrograms[ui];
   END_FOR;
   FOR ui := 1 TO MAX_TRANSPORTERS DO
-    io_wk_task[ui].Count := 0;
+    ioWkTask[ui].Count := 0;
   END_FOR;
-ELSIF i_cmd = 2 THEN
+ELSIF iCmd = 2 THEN
   (* RESTORE: workspace batch+program → live (for REJECT rollback) *)
   FOR ui := 1 TO MAX_UNITS DO
-    IF io_wk_batch[ui].BatchCode > 0 THEN
-      g_batch[ui] := io_wk_batch[ui];
+    IF ioWkBatch[ui].BatchCode > 0 THEN
+      g_batch[ui] := ioWkBatch[ui];
     END_IF;
-    IF io_wk_program[ui].ProgramId > 0 THEN
-      TreatmentPrograms[ui] := io_wk_program[ui];
+    IF ioWkProgram[ui].ProgramId > 0 THEN
+      TreatmentPrograms[ui] := ioWkProgram[ui];
     END_IF;
   END_FOR;
-ELSIF i_cmd = 3 THEN
-  ;  (* CLEAR: nothing needed *)
+ELSIF iCmd = 3 THEN
+  ;  (* CLEAR: nothing vNeeded *)
 
 END_IF;
 

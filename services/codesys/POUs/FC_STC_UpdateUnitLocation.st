@@ -1,19 +1,19 @@
 (* ===========================================================================================
- *  FC_STC_UpdateUnitLocation — Update a unit's location
+ *  FC_STC_UpdateUnitLocation — Update a unit's vLocation
  *
  *  Company : Galvatek part of the John Cockerill Group
  *  Author  : Jarmo Piipponen
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  Sets g_unit[i_unit].location to the given new location.
+ *  Sets g_unit[iUnit].vLocation to the given new vLocation.
  *  Updates g_station_occupancy[].UnitId + ChangeTime for both old
- *  and new locations.
+ *  and new vLocations.
  *
  *  When moving to a station:
  *  - Advances batch CurStage if batch is IN_PROCESS
  *  - Updates batch min/max/cal times from treatment program
- *  - Clears unit target if i_ntt_primary = 1
+ *  - Clears unit target if iNttPrimary = 1
  *
  *  ------------------------------------------------------------------------------------------
  *
@@ -30,9 +30,9 @@ FUNCTION FC_STC_UpdateUnitLocation : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_unit                    : INT;   (* unit number to update *)
-  i_location                : INT;   (* new location: <100 = transporter id, >=100 = station number *)
-  i_ntt_primary             : INT;   (* 1 = sink is NTT primary → clear target, 0 = don't clear *)
+  iUnit                    : INT;   (* unit number to update *)
+  iLocation                : INT;   (* new vLocation: <100 = transporter id, >=100 = station number *)
+  iNttPrimary             : INT;   (* 1 = sink is NTT primary → clear target, 0 = don't clear *)
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -58,69 +58,69 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  old_loc                   : INT;
-  new_stg                   : INT;
+  vOldLoc                   : INT;
+  vNewStg                   : INT;
 END_VAR
 
-IF (i_unit >= 1) AND (i_unit <= MAX_UNITS) THEN
-  old_loc := g_unit[i_unit].location;
+IF (iUnit >= 1) AND (iUnit <= MAX_UNITS) THEN
+  vOldLoc := g_unit[iUnit].vLocation;
 
-  (* --- Clear unit_id from old location (unified: transporter or station) --- *)
-  IF (old_loc >= 1) AND (old_loc <= MAX_STATION_INDEX) THEN
-    g_station_occupancy[old_loc].UnitId     := 0;
-    g_station_occupancy[old_loc].ChangeTime := g_time_s;
+  (* --- Clear unit_id from old vLocation (unified: transporter or station) --- *)
+  IF (vOldLoc >= 1) AND (vOldLoc <= MAX_STATION_INDEX) THEN
+    g_station_occupancy[vOldLoc].UnitId     := 0;
+    g_station_occupancy[vOldLoc].ChangeTime := g_time_s;
   END_IF;
 
-  (* --- Update unit location --- *)
-  g_unit[i_unit].location := i_location;
+  (* --- Update unit vLocation --- *)
+  g_unit[iUnit].vLocation := iLocation;
 
-  (* --- Set unit_id on new location (unified: transporter or station) --- *)
-  IF (i_location >= 1) AND (i_location <= MAX_STATION_INDEX) THEN
-    g_station_occupancy[i_location].UnitId     := i_unit;
-    g_station_occupancy[i_location].ChangeTime := g_time_s;
+  (* --- Set unit_id on new vLocation (unified: transporter or station) --- *)
+  IF (iLocation >= 1) AND (iLocation <= MAX_STATION_INDEX) THEN
+    g_station_occupancy[iLocation].UnitId     := iUnit;
+    g_station_occupancy[iLocation].ChangeTime := g_time_s;
 
     (* Station-specific: batch stage advance only when landing on a station *)
-    IF (i_location >= MIN_STATION_INDEX) THEN
+    IF (iLocation >= MIN_STATION_INDEX) THEN
 
     (* Advance batch stage if unit is USED with an active batch *)
-    IF (g_unit[i_unit].Status = USED)  (* USED *)
-       AND (g_batch[i_unit].BatchCode <> 0)
-       AND (g_batch[i_unit].State = IN_PROCESS)
-       AND (g_batch[i_unit].CurStage < MAX_STEPS_PER_PROGRAM) THEN
-      g_batch[i_unit].CurStage := g_batch[i_unit].CurStage + 1;
+    IF (g_unit[iUnit].Status = USED)  (* USED *)
+       AND (g_batch[iUnit].BatchCode <> 0)
+       AND (g_batch[iUnit].State = IN_PROCESS)
+       AND (g_batch[iUnit].CurStage < MAX_STEPS_PER_PROGRAM) THEN
+      g_batch[iUnit].CurStage := g_batch[iUnit].CurStage + 1;
 
       (* Stamp arrival time on new station — used by CalcSchedule for elapsed calculation *)
-      g_batch[i_unit].StartTime := g_time_s;
+      g_batch[iUnit].StartTime := g_time_s;
 
       (* Update batch treatment times from program for the new stage *)
-      IF (TreatmentPrograms[i_unit].ProgramId = g_batch[i_unit].ProgId)
-         AND (TreatmentPrograms[i_unit].ProgramId > 0) THEN
-        new_stg := g_batch[i_unit].CurStage;
-        IF (new_stg >= 1) AND (new_stg <= MAX_STEPS_PER_PROGRAM) THEN
-          g_batch[i_unit].MinTime := TreatmentPrograms[i_unit].Steps[new_stg].MinTime;
-          g_batch[i_unit].MaxTime := TreatmentPrograms[i_unit].Steps[new_stg].MaxTime;
-          g_batch[i_unit].CalTime := TreatmentPrograms[i_unit].Steps[new_stg].CalTime;
+      IF (TreatmentPrograms[iUnit].ProgramId = g_batch[iUnit].ProgId)
+         AND (TreatmentPrograms[iUnit].ProgramId > 0) THEN
+        vNewStg := g_batch[iUnit].CurStage;
+        IF (vNewStg >= 1) AND (vNewStg <= MAX_STEPS_PER_PROGRAM) THEN
+          g_batch[iUnit].MinTime := TreatmentPrograms[iUnit].Steps[vNewStg].MinTime;
+          g_batch[iUnit].MaxTime := TreatmentPrograms[iUnit].Steps[vNewStg].MaxTime;
+          g_batch[iUnit].CalTime := TreatmentPrograms[iUnit].Steps[vNewStg].CalTime;
         END_IF;
       END_IF;
     END_IF;
 
     (* NOT_PROCESSED batch on station: clear times so UI shows no progress bar *)
-    IF (g_batch[i_unit].BatchCode <> 0)
-       AND (g_batch[i_unit].State <> IN_PROCESS) THEN
-      g_batch[i_unit].MinTime   := 0;
-      g_batch[i_unit].CalTime   := 0;
-      g_batch[i_unit].MaxTime   := 32000;  (* ~8.9 h cap, INT max safe *)
-      g_batch[i_unit].StartTime := g_time_s;
+    IF (g_batch[iUnit].BatchCode <> 0)
+       AND (g_batch[iUnit].State <> IN_PROCESS) THEN
+      g_batch[iUnit].MinTime   := 0;
+      g_batch[iUnit].CalTime   := 0;
+      g_batch[iUnit].MaxTime   := 32000;  (* ~8.9 h cap, INT max safe *)
+      g_batch[iUnit].StartTime := g_time_s;
     END_IF;
 
-    (* Clear unit target ONLY when i_ntt_primary = 1 (primary NTT destination).
+    (* Clear unit target ONLY when iNttPrimary = 1 (primary NTT destination).
        All other cases: keep target so NTT retries primary later. *)
-    IF g_unit[i_unit].Target <> TO_NONE AND i_ntt_primary > 0 THEN
-      g_unit[i_unit].Target := TO_NONE;  (* primary reached → clear *)
+    IF g_unit[iUnit].Target <> TO_NONE AND iNttPrimary > 0 THEN
+      g_unit[iUnit].Target := TO_NONE;  (* primary reached → clear *)
     END_IF;
 
-    END_IF; (* i_location >= MIN_STATION_INDEX — station-specific block *)
-  END_IF; (* i_location valid *)
+    END_IF; (* iLocation >= MIN_STATION_INDEX — station-specific block *)
+  END_IF; (* iLocation valid *)
 END_IF;
 
 FC_STC_UpdateUnitLocation := TRUE;

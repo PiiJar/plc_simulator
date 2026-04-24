@@ -6,7 +6,7 @@
  *  Created : 08.04.2026
  *
  * -------------------------------------------------------------------------------------------
- *  Encapsulates everything that is simulation-only and NOT needed in production:
+ *  Encapsulates everything that is simulation-only and NOT vNeeded in production:
  *    - OPC UA command handler (init / clear)
  *    - System time calculation (g_time_s via offset from gateway sync)
  *    - TWA calculation
@@ -77,20 +77,20 @@ VAR_EXTERNAL
 END_VAR
 
 VAR_OUTPUT
-  o_init_done               : BOOL;
+  oInitDone               : BOOL;
 END_VAR
 
 VAR
-  init_done                 : BOOL := FALSE;
+  vInitDone                 : BOOL := FALSE;
   i                         : INT;
-  clear_cfg                 : FB_SIM_ClearConfig;
-  run_tasks                 : FB_SIM_RunTasks;
-  evt_queue                 : FB_SIM_EventQueue;
-  now_ms                    : LINT := 0;
-  prev_ms                   : UDINT := 0;
+  vFB_ClearConfig                 : FB_SIM_ClearConfig;
+  vFB_RunTasks                 : FB_SIM_RunTasks;
+  vFB_EventQueue                 : FB_SIM_EventQueue;
+  vNowMs                    : LINT := 0;
+  vPrevMs                   : UDINT := 0;
   sim_delta_t               : REAL := 0.02;
-  prev_tsk_phase            : INT := 0;
-  prev_dep_phase            : INT := 0;
+  vPrevTskPhase            : INT := 0;
+  vPrevDepPhase            : INT := 0;
 END_VAR
 
 
@@ -103,12 +103,12 @@ IF g_cmd_code <> 0 THEN
 
   IF g_cmd_code = 3 THEN
     (* ── Clear all config data ── *)
-    clear_cfg();
-    init_done := FALSE;
+    vFB_ClearConfig();
+    vInitDone := FALSE;
     CountStations := 0;
 
   ELSIF g_cmd_code = 2 THEN
-    (* ── Finish init: all config already uploaded via OPC UA ── *)
+    (* ── Finish init: all config vAlready uploaded via OPC UA ── *)
     CountStations := g_cmd_param;
 
     FOR i := 1 TO MAX_TRANSPORTERS DO
@@ -127,25 +127,25 @@ IF g_cmd_code <> 0 THEN
       g_transporter[i].XMinDriveLimit := Transporters[i].DrivePosMin;
       g_transporter[i].XMaxDriveLimit := Transporters[i].DrivePosMax;
 
-      (* Start position: at own area minimum, z=0 *)
+      (* Start position: at own vArea minimum, z=0 *)
       g_transporter[i].XPosition := Transporters[i].DrivePosMin;
       g_transporter[i].ZPosition := 0;
       g_transporter[i].CurrentStation := 0;
     END_FOR;
 
-    init_done := TRUE;
+    vInitDone := TRUE;
 
     (* Calculate time offset: real unix time - uptime *)
     g_time_offset := g_time_sync - UDINT_TO_LINT(SysTimeGetMs()) / 1000;
 
-    (* Build g_station_occupancy from g_unit[].location so FB_SIM_RunTasks
+    (* Build g_station_occupancy from g_unit[].vLocation so FB_SIM_RunTasks
        can find units on stations via g_station_occupancy[stn].UnitId.
        Gateway writes g_unit[] but not g_station_occupancy[]. *)
     FOR i := 1 TO MAX_UNITS DO
-      IF g_unit[i].location >= MIN_STATION_INDEX
-         AND g_unit[i].location <= MAX_STATION_INDEX THEN
-        g_station_occupancy[g_unit[i].location].UnitId     := i;
-        g_station_occupancy[g_unit[i].location].ChangeTime  := g_time_s;
+      IF g_unit[i].vLocation >= MIN_STATION_INDEX
+         AND g_unit[i].vLocation <= MAX_STATION_INDEX THEN
+        g_station_occupancy[g_unit[i].vLocation].UnitId     := i;
+        g_station_occupancy[g_unit[i].vLocation].ChangeTime  := g_time_s;
       END_IF;
     END_FOR;
 
@@ -159,45 +159,45 @@ IF g_cmd_code <> 0 THEN
 END_IF;
 
 (* ============================================================
-   MAIN TRANSPORT CYCLE — only runs when init_done
+   MAIN TRANSPORT CYCLE — only runs when vInitDone
    ============================================================ *)
-IF init_done THEN
+IF vInitDone THEN
 
   (* ── System time: uptime + offset = real unix seconds ── *)
-  now_ms := UDINT_TO_LINT(SysTimeGetMs());
-  g_time_s := g_time_offset + now_ms / 1000;        (* seconds, unix epoch *)
-  g_time_100ms := g_time_offset * 10 + now_ms / 100; (* 0.1s ticks, unix epoch *)
+  vNowMs := UDINT_TO_LINT(SysTimeGetMs());
+  g_time_s := g_time_offset + vNowMs / 1000;        (* seconds, unix epoch *)
+  g_time_100ms := g_time_offset * 10 + vNowMs / 100; (* 0.1s ticks, unix epoch *)
 
   (* ── Actual cycle time for physics simulation ── *)
-  IF prev_ms > 0 THEN
-    sim_delta_t := UDINT_TO_REAL(LINT_TO_UDINT(now_ms) - prev_ms) / 1000.0;
+  IF vPrevMs > 0 THEN
+    sim_delta_t := UDINT_TO_REAL(LINT_TO_UDINT(vNowMs) - vPrevMs) / 1000.0;
   END_IF;
-  prev_ms := LINT_TO_UDINT(now_ms);
+  vPrevMs := LINT_TO_UDINT(vNowMs);
 
   (* ── Execute transporter tasks (physics simulation) ── *)
-  run_tasks(i_run := init_done, i_delta_t := sim_delta_t);
+  vFB_RunTasks(iRun := vInitDone, iDeltaT := sim_delta_t);
 
-END_IF;  (* init_done *)
+END_IF;  (* vInitDone *)
 
-o_init_done := init_done;
+oInitDone := vInitDone;
 
 (* ── UI schedule snapshot — copy stable data for gateway reads ── *)
-IF g_sched_dbg_tsk_phase = 10000 AND prev_tsk_phase <> 10000 THEN
+IF g_sched_dbg_tsk_phase = 10000 AND vPrevTskPhase <> 10000 THEN
   g_sim_ui_schedule := g_schedule;
   g_sim_ui_task     := g_task;
 END_IF;
-IF g_sched_dbg_dep_phase = 8000 AND prev_dep_phase <> 8000 THEN
+IF g_sched_dbg_dep_phase = 8000 AND vPrevDepPhase <> 8000 THEN
   g_sim_ui_wait_unit   := 0;
   g_sim_ui_wait_reason := 0;
 END_IF;
-IF g_sched_dbg_dep_phase = 9000 AND prev_dep_phase <> 9000 THEN
+IF g_sched_dbg_dep_phase = 9000 AND vPrevDepPhase <> 9000 THEN
   g_sim_ui_wait_unit   := g_sched_dbg_dep_cur_wait_unit;
   g_sim_ui_wait_reason := 1;
 END_IF;
-prev_tsk_phase := g_sched_dbg_tsk_phase;
-prev_dep_phase := g_sched_dbg_dep_phase;
+vPrevTskPhase := g_sched_dbg_tsk_phase;
+vPrevDepPhase := g_sched_dbg_dep_phase;
 
-(* ── Event queue — always runs, not gated by init_done ── *)
-evt_queue();
+(* ── Event queue — always runs, not gated by vInitDone ── *)
+vFB_EventQueue();
 
 END_FUNCTION_BLOCK

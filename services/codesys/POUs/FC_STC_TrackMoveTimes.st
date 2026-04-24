@@ -1,12 +1,12 @@
 (* ===========================================================================================
- *  FC_STC_TrackMoveTimes — Record phase transition timestamps
+ *  FC_STC_TrackMoveTimes — Record vPhase transition timestamps
  *
  *  Company : Galvatek part of the John Cockerill Group
  *  Author  : Jarmo Piipponen
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  Called from SIM code at each transporter phase change.
+ *  Called from SIM code at each transporter vPhase change.
  *  Uses g_time_100ms (0.1s ticks). On 4→0 completion,
  *  calculates net durations and updates g_move[] with
  *  weighted average: new = (old * 4 + measured) / 5.
@@ -26,9 +26,9 @@ FUNCTION FC_STC_TrackMoveTimes : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_trans                   : INT;   (* transporter index 1..MAX_TRANSPORTERS *)
-  i_prev                    : INT;   (* previous phase *)
-  i_new                     : INT;   (* new phase *)
+  iTrans                   : INT;   (* transporter index 1..MAX_TRANSPORTERS *)
+  iPrev                    : INT;   (* previous vPhase *)
+  iNew                     : INT;   (* new vPhase *)
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -49,31 +49,31 @@ END_VAR
 
 VAR
   t                         : INT;
-  lift_stn                  : INT;
-  sink_stn                  : INT;
-  start_stn                 : INT;
+  vLiftStn                  : INT;
+  vSinkStn                  : INT;
+  vStartStn                 : INT;
   li                        : INT;   (* lift station index = stn - 100 *)
   si                        : INT;   (* sink station index = stn - 100 *)
   st_i                      : INT;   (* start station index = stn - 100 *)
-  raw_lift                  : INT;   (* measured lift duration in 0.1s ticks *)
-  raw_sink                  : INT;   (* measured sink duration in 0.1s ticks *)
-  raw_trav1                 : INT;   (* measured travel start→lift in 0.1s ticks *)
-  raw_trav2                 : INT;   (* measured travel lift→sink in 0.1s ticks *)
+  raw_lift                  : INT;   (* measured lift vDuration in 0.1s ticks *)
+  raw_sink                  : INT;   (* measured sink vDuration in 0.1s ticks *)
+  raw_trav1                 : INT;   (* measured vTravel start→lift in 0.1s ticks *)
+  raw_trav2                 : INT;   (* measured vTravel lift→sink in 0.1s ticks *)
   drip_x10                  : INT;   (* DrippingTime in 0.1s ticks from lift station *)
   tray_x10                  : INT;   (* DripTrayDelay in 0.1s ticks from transporter config *)
   dev_x10                   : INT;   (* DeviceDelay in 0.1s ticks from sink station *)
 END_VAR
 
-t := i_trans;
+t := iTrans;
 
 (* Bounds check *)
 IF t < 1 OR t > MAX_TRANSPORTERS THEN
     RETURN;
 END_IF;
 
-CASE i_prev OF
+CASE iPrev OF
     0: (* 0→1 : siirto nostoasemalle alkaa *)
-        IF i_new = 1 THEN
+        IF iNew = 1 THEN
             g_actual_move[t].StartStation := g_transporter[t].CurrentStation;
             g_actual_move[t].LiftStation  := g_transporter[t].LiftStationTarget;
             g_actual_move[t].SinkStation  := g_transporter[t].SinkStationTarget;
@@ -81,22 +81,22 @@ CASE i_prev OF
             g_actual_move[t].Invalidated := FALSE;
         END_IF;
     1: (* 1→2 : nosto alkaa *)
-        IF i_new = 2 THEN
+        IF iNew = 2 THEN
             g_actual_move[t].ts1 := g_time_100ms;
         END_IF;
     2: (* 2→3 : siirto laskuasemalle alkaa *)
-        IF i_new = 3 THEN
+        IF iNew = 3 THEN
             g_actual_move[t].ts2 := g_time_100ms;
         END_IF;
     3: (* 3→4 : lasku alkaa *)
-        IF i_new = 4 THEN
+        IF iNew = 4 THEN
             g_actual_move[t].ts3 := g_time_100ms;
         END_IF;
     4: (* 4→0 : handled after CASE — see below *)
 END_CASE;
 
-(* ── Invalidate on anomaly (checked at every phase transition) ── *)
-IF i_new > 0 THEN
+(* ── Invalidate on anomaly (checked at every vPhase transition) ── *)
+IF iNew > 0 THEN
     (* Not in automatic mode: task interrupted *)
     IF g_transporter[t].Status < 4 THEN
         g_actual_move[t].Invalidated := TRUE;
@@ -108,7 +108,7 @@ IF i_new > 0 THEN
 END_IF;
 
 (* ── 4→0 completion: calculate and update g_move ── *)
-IF i_prev = 4 AND i_new = 0 THEN
+IF iPrev = 4 AND iNew = 0 THEN
     g_actual_move[t].ts4 := g_time_100ms;
 
     (* Only update if all timestamps are valid and transfer was normal *)
@@ -118,19 +118,19 @@ IF i_prev = 4 AND i_new = 0 THEN
        AND g_actual_move[t].ts3 > 0
        AND NOT g_actual_move[t].Invalidated
     THEN
-                lift_stn  := g_actual_move[t].LiftStation;
-                sink_stn  := g_actual_move[t].SinkStation;
-                start_stn := g_actual_move[t].StartStation;
-                li   := lift_stn  - MIN_STATION_INDEX;
-                si   := sink_stn  - MIN_STATION_INDEX;
-                st_i := start_stn - MIN_STATION_INDEX;
+                vLiftStn  := g_actual_move[t].LiftStation;
+                vSinkStn  := g_actual_move[t].SinkStation;
+                vStartStn := g_actual_move[t].StartStation;
+                li   := vLiftStn  - MIN_STATION_INDEX;
+                si   := vSinkStn  - MIN_STATION_INDEX;
+                st_i := vStartStn - MIN_STATION_INDEX;
 
                 (* Mechanical delays in 0.1s ticks *)
-                drip_x10 := Stations[lift_stn].DrippingTime;
+                drip_x10 := Stations[vLiftStn].DrippingTime;
                 tray_x10 := Transporters[t].DripTrayDelay;
-                dev_x10  := Stations[sink_stn].DeviceDelay;
+                dev_x10  := Stations[vSinkStn].DeviceDelay;
 
-                (* Raw durations are already in 0.1s ticks *)
+                (* Raw durations are vAlready in 0.1s ticks *)
                 raw_trav1 := LINT_TO_INT(g_actual_move[t].ts1 - g_actual_move[t].ts0);
                 raw_trav2 := LINT_TO_INT(g_actual_move[t].ts3 - g_actual_move[t].ts2);
 
@@ -163,7 +163,7 @@ IF i_prev = 4 AND i_new = 0 THEN
                     g_move[t].SinkTime[si] :=
                         (g_move[t].SinkTime[si] * 4 + raw_sink) / 5;
 
-                    (* Travel: lift → sink (both directions) — phase 3 is always exact station-to-station *)
+                    (* Travel: lift → sink (both directions) — vPhase 3 is always exact station-to-station *)
                     g_move[t].Travel[li].ToTime[si] :=
                         (g_move[t].Travel[li].ToTime[si] * 4 + raw_trav2) / 5;
                     g_move[t].Travel[si].ToTime[li] :=

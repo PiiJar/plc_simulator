@@ -41,13 +41,13 @@ VAR
   r_pos        : REAL;
   r_vel        : REAL;
   drive_target : REAL;
-  distance     : REAL;
+  vDistance     : REAL;
   dir          : REAL;
   a_acc        : REAL;
   a_dec        : REAL;
   brake_dist   : REAL;
-  new_vel      : REAL;
-  travel       : REAL;
+  vNewVel      : REAL;
+  vTravel       : REAL;
 END_VAR
   (* Convert DINT/INT inputs to REAL for physics *)
   r_target := DINT_TO_REAL(x_target);
@@ -98,7 +98,7 @@ END_VAR
     dir := -1.0;
   END_IF;
 
-  distance := ABS(drive_target - r_pos);
+  vDistance := ABS(drive_target - r_pos);
 
   IF a_dec > 0.0 THEN
     brake_dist := (r_vel * r_vel) / (2.0 * a_dec);
@@ -106,22 +106,22 @@ END_VAR
     brake_dist := 0.0;
   END_IF;
 
-  IF brake_dist >= distance THEN
-    new_vel := r_vel - a_dec * delta_t;
-    IF new_vel < 0.0 THEN new_vel := 0.0; END_IF;
+  IF brake_dist >= vDistance THEN
+    vNewVel := r_vel - a_dec * delta_t;
+    IF vNewVel < 0.0 THEN vNewVel := 0.0; END_IF;
   ELSE
-    new_vel := r_vel + a_acc * delta_t;
-    IF new_vel > r_vmax THEN new_vel := r_vmax; END_IF;
+    vNewVel := r_vel + a_acc * delta_t;
+    IF vNewVel > r_vmax THEN vNewVel := r_vmax; END_IF;
   END_IF;
 
-  travel := new_vel * delta_t;
-  IF travel >= distance THEN
+  vTravel := vNewVel * delta_t;
+  IF vTravel >= vDistance THEN
     x_pos := REAL_TO_DINT(drive_target);
     v_x := 0;
     arrived := TRUE;
   ELSE
-    x_pos := REAL_TO_DINT(r_pos + dir * travel);
-    v_x := REAL_TO_DINT(new_vel);
+    x_pos := REAL_TO_DINT(r_pos + dir * vTravel);
+    v_x := REAL_TO_DINT(vNewVel);
     arrived := FALSE;
   END_IF;
 END_FUNCTION_BLOCK

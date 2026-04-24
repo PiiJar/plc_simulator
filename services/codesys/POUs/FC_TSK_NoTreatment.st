@@ -9,7 +9,7 @@
  *  Scans units with a target and creates transfer tasks
  *  using the g_ntt destination table.
  *
- *  VAR_IN_OUT: io_task — only mutable array (inserts NTT tasks).
+ *  VAR_IN_OUT: ioTask — only mutable array (inserts NTT tasks).
  *  All other globals are read-only via VAR_EXTERNAL.
  *
  *  ------------------------------------------------------------------------------------------
@@ -27,11 +27,11 @@ FUNCTION FC_TSK_NoTreatment : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_time_s                  : LINT;
+  iTimeS                  : LINT;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
-  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -60,51 +60,51 @@ END_VAR
 
 VAR
   ui                        : INT;
-  loc                       : INT;
+  vLoc                       : INT;
   tgt                       : INT;
   cov_t                     : INT;
   ai                        : INT;
-  covers                    : BOOL;
-  done                      : BOOL;
-  dest                      : UDT_JC_NttDestType;
-  ntt_idx                   : INT;
-  on_primary                : BOOL;
-  on_fallback               : BOOL;
-  primary_free              : BOOL;
-  dest_stn                  : INT;
+  vCovers                    : BOOL;
+  vDone                      : BOOL;
+  vDest                      : UDT_JC_NttDestType;
+  vNttIdx                   : INT;
+  vOnPrimary                : BOOL;
+  vOnFallback               : BOOL;
+  vPrimaryFree              : BOOL;
+  vDestStn                  : INT;
   si                        : INT;
-  station_idx               : INT;
-  stn_free                  : BOOL;
+  vStationIdx               : INT;
+  vStnFree                  : BOOL;
   uj                        : INT;
   ti                        : INT;
-  already                   : BOOL;
+  vAlready                   : BOOL;
   qi2                       : INT;
-  xfer_s                    : REAL;
-  task_start                : LINT;
-  task_end                  : LINT;
-  slot_start                : LINT;
-  tmp_move                  : UDT_JC_MoveTimesType;
-  slot_end                  : LINT;
+  vXferS                    : REAL;
+  vTaskStart                : LINT;
+  vTaskEnd                  : LINT;
+  vSlotStart                : LINT;
+  vTmpMove                  : UDT_JC_MoveTimesType;
+  vSlotEnd                  : LINT;
   latest_end                : LINT;
-  travel_from_sink          : REAL;
-  travel_to_lift_s          : REAL;
-  trans_pos                 : INT;
-  ntt_duration              : LINT;
-  slot_ok                   : BOOL;
+  vTravelFromSink          : REAL;
+  vTravelToLiftS          : REAL;
+  vTransPos                 : INT;
+  vNttDuration              : LINT;
+  vSlotOk                   : BOOL;
   sh                        : INT;
 
   (* Idle-stretch: extend blocking batch CalTime to make room for NTT -----------------------*)
-  stretch_pending           : BOOL;
-  stretch_unit_id           : INT;
-  stretch_deficit           : DINT;
-  stretch_avail             : DINT;
+  vStretchPending           : BOOL;
+  vStretchUnitId           : INT;
+  vStretchDeficit           : DINT;
+  vStretchAvail             : DINT;
 
-  (* Multi-transporter shared-area idle check -----------------------------------------------*)
+  (* Multi-transporter shared-vArea idle check -----------------------------------------------*)
   ot                        : INT;
   oq                        : INT;
-  overlap_conflict          : BOOL;
-  dest_x                    : DINT;
-  avoid_dist                : DINT;
+  vOverlapConflict          : BOOL;
+  vDestX                    : DINT;
+  vAvoidDist                : DINT;
   cov_min_x                 : DINT;
   cov_max_x                 : DINT;
   ot_min_x                  : DINT;
@@ -113,12 +113,12 @@ VAR
   zone_max_x                : DINT;
   danger_min                : DINT;
   danger_max                : DINT;
-  (* Shared-area timing: NTT split into own-area + shared-area portions ---------------------*)
-  loc_idx                   : INT;
-  loc_x                     : DINT;
+  (* Shared-vArea timing: NTT split into own-vArea + shared-vArea portions ---------------------*)
+  vLocIdx                   : INT;
+  vLocX                     : DINT;
   phase2_s                  : REAL;
-  shared_entry              : LINT;
-  shared_time               : REAL;
+  vSharedEntry              : LINT;
+  vSharedTime               : REAL;
   ot_idle_ok                : BOOL;
   ot_idle_start             : LINT;
   ot_idle_end               : LINT;
@@ -139,175 +139,175 @@ FC_TSK_NoTreatment := TRUE;
 
 FOR ui := 1 TO MAX_UNITS DO
   tgt := g_unit[ui].Target;
-  loc := g_unit[ui].location;
+  vLoc := g_unit[ui].vLocation;
 
-  IF tgt >= 1 AND tgt <= 5 AND loc >= MIN_STATION_INDEX THEN
+  IF tgt >= 1 AND tgt <= 5 AND vLoc >= MIN_STATION_INDEX THEN
 
     IF tgt = 3 AND (g_batch[ui].BatchCode = 0 OR g_batch[ui].State <> NOT_PROCESSED) THEN
       CONTINUE;
     END_IF;
 
-    already := FALSE;
+    vAlready := FALSE;
     FOR ti := 1 TO MAX_TRANSPORTERS DO
-      IF NOT already THEN
+      IF NOT vAlready THEN
         IF g_transporter[ti].Phase > 0 AND g_station_occupancy[ti].UnitId = ui THEN
-          already := TRUE;
+          vAlready := TRUE;
         END_IF;
-        FOR qi2 := 1 TO io_task[ti].Count DO
-          IF NOT already THEN
-            IF io_task[ti].Queue[qi2].Unit = ui THEN
-              already := TRUE;
+        FOR qi2 := 1 TO ioTask[ti].Count DO
+          IF NOT vAlready THEN
+            IF ioTask[ti].Queue[qi2].Unit = ui THEN
+              vAlready := TRUE;
             END_IF;
           END_IF;
         END_FOR;
       END_IF;
     END_FOR;
 
-    IF NOT already THEN
+    IF NOT vAlready THEN
 
-    done := FALSE;
+    vDone := FALSE;
     FOR cov_t := 1 TO MAX_TRANSPORTERS DO
-      IF NOT done THEN
+      IF NOT vDone THEN
 
-      covers := FALSE;
+      vCovers := FALSE;
       FOR ai := 1 TO 4 DO
-        IF NOT covers THEN
+        IF NOT vCovers THEN
           IF Transporters[cov_t].TaskArea[ai].MinLift > 0 OR Transporters[cov_t].TaskArea[ai].MaxLift > 0 THEN
-            IF loc >= Transporters[cov_t].TaskArea[ai].MinLift AND loc <= Transporters[cov_t].TaskArea[ai].MaxLift THEN
-              covers := TRUE;
+            IF vLoc >= Transporters[cov_t].TaskArea[ai].MinLift AND vLoc <= Transporters[cov_t].TaskArea[ai].MaxLift THEN
+              vCovers := TRUE;
             END_IF;
           END_IF;
         END_IF;
       END_FOR;
 
-      IF covers AND g_transporter[cov_t].IsActive
+      IF vCovers AND g_transporter[cov_t].IsActive
          AND (g_transporter[cov_t].Phase = 0 OR tgt = 5) THEN
 
         IF tgt = 2 THEN
-          IF g_batch[ui].BatchCode = 0 THEN ntt_idx := 6;
-          ELSIF g_batch[ui].State = PROCESSED THEN ntt_idx := 8;
-  ELSE ntt_idx := 7; END_IF;
-        ELSIF tgt = 3 THEN ntt_idx := 7;
-  ELSE ntt_idx := tgt; END_IF;
+          IF g_batch[ui].BatchCode = 0 THEN vNttIdx := 6;
+          ELSIF g_batch[ui].State = PROCESSED THEN vNttIdx := 8;
+  ELSE vNttIdx := 7; END_IF;
+        ELSIF tgt = 3 THEN vNttIdx := 7;
+  ELSE vNttIdx := tgt; END_IF;
 
-        dest := g_ntt[cov_t].Target[ntt_idx];
+        vDest := g_ntt[cov_t].Target[vNttIdx];
 
-        on_primary := FALSE;
-        FOR si := 1 TO dest.StationCount DO
-  IF dest.Stations[si] = loc THEN on_primary := TRUE; END_IF;
+        vOnPrimary := FALSE;
+        FOR si := 1 TO vDest.StationCount DO
+  IF vDest.Stations[si] = vLoc THEN vOnPrimary := TRUE; END_IF;
         END_FOR;
 
-        IF NOT on_primary THEN
+        IF NOT vOnPrimary THEN
 
-          on_fallback := FALSE;
-          FOR si := 1 TO dest.FallbackCount DO
-  IF dest.FallbackStations[si] = loc THEN on_fallback := TRUE; END_IF;
+          vOnFallback := FALSE;
+          FOR si := 1 TO vDest.FallbackCount DO
+  IF vDest.FallbackStations[si] = vLoc THEN vOnFallback := TRUE; END_IF;
           END_FOR;
 
-          primary_free := FALSE;
-          FOR si := 1 TO dest.StationCount DO
-            station_idx := dest.Stations[si];
-            IF station_idx <> loc AND station_idx >= MIN_STATION_INDEX AND station_idx <= MAX_STATION_INDEX THEN
-              stn_free := TRUE;
+          vPrimaryFree := FALSE;
+          FOR si := 1 TO vDest.StationCount DO
+            vStationIdx := vDest.Stations[si];
+            IF vStationIdx <> vLoc AND vStationIdx >= MIN_STATION_INDEX AND vStationIdx <= MAX_STATION_INDEX THEN
+              vStnFree := TRUE;
               FOR uj := 1 TO MAX_UNITS DO
-  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].vLocation = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
               END_FOR;
-  IF stn_free THEN primary_free := TRUE; END_IF;
+  IF vStnFree THEN vPrimaryFree := TRUE; END_IF;
             END_IF;
           END_FOR;
 
-          dest_stn := 0;
+          vDestStn := 0;
 
-          IF on_fallback AND NOT primary_free THEN
-            dest_stn := 0;
-          ELSIF on_fallback AND primary_free THEN
-            FOR si := 1 TO dest.StationCount DO
-              IF dest_stn = 0 THEN
-                station_idx := dest.Stations[si];
-                IF station_idx <> loc AND station_idx >= MIN_STATION_INDEX AND station_idx <= MAX_STATION_INDEX THEN
-                  stn_free := TRUE;
+          IF vOnFallback AND NOT vPrimaryFree THEN
+            vDestStn := 0;
+          ELSIF vOnFallback AND vPrimaryFree THEN
+            FOR si := 1 TO vDest.StationCount DO
+              IF vDestStn = 0 THEN
+                vStationIdx := vDest.Stations[si];
+                IF vStationIdx <> vLoc AND vStationIdx >= MIN_STATION_INDEX AND vStationIdx <= MAX_STATION_INDEX THEN
+                  vStnFree := TRUE;
                   FOR uj := 1 TO MAX_UNITS DO
-  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].vLocation = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
                   END_FOR;
-  IF stn_free THEN dest_stn := station_idx; END_IF;
+  IF vStnFree THEN vDestStn := vStationIdx; END_IF;
                 END_IF;
               END_IF;
             END_FOR;
           ELSE
-            FOR si := 1 TO dest.StationCount DO
-              IF dest_stn = 0 THEN
-                station_idx := dest.Stations[si];
-                IF station_idx <> loc AND station_idx >= MIN_STATION_INDEX AND station_idx <= MAX_STATION_INDEX THEN
-                  stn_free := TRUE;
+            FOR si := 1 TO vDest.StationCount DO
+              IF vDestStn = 0 THEN
+                vStationIdx := vDest.Stations[si];
+                IF vStationIdx <> vLoc AND vStationIdx >= MIN_STATION_INDEX AND vStationIdx <= MAX_STATION_INDEX THEN
+                  vStnFree := TRUE;
                   FOR uj := 1 TO MAX_UNITS DO
-  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].vLocation = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
                   END_FOR;
-  IF stn_free THEN dest_stn := station_idx; END_IF;
+  IF vStnFree THEN vDestStn := vStationIdx; END_IF;
                 END_IF;
               END_IF;
             END_FOR;
 
-            IF dest_stn = 0 THEN
-              FOR si := 1 TO dest.FallbackCount DO
-                IF dest_stn = 0 THEN
-                  station_idx := dest.FallbackStations[si];
-                  IF station_idx <> loc AND station_idx >= MIN_STATION_INDEX AND station_idx <= MAX_STATION_INDEX THEN
-                    stn_free := TRUE;
+            IF vDestStn = 0 THEN
+              FOR si := 1 TO vDest.FallbackCount DO
+                IF vDestStn = 0 THEN
+                  vStationIdx := vDest.FallbackStations[si];
+                  IF vStationIdx <> vLoc AND vStationIdx >= MIN_STATION_INDEX AND vStationIdx <= MAX_STATION_INDEX THEN
+                    vStnFree := TRUE;
                     FOR uj := 1 TO MAX_UNITS DO
-  IF g_unit[uj].location = station_idx AND g_unit[uj].Status = USED THEN stn_free := FALSE; END_IF;
+  IF g_unit[uj].vLocation = vStationIdx AND g_unit[uj].Status = USED THEN vStnFree := FALSE; END_IF;
                     END_FOR;
-  IF stn_free THEN dest_stn := station_idx; END_IF;
+  IF vStnFree THEN vDestStn := vStationIdx; END_IF;
                   END_IF;
                 END_IF;
               END_FOR;
             END_IF;
           END_IF;
 
-          IF dest_stn > 0 THEN
-            tmp_move := g_move[cov_t];
-            xfer_s := FC_STC_CalcTransferTime(
-              i_from_stn            := loc,
-              i_to_stn              := dest_stn,
-              i_move                := tmp_move,
-              i_from_dropping_x10   := Stations[loc].DrippingTime,
-              i_to_device_delay_x10 := Stations[dest_stn].DeviceDelay,
-              i_drip_tray_delay_x10 := Transporters[cov_t].DripTrayDelay);
+          IF vDestStn > 0 THEN
+            vTmpMove := g_move[cov_t];
+            vXferS := FC_STC_CalcTransferTime(
+              iFromStn            := vLoc,
+              iToStn              := vDestStn,
+              iMove                := vTmpMove,
+              i_from_dropping_x10   := Stations[vLoc].DrippingTime,
+              i_to_device_delay_x10 := Stations[vDestStn].DeviceDelay,
+              iDripTrayDelayX10 := Transporters[cov_t].DripTrayDelay);
 
             (* ── Travel-to: time for transporter to reach lift station ── *)
-            travel_to_lift_s := 0.0;
+            vTravelToLiftS := 0.0;
             IF g_transporter[cov_t].Phase = 0 THEN
-              trans_pos := g_transporter[cov_t].CurrentStation;
+              vTransPos := g_transporter[cov_t].CurrentStation;
             ELSE
-              trans_pos := g_transporter[cov_t].SinkStationTarget;
+              vTransPos := g_transporter[cov_t].SinkStationTarget;
             END_IF;
-            IF trans_pos > 0 AND trans_pos <> loc THEN
-              travel_to_lift_s := FC_STC_CalcHorizontalTravel(
-                i_from_stn := trans_pos,
-                i_to_stn   := loc,
-                i_move     := tmp_move);
+            IF vTransPos > 0 AND vTransPos <> vLoc THEN
+              vTravelToLiftS := FC_STC_CalcHorizontalTravel(
+                iFromStn := vTransPos,
+                iToStn   := vLoc,
+                iMove     := vTmpMove);
             END_IF;
 
-            task_start := i_time_s + REAL_TO_LINT(travel_to_lift_s);
-            task_end   := task_start + REAL_TO_LINT(xfer_s);
-            ntt_duration := task_end - task_start;
+            vTaskStart := iTimeS + REAL_TO_LINT(vTravelToLiftS);
+            vTaskEnd   := vTaskStart + REAL_TO_LINT(vXferS);
+            vNttDuration := vTaskEnd - vTaskStart;
 
-            slot_ok := FALSE;
-            stretch_pending := FALSE;
+            vSlotOk := FALSE;
+            vStretchPending := FALSE;
             ot_stretch_pending := FALSE;
 
-            IF io_task[cov_t].Count = 0 THEN
-              slot_ok := TRUE;
+            IF ioTask[cov_t].Count = 0 THEN
+              vSlotOk := TRUE;
             ELSE
-              IF io_task[cov_t].Queue[1].StartTime > task_start THEN
-                slot_start := task_start;
-                slot_end   := io_task[cov_t].Queue[1].StartTime;
-                travel_from_sink := FC_STC_CalcHorizontalTravel(
-                  i_from_stn := dest_stn,
-                  i_to_stn   := io_task[cov_t].Queue[1].LiftStationTarget,
-                  i_move     := g_move[cov_t]);
-                latest_end := slot_end - REAL_TO_LINT(travel_from_sink) - 1;
-                IF task_start >= slot_start AND task_end <= latest_end THEN
-                  slot_ok := TRUE;
+              IF ioTask[cov_t].Queue[1].StartTime > vTaskStart THEN
+                vSlotStart := vTaskStart;
+                vSlotEnd   := ioTask[cov_t].Queue[1].StartTime;
+                vTravelFromSink := FC_STC_CalcHorizontalTravel(
+                  iFromStn := vDestStn,
+                  iToStn   := ioTask[cov_t].Queue[1].LiftStationTarget,
+                  iMove     := g_move[cov_t]);
+                latest_end := vSlotEnd - REAL_TO_LINT(vTravelFromSink) - 1;
+                IF vTaskStart >= vSlotStart AND vTaskEnd <= latest_end THEN
+                  vSlotOk := TRUE;
                 END_IF;
 
                 (* ── Idle-stretch: NTT slightly too long for idle window ──
@@ -315,16 +315,16 @@ FOR ui := 1 TO MAX_UNITS DO
                    extended (up to MaxTime) to widen the idle gap.  Only flag
                    the intent here; the actual g_batch write happens after
                    the multi-transporter overlap check passes. *)
-                IF NOT slot_ok AND latest_end > 0 THEN
-                  stretch_deficit := LINT_TO_DINT(task_end - latest_end);
-                  IF stretch_deficit > 0 THEN
-                    stretch_unit_id := io_task[cov_t].Queue[1].Unit;
-                    IF stretch_unit_id >= 1 AND stretch_unit_id <= MAX_UNITS THEN
-                      stretch_avail := g_batch[stretch_unit_id].MaxTime
-                                     - g_batch[stretch_unit_id].CalTime;
-                      IF stretch_avail >= stretch_deficit THEN
-                        stretch_pending := TRUE;
-                        slot_ok := TRUE;
+                IF NOT vSlotOk AND latest_end > 0 THEN
+                  vStretchDeficit := LINT_TO_DINT(vTaskEnd - latest_end);
+                  IF vStretchDeficit > 0 THEN
+                    vStretchUnitId := ioTask[cov_t].Queue[1].Unit;
+                    IF vStretchUnitId >= 1 AND vStretchUnitId <= MAX_UNITS THEN
+                      vStretchAvail := g_batch[vStretchUnitId].MaxTime
+                                     - g_batch[vStretchUnitId].CalTime;
+                      IF vStretchAvail >= vStretchDeficit THEN
+                        vStretchPending := TRUE;
+                        vSlotOk := TRUE;
                       END_IF;
                     END_IF;
                   END_IF;
@@ -332,42 +332,42 @@ FOR ui := 1 TO MAX_UNITS DO
               END_IF;
             END_IF;
 
-            IF NOT slot_ok THEN
-              IF io_task[cov_t].Count > 0
-                 AND io_task[cov_t].Queue[1].SinkStationTarget = loc THEN
-                slot_ok := TRUE;
+            IF NOT vSlotOk THEN
+              IF ioTask[cov_t].Count > 0
+                 AND ioTask[cov_t].Queue[1].SinkStationTarget = vLoc THEN
+                vSlotOk := TRUE;
               ELSE
-                dest_stn := 0;
+                vDestStn := 0;
               END_IF;
             END_IF;
           END_IF;
 
-          (* ── Multi-transporter shared-area idle check ──
-             If dest_stn is on the shared drive area between two transporters,
+          (* ── Multi-transporter shared-vArea idle check ──
+             If vDestStn is on the shared drive vArea between two transporters,
              the other transporter must have an idle window covering the time
-             when THIS transporter is physically on the shared area.
+             when THIS transporter is physically on the shared vArea.
 
              NTT transfer phases:
                Phase 2: lift + drip + tray  (nostin on vielä lift-asemalla)
-               Phase 3: horizontal travel   (nostin liikkuu kohti dest)
-               Phase 4: lower + tray + dev  (nostin on dest-asemalla)
+               Phase 3: horizontal vTravel   (nostin liikkuu kohti vDest)
+               Phase 4: lower + tray + dev  (nostin on vDest-asemalla)
 
-             If lift station is NOT on shared area:
-               shared_entry = task_start + phase2_s  (travel starts)
-               shared_time  = xfer_s - phase2_s
-             If lift station IS on shared area:
-               shared_entry = task_start  (already there)
-               shared_time  = xfer_s
+             If lift station is NOT on shared vArea:
+               vSharedEntry = vTaskStart + phase2_s  (vTravel starts)
+               vSharedTime  = vXferS - phase2_s
+             If lift station IS on shared vArea:
+               vSharedEntry = vTaskStart  (vAlready there)
+               vSharedTime  = vXferS
           *)
-          IF dest_stn > 0 THEN
-            overlap_conflict := FALSE;
-            dest_x := Stations[dest_stn].XPosition;
-            avoid_dist := Transporters[cov_t].AvoidanceWidth;
+          IF vDestStn > 0 THEN
+            vOverlapConflict := FALSE;
+            vDestX := Stations[vDestStn].XPosition;
+            vAvoidDist := Transporters[cov_t].AvoidanceWidth;
             cov_min_x := Transporters[cov_t].DrivePosMin;
             cov_max_x := Transporters[cov_t].DrivePosMax;
 
             FOR ot := 1 TO MAX_TRANSPORTERS DO
-              IF ot <> cov_t AND NOT overlap_conflict
+              IF ot <> cov_t AND NOT vOverlapConflict
                  AND g_transporter[ot].IsActive THEN
                 ot_min_x := Transporters[ot].DrivePosMin;
                 ot_max_x := Transporters[ot].DrivePosMax;
@@ -378,109 +378,109 @@ FOR ui := 1 TO MAX_UNITS DO
   ELSE zone_max_x := ot_max_x; END_IF;
 
                 IF zone_min_x >= zone_max_x THEN CONTINUE; END_IF;
-                IF dest_x < zone_min_x OR dest_x > zone_max_x THEN CONTINUE; END_IF;
+                IF vDestX < zone_min_x OR vDestX > zone_max_x THEN CONTINUE; END_IF;
 
-                danger_min := zone_min_x - avoid_dist;
-                danger_max := zone_max_x + avoid_dist;
+                danger_min := zone_min_x - vAvoidDist;
+                danger_max := zone_max_x + vAvoidDist;
 
-                (* ── Calculate shared-area entry time and duration ── *)
-                loc_x := Stations[loc].XPosition;
-                IF loc_x >= danger_min AND loc_x <= danger_max THEN
-                  shared_entry := task_start;
-                  shared_time  := xfer_s;
+                (* ── Calculate shared-vArea entry time and vDuration ── *)
+                vLocX := Stations[vLoc].XPosition;
+                IF vLocX >= danger_min AND vLocX <= danger_max THEN
+                  vSharedEntry := vTaskStart;
+                  vSharedTime  := vXferS;
                 ELSE
-                  loc_idx := loc - MIN_STATION_INDEX;
-                  IF loc_idx >= 1 AND loc_idx <= 25 THEN
-                    phase2_s := INT_TO_REAL(g_move[cov_t].LiftTime[loc_idx]) / 10.0
-                              + INT_TO_REAL(Stations[loc].DrippingTime) / 10.0
+                  vLocIdx := vLoc - MIN_STATION_INDEX;
+                  IF vLocIdx >= 1 AND vLocIdx <= 25 THEN
+                    phase2_s := INT_TO_REAL(g_move[cov_t].LiftTime[vLocIdx]) / 10.0
+                              + INT_TO_REAL(Stations[vLoc].DrippingTime) / 10.0
                               + INT_TO_REAL(Transporters[cov_t].DripTrayDelay) / 10.0;
                   ELSE
                     phase2_s := 0.0;
                   END_IF;
-                  shared_entry := task_start + REAL_TO_LINT(phase2_s);
-                  shared_time  := xfer_s - phase2_s;
-  IF shared_time < 1.0 THEN shared_time := 1.0; END_IF;
+                  vSharedEntry := vTaskStart + REAL_TO_LINT(phase2_s);
+                  vSharedTime  := vXferS - phase2_s;
+  IF vSharedTime < 1.0 THEN vSharedTime := 1.0; END_IF;
                 END_IF;
 
                 (* ── Check: does other transporter have an idle window
-                     that starts ≤ shared_entry and lasts ≥ shared_time? ── *)
+                     that starts ≤ vSharedEntry and lasts ≥ vSharedTime? ── *)
                 ot_idle_ok := FALSE;
 
-                IF io_task[ot].Count = 0 AND g_transporter[ot].Phase = 0 THEN
+                IF ioTask[ot].Count = 0 AND g_transporter[ot].Phase = 0 THEN
                   ot_idle_ok := TRUE;
-                ELSIF io_task[ot].Count = 0
+                ELSIF ioTask[ot].Count = 0
                       AND g_transporter[ot].Phase >= 1
                       AND g_transporter[ot].Phase <= 4 THEN
                   (* Transporter executing task, nothing queued after.
                      Idle starts at current task finish. *)
                   ot_idle_start := g_transporter[ot].CurrentTaskFinishTime;
-                  IF ot_idle_start <= shared_entry THEN
+                  IF ot_idle_start <= vSharedEntry THEN
                     ot_idle_ok := TRUE;
                   END_IF;
                 ELSE
-                  IF io_task[ot].Count > 0 THEN
+                  IF ioTask[ot].Count > 0 THEN
                     IF g_transporter[ot].Phase >= 1 AND g_transporter[ot].Phase <= 4 THEN
                       (* Idle gap: current task finish → next queued start *)
                       ot_idle_start := g_transporter[ot].CurrentTaskFinishTime;
                       ot_dispatch_from := g_transporter[ot].SinkStationTarget;
                     ELSE
-                      ot_idle_start := task_start;
+                      ot_idle_start := vTaskStart;
                       ot_dispatch_from := g_transporter[ot].CurrentStation;
                     END_IF;
-                    ot_next_lift := io_task[ot].Queue[1].LiftStationTarget;
+                    ot_next_lift := ioTask[ot].Queue[1].LiftStationTarget;
                     ot_travel_to_next := 0.0;
                     IF ot_dispatch_from > 0
                        AND ot_next_lift > 0
                        AND ot_dispatch_from <> ot_next_lift THEN
                       ot_travel_to_next := FC_STC_CalcHorizontalTravel(
-                        i_from_stn := ot_dispatch_from,
-                        i_to_stn   := ot_next_lift,
-                        i_move     := g_move[ot]);
+                        iFromStn := ot_dispatch_from,
+                        iToStn   := ot_next_lift,
+                        iMove     := g_move[ot]);
                     END_IF;
-                    ot_idle_end := io_task[ot].Queue[1].StartTime
+                    ot_idle_end := ioTask[ot].Queue[1].StartTime
                                  - REAL_TO_LINT(ot_travel_to_next)
                                  - REAL_TO_LINT(SCH_DISPATCH_MARGIN_S);
                     IF ot_idle_end < ot_idle_start THEN
                       ot_idle_end := ot_idle_start;
                     END_IF;
-                    IF ot_idle_start <= shared_entry
-                       AND ot_idle_end >= shared_entry + REAL_TO_LINT(shared_time) THEN
+                    IF ot_idle_start <= vSharedEntry
+                       AND ot_idle_end >= vSharedEntry + REAL_TO_LINT(vSharedTime) THEN
                       ot_idle_ok := TRUE;
                     END_IF;
                   END_IF;
 
                   IF NOT ot_idle_ok THEN
-                    FOR oq := 1 TO io_task[ot].Count - 1 DO
+                    FOR oq := 1 TO ioTask[ot].Count - 1 DO
                       IF NOT ot_idle_ok THEN
-                        ot_idle_start := io_task[ot].Queue[oq].FinishTime;
-                        ot_dispatch_from := io_task[ot].Queue[oq].SinkStationTarget;
-                        ot_next_lift := io_task[ot].Queue[oq + 1].LiftStationTarget;
+                        ot_idle_start := ioTask[ot].Queue[oq].FinishTime;
+                        ot_dispatch_from := ioTask[ot].Queue[oq].SinkStationTarget;
+                        ot_next_lift := ioTask[ot].Queue[oq + 1].LiftStationTarget;
                         ot_travel_to_next := 0.0;
                         IF ot_dispatch_from > 0
                            AND ot_next_lift > 0
                            AND ot_dispatch_from <> ot_next_lift THEN
                           ot_travel_to_next := FC_STC_CalcHorizontalTravel(
-                            i_from_stn := ot_dispatch_from,
-                            i_to_stn   := ot_next_lift,
-                            i_move     := g_move[ot]);
+                            iFromStn := ot_dispatch_from,
+                            iToStn   := ot_next_lift,
+                            iMove     := g_move[ot]);
                         END_IF;
-                        ot_idle_end := io_task[ot].Queue[oq + 1].StartTime
+                        ot_idle_end := ioTask[ot].Queue[oq + 1].StartTime
                                      - REAL_TO_LINT(ot_travel_to_next)
                                      - REAL_TO_LINT(SCH_DISPATCH_MARGIN_S);
                         IF ot_idle_end < ot_idle_start THEN
                           ot_idle_end := ot_idle_start;
                         END_IF;
-                        IF ot_idle_start <= shared_entry
-                           AND ot_idle_end >= shared_entry + REAL_TO_LINT(shared_time) THEN
+                        IF ot_idle_start <= vSharedEntry
+                           AND ot_idle_end >= vSharedEntry + REAL_TO_LINT(vSharedTime) THEN
                           ot_idle_ok := TRUE;
                         END_IF;
                       END_IF;
                     END_FOR;
                   END_IF;
 
-                  IF NOT ot_idle_ok AND io_task[ot].Count > 0 THEN
-                    ot_idle_start := io_task[ot].Queue[io_task[ot].Count].FinishTime;
-                    IF ot_idle_start <= shared_entry THEN
+                  IF NOT ot_idle_ok AND ioTask[ot].Count > 0 THEN
+                    ot_idle_start := ioTask[ot].Queue[ioTask[ot].Count].FinishTime;
+                    IF ot_idle_start <= vSharedEntry THEN
                       ot_idle_ok := TRUE;
                     END_IF;
                   END_IF;
@@ -494,39 +494,39 @@ FOR ui := 1 TO MAX_UNITS DO
                   ot_stretch_ok := FALSE;
 
                   (* Try gap before first task *)
-                  IF io_task[ot].Count > 0
-                     AND io_task[ot].Queue[1].Stage > 0 THEN
+                  IF ioTask[ot].Count > 0
+                     AND ioTask[ot].Queue[1].Stage > 0 THEN
                     IF g_transporter[ot].Phase >= 1 AND g_transporter[ot].Phase <= 4 THEN
                       ot_idle_start := g_transporter[ot].CurrentTaskFinishTime;
                       ot_dispatch_from := g_transporter[ot].SinkStationTarget;
                     ELSE
-                      ot_idle_start := task_start;
+                      ot_idle_start := vTaskStart;
                       ot_dispatch_from := g_transporter[ot].CurrentStation;
                     END_IF;
-                    ot_next_lift := io_task[ot].Queue[1].LiftStationTarget;
+                    ot_next_lift := ioTask[ot].Queue[1].LiftStationTarget;
                     ot_travel_to_next := 0.0;
                     IF ot_dispatch_from > 0
                        AND ot_next_lift > 0
                        AND ot_dispatch_from <> ot_next_lift THEN
                       ot_travel_to_next := FC_STC_CalcHorizontalTravel(
-                        i_from_stn := ot_dispatch_from,
-                        i_to_stn   := ot_next_lift,
-                        i_move     := g_move[ot]);
+                        iFromStn := ot_dispatch_from,
+                        iToStn   := ot_next_lift,
+                        iMove     := g_move[ot]);
                     END_IF;
-                    ot_idle_end := io_task[ot].Queue[1].StartTime
+                    ot_idle_end := ioTask[ot].Queue[1].StartTime
                                  - REAL_TO_LINT(ot_travel_to_next)
                                  - REAL_TO_LINT(SCH_DISPATCH_MARGIN_S);
                     IF ot_idle_end < ot_idle_start THEN
                       ot_idle_end := ot_idle_start;
                     END_IF;
 
-                    IF ot_idle_start <= shared_entry
-                       AND ot_idle_end > shared_entry THEN
-                      ot_stretch_need := shared_entry
-                                       + REAL_TO_LINT(shared_time)
+                    IF ot_idle_start <= vSharedEntry
+                       AND ot_idle_end > vSharedEntry THEN
+                      ot_stretch_need := vSharedEntry
+                                       + REAL_TO_LINT(vSharedTime)
                                        - ot_idle_end;
                       IF ot_stretch_need > LINT#0 THEN
-                        ot_stretch_unit_id := io_task[ot].Queue[1].Unit;
+                        ot_stretch_unit_id := ioTask[ot].Queue[1].Unit;
                         IF ot_stretch_unit_id >= 1
                            AND ot_stretch_unit_id <= MAX_UNITS THEN
                           ot_stretch_avail :=
@@ -544,35 +544,35 @@ FOR ui := 1 TO MAX_UNITS DO
 
                   (* Try gaps between tasks *)
                   IF NOT ot_stretch_ok THEN
-                    FOR oq := 1 TO io_task[ot].Count - 1 DO
+                    FOR oq := 1 TO ioTask[ot].Count - 1 DO
                       IF NOT ot_stretch_ok
-                         AND io_task[ot].Queue[oq + 1].Stage > 0 THEN
-                        ot_idle_start := io_task[ot].Queue[oq].FinishTime;
-                        ot_dispatch_from := io_task[ot].Queue[oq].SinkStationTarget;
-                        ot_next_lift := io_task[ot].Queue[oq + 1].LiftStationTarget;
+                         AND ioTask[ot].Queue[oq + 1].Stage > 0 THEN
+                        ot_idle_start := ioTask[ot].Queue[oq].FinishTime;
+                        ot_dispatch_from := ioTask[ot].Queue[oq].SinkStationTarget;
+                        ot_next_lift := ioTask[ot].Queue[oq + 1].LiftStationTarget;
                         ot_travel_to_next := 0.0;
                         IF ot_dispatch_from > 0
                            AND ot_next_lift > 0
                            AND ot_dispatch_from <> ot_next_lift THEN
                           ot_travel_to_next := FC_STC_CalcHorizontalTravel(
-                            i_from_stn := ot_dispatch_from,
-                            i_to_stn   := ot_next_lift,
-                            i_move     := g_move[ot]);
+                            iFromStn := ot_dispatch_from,
+                            iToStn   := ot_next_lift,
+                            iMove     := g_move[ot]);
                         END_IF;
-                        ot_idle_end := io_task[ot].Queue[oq + 1].StartTime
+                        ot_idle_end := ioTask[ot].Queue[oq + 1].StartTime
                                      - REAL_TO_LINT(ot_travel_to_next)
                                      - REAL_TO_LINT(SCH_DISPATCH_MARGIN_S);
                         IF ot_idle_end < ot_idle_start THEN
                           ot_idle_end := ot_idle_start;
                         END_IF;
 
-                        IF ot_idle_start <= shared_entry
-                           AND ot_idle_end > shared_entry THEN
-                          ot_stretch_need := shared_entry
-                                           + REAL_TO_LINT(shared_time)
+                        IF ot_idle_start <= vSharedEntry
+                           AND ot_idle_end > vSharedEntry THEN
+                          ot_stretch_need := vSharedEntry
+                                           + REAL_TO_LINT(vSharedTime)
                                            - ot_idle_end;
                           IF ot_stretch_need > LINT#0 THEN
-                            ot_stretch_unit_id := io_task[ot].Queue[oq + 1].Unit;
+                            ot_stretch_unit_id := ioTask[ot].Queue[oq + 1].Unit;
                             IF ot_stretch_unit_id >= 1
                                AND ot_stretch_unit_id <= MAX_UNITS THEN
                               ot_stretch_avail :=
@@ -593,21 +593,21 @@ FOR ui := 1 TO MAX_UNITS DO
                   IF ot_stretch_ok THEN
                     ot_idle_ok := TRUE;
                   ELSE
-                    overlap_conflict := TRUE;
+                    vOverlapConflict := TRUE;
                   END_IF;
                 END_IF;
               END_IF;
             END_FOR;
 
-  IF overlap_conflict THEN dest_stn := 0; END_IF;
+  IF vOverlapConflict THEN vDestStn := 0; END_IF;
           END_IF;
 
-          IF dest_stn > 0 THEN
+          IF vDestStn > 0 THEN
             (* ── Commit idle-stretch: extend blocking batch CalTime ── *)
-            IF stretch_pending THEN
-              g_batch[stretch_unit_id].CalTime :=
-                g_batch[stretch_unit_id].CalTime + stretch_deficit;
-              stretch_pending := FALSE;
+            IF vStretchPending THEN
+              g_batch[vStretchUnitId].CalTime :=
+                g_batch[vStretchUnitId].CalTime + vStretchDeficit;
+              vStretchPending := FALSE;
             END_IF;
 
             (* ── Commit other-transporter idle-stretch ── *)
@@ -617,35 +617,35 @@ FOR ui := 1 TO MAX_UNITS DO
               ot_stretch_pending := FALSE;
             END_IF;
 
-            IF io_task[cov_t].Count < MAX_TASK_QUEUE THEN
-              FOR sh := io_task[cov_t].Count TO 1 BY -1 DO
-                io_task[cov_t].Queue[sh + 1] := io_task[cov_t].Queue[sh];
+            IF ioTask[cov_t].Count < MAX_TASK_QUEUE THEN
+              FOR sh := ioTask[cov_t].Count TO 1 BY -1 DO
+                ioTask[cov_t].Queue[sh + 1] := ioTask[cov_t].Queue[sh];
               END_FOR;
-              io_task[cov_t].Queue[1].Unit         := ui;
-              io_task[cov_t].Queue[1].Stage        := 0;
-              io_task[cov_t].Queue[1].LiftStationTarget := loc;
-              io_task[cov_t].Queue[1].SinkStationTarget := dest_stn;
-              io_task[cov_t].Queue[1].StartTime   := task_start;
-              io_task[cov_t].Queue[1].FinishTime  := task_end;
-              io_task[cov_t].Queue[1].CalcTime    := 0;
-              io_task[cov_t].Queue[1].MinTime     := 0;
-              io_task[cov_t].Queue[1].MaxTime     := 0;
-              io_task[cov_t].Queue[1].NttPrimary := 0;
-              FOR si := 1 TO dest.StationCount DO
-                IF dest.Stations[si] = dest_stn THEN
-                  io_task[cov_t].Queue[1].NttPrimary := 1;
+              ioTask[cov_t].Queue[1].Unit         := ui;
+              ioTask[cov_t].Queue[1].Stage        := 0;
+              ioTask[cov_t].Queue[1].LiftStationTarget := vLoc;
+              ioTask[cov_t].Queue[1].SinkStationTarget := vDestStn;
+              ioTask[cov_t].Queue[1].StartTime   := vTaskStart;
+              ioTask[cov_t].Queue[1].FinishTime  := vTaskEnd;
+              ioTask[cov_t].Queue[1].CalcTime    := 0;
+              ioTask[cov_t].Queue[1].MinTime     := 0;
+              ioTask[cov_t].Queue[1].MaxTime     := 0;
+              ioTask[cov_t].Queue[1].NttPrimary := 0;
+              FOR si := 1 TO vDest.StationCount DO
+                IF vDest.Stations[si] = vDestStn THEN
+                  ioTask[cov_t].Queue[1].NttPrimary := 1;
                 END_IF;
               END_FOR;
-              io_task[cov_t].Count := io_task[cov_t].Count + 1;
-              done := TRUE;
+              ioTask[cov_t].Count := ioTask[cov_t].Count + 1;
+              vDone := TRUE;
             END_IF;
           END_IF;
 
-        END_IF; (* NOT on_primary *)
-      END_IF; (* covers + idle *)
-      END_IF; (* NOT done *)
+        END_IF; (* NOT vOnPrimary *)
+      END_IF; (* vCovers + idle *)
+      END_IF; (* NOT vDone *)
     END_FOR; (* transporter loop *)
-    END_IF; (* NOT already *)
+    END_IF; (* NOT vAlready *)
   END_IF; (* valid target *)
 END_FOR;
 

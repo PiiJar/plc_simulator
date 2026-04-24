@@ -1,5 +1,5 @@
 (* ===========================================================================================
- *  FC_STC_SortTasks — Insertion sort task queues by priority
+ *  FC_STC_SortTasks — Insertion sort task queues by vPriority
  *
  *  Company : Galvatek part of the John Cockerill Group
  *  Author  : Jarmo Piipponen
@@ -8,7 +8,7 @@
  * -------------------------------------------------------------------------------------------
  *  Shared FC: both TSK and DEP call this with different arrays.
  *  Priority: emergency (overtime ratio > 1.0) first, then
- *  earliest StartTime.
+ *  vEarliest StartTime.
  *
  *  ------------------------------------------------------------------------------------------
  *
@@ -25,13 +25,13 @@ FUNCTION FC_STC_SortTasks : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_trans                   : INT;    (* 0 = all, 1..3 = specific transporter *)
-  i_time_s                  : LINT;
+  iTrans                   : INT;    (* 0 = all, 1..3 = specific transporter *)
+  iTimeS                  : LINT;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS, 10=MAX_UNITS *)
-  io_task                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
-  io_batch                  : ARRAY[1..10] OF UDT_BatchType;
+  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioBatch                  : ARRAY[1..10] OF UDT_BatchType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -48,88 +48,88 @@ VAR
   ti                        : INT;
   t_start                   : INT;
   t_end                     : INT;
-  ins_i                     : INT;
-  ins_j                     : INT;
-  ins_cnt                   : INT;
-  tmp_task                  : UDT_JC_TskTaskType;
-  tmp_unit                  : INT;
-  cur_unit                  : INT;
-  tmp_ratio                 : REAL;
-  cur_ratio                 : REAL;
-  tmp_emerg                 : BOOL;
-  cur_emerg                 : BOOL;
-  do_shift                  : BOOL;
+  vInsI                     : INT;
+  vInsJ                     : INT;
+  vInsCnt                   : INT;
+  vTmpTask                  : UDT_JC_TskTaskType;
+  vTmpUnit                  : INT;
+  vCurUnit                  : INT;
+  vTmpRatio                 : REAL;
+  vCurRatio                 : REAL;
+  vTmpEmerg                 : BOOL;
+  vCurEmerg                 : BOOL;
+  vDoShift                  : BOOL;
 END_VAR
 
 FC_STC_SortTasks := TRUE;
 
-IF i_trans >= 1 AND i_trans <= 3 THEN
-  t_start := i_trans;
-  t_end   := i_trans;
+IF iTrans >= 1 AND iTrans <= 3 THEN
+  t_start := iTrans;
+  t_end   := iTrans;
 ELSE
   t_start := 1;
   t_end   := 3;
 END_IF;
 
 FOR ti := t_start TO t_end DO
-  ins_cnt := io_task[ti].Count;
-  IF ins_cnt >= 2 THEN
-    FOR ins_i := 2 TO ins_cnt DO
-      tmp_task := io_task[ti].Queue[ins_i];
+  vInsCnt := ioTask[ti].Count;
+  IF vInsCnt >= 2 THEN
+    FOR vInsI := 2 TO vInsCnt DO
+      vTmpTask := ioTask[ti].Queue[vInsI];
 
-      tmp_ratio := 0.0;
-      tmp_unit  := tmp_task.Unit;
-      IF tmp_unit >= 1 AND tmp_unit <= MAX_UNITS THEN
-        IF io_batch[tmp_unit].State = IN_PROCESS
-           AND tmp_task.Stage >= 1 THEN
-          IF io_batch[tmp_unit].CurStage = tmp_task.Stage
-             AND g_unit[tmp_unit].location = tmp_task.LiftStationTarget
-             AND io_batch[tmp_unit].StartTime > LINT#0
-             AND io_batch[tmp_unit].MaxTime > 0 THEN
-            tmp_ratio := LINT_TO_REAL(i_time_s - io_batch[tmp_unit].StartTime)
-                         / DINT_TO_REAL(io_batch[tmp_unit].MaxTime);
+      vTmpRatio := 0.0;
+      vTmpUnit  := vTmpTask.Unit;
+      IF vTmpUnit >= 1 AND vTmpUnit <= MAX_UNITS THEN
+        IF ioBatch[vTmpUnit].State = IN_PROCESS
+           AND vTmpTask.Stage >= 1 THEN
+          IF ioBatch[vTmpUnit].CurStage = vTmpTask.Stage
+             AND g_unit[vTmpUnit].vLocation = vTmpTask.LiftStationTarget
+             AND ioBatch[vTmpUnit].StartTime > LINT#0
+             AND ioBatch[vTmpUnit].MaxTime > 0 THEN
+            vTmpRatio := LINT_TO_REAL(iTimeS - ioBatch[vTmpUnit].StartTime)
+                         / DINT_TO_REAL(ioBatch[vTmpUnit].MaxTime);
           END_IF;
         END_IF;
       END_IF;
-      tmp_emerg := tmp_ratio > 1.0;
+      vTmpEmerg := vTmpRatio > 1.0;
 
-      ins_j := 0;
-      FOR ins_j := ins_i - 1 TO 1 BY -1 DO
-        cur_ratio := 0.0;
-        cur_unit  := io_task[ti].Queue[ins_j].Unit;
-        IF cur_unit >= 1 AND cur_unit <= MAX_UNITS THEN
-          IF io_batch[cur_unit].State = IN_PROCESS
-             AND io_task[ti].Queue[ins_j].Stage >= 1 THEN
-            IF io_batch[cur_unit].CurStage = io_task[ti].Queue[ins_j].Stage
-               AND g_unit[cur_unit].location = io_task[ti].Queue[ins_j].LiftStationTarget
-               AND io_batch[cur_unit].StartTime > LINT#0
-               AND io_batch[cur_unit].MaxTime > 0 THEN
-              cur_ratio := LINT_TO_REAL(i_time_s - io_batch[cur_unit].StartTime)
-                           / DINT_TO_REAL(io_batch[cur_unit].MaxTime);
+      vInsJ := 0;
+      FOR vInsJ := vInsI - 1 TO 1 BY -1 DO
+        vCurRatio := 0.0;
+        vCurUnit  := ioTask[ti].Queue[vInsJ].Unit;
+        IF vCurUnit >= 1 AND vCurUnit <= MAX_UNITS THEN
+          IF ioBatch[vCurUnit].State = IN_PROCESS
+             AND ioTask[ti].Queue[vInsJ].Stage >= 1 THEN
+            IF ioBatch[vCurUnit].CurStage = ioTask[ti].Queue[vInsJ].Stage
+               AND g_unit[vCurUnit].vLocation = ioTask[ti].Queue[vInsJ].LiftStationTarget
+               AND ioBatch[vCurUnit].StartTime > LINT#0
+               AND ioBatch[vCurUnit].MaxTime > 0 THEN
+              vCurRatio := LINT_TO_REAL(iTimeS - ioBatch[vCurUnit].StartTime)
+                           / DINT_TO_REAL(ioBatch[vCurUnit].MaxTime);
             END_IF;
           END_IF;
         END_IF;
-        cur_emerg := cur_ratio > 1.0;
+        vCurEmerg := vCurRatio > 1.0;
 
-        do_shift := FALSE;
-        IF tmp_emerg AND NOT cur_emerg THEN
-          do_shift := TRUE;
-        ELSIF tmp_emerg AND cur_emerg THEN
-          IF tmp_ratio > cur_ratio THEN
-            do_shift := TRUE;
+        vDoShift := FALSE;
+        IF vTmpEmerg AND NOT vCurEmerg THEN
+          vDoShift := TRUE;
+        ELSIF vTmpEmerg AND vCurEmerg THEN
+          IF vTmpRatio > vCurRatio THEN
+            vDoShift := TRUE;
           END_IF;
-        ELSIF NOT tmp_emerg AND NOT cur_emerg THEN
-          IF io_task[ti].Queue[ins_j].StartTime > tmp_task.StartTime THEN
-            do_shift := TRUE;
+        ELSIF NOT vTmpEmerg AND NOT vCurEmerg THEN
+          IF ioTask[ti].Queue[vInsJ].StartTime > vTmpTask.StartTime THEN
+            vDoShift := TRUE;
           END_IF;
         END_IF;
 
-        IF NOT do_shift THEN EXIT; END_IF;
+        IF NOT vDoShift THEN EXIT; END_IF;
 
-        io_task[ti].Queue[ins_j + 1] := io_task[ti].Queue[ins_j];
+        ioTask[ti].Queue[vInsJ + 1] := ioTask[ti].Queue[vInsJ];
       END_FOR;
 
-      io_task[ti].Queue[ins_j + 1] := tmp_task;
+      ioTask[ti].Queue[vInsJ + 1] := vTmpTask;
     END_FOR;
   END_IF;
 END_FOR;

@@ -14,15 +14,15 @@
      3: Fast lift    → (z_total - ZPosSlowEnd)
      4: Slow end     → z_total
      5: Dropping     at top, dripping time
-     9: Drip close   drip tray close delay at top
+     9: Drip close   drip tray close vDelay at top
 
    SINK sequence (z_stage 6-8):
-     6: Init delay   (device_delay + drip_delay)
+     6: Init vDelay   (device_delay + drip_delay)
      7: Fast sink    z_total → slow_zone
      8: Slow sink    → 0 mm
 
    Caller sets z_stage and z_timer_s before first call.
-   Output 'done' pulses TRUE when sequence completes.
+   Output 'vDone' pulses TRUE when sequence completes.
    ------------------------------------------------------------
    Changes:
    ============================================================ *)
@@ -30,15 +30,15 @@
 FUNCTION_BLOCK FB_SIM_ZMotion
 VAR_INPUT
   delta_t         : REAL;    (* Cycle time in seconds — simulation internal *)
-  station_kind    : INT;     (* KIND_DRY=0, KIND_WET=1 *)
+  vStationKind    : INT;     (* KIND_DRY=0, KIND_WET=1 *)
   ZPosUp          : DINT;    (* Z position at full up mm *)
   ZPosDown        : DINT;    (* Z position at full down mm *)
   ZPosSlowUp      : DINT;    (* Slow zone when going up (dry) mm *)
   ZPosSlowDown    : DINT;    (* Slow zone when going down (wet) mm *)
-  ZPosSlowEnd     : DINT;    (* Slow zone at end of travel mm *)
+  ZPosSlowEnd     : DINT;    (* Slow zone at end of vTravel mm *)
   SpeedLiftSlow_Z : DINT;    (* Slow speed mm/s *)
   SpeedLiftFast_Z : DINT;    (* Fast speed mm/s *)
-  DripTrayDelay   : INT;     (* Drip tray open/close delay ×10 = tenths of second *)
+  DripTrayDelay   : INT;     (* Drip tray open/close vDelay ×10 = tenths of second *)
   DroppingTime    : INT;     (* Dropping/dripping time ×10 = tenths of second *)
 END_VAR
 VAR_IN_OUT
@@ -47,7 +47,7 @@ VAR_IN_OUT
   z_timer_s : REAL;        (* Delay timer — simulation internal *)
 END_VAR
 VAR_OUTPUT
-  done : BOOL;             (* TRUE when sequence complete *)
+  vDone : BOOL;             (* TRUE when sequence complete *)
 END_VAR
 VAR_EXTERNAL CONSTANT
   KIND_WET : INT;
@@ -65,7 +65,7 @@ VAR
   z_total_mm   : DINT;     (* computed: ZPosDown - ZPosUp *)
 END_VAR
 
-  done := FALSE;
+  vDone := FALSE;
   z_total_mm := ZPosDown - ZPosUp;
 
   (* Convert DINT/INT inputs to REAL for physics *)
@@ -78,7 +78,7 @@ END_VAR
   r_drop      := INT_TO_REAL(DroppingTime) / 10.0;
 
   (* Select slow zone based on station kind *)
-  IF station_kind = KIND_WET THEN
+  IF vStationKind = KIND_WET THEN
     r_slow_zone := DINT_TO_REAL(ZPosSlowDown);
   ELSE
     r_slow_zone := DINT_TO_REAL(ZPosSlowUp);
@@ -124,12 +124,12 @@ END_VAR
       z_timer_s := z_timer_s - delta_t;
       IF z_timer_s <= 0.0 THEN
         z_stage := 0;
-        done := TRUE;
+        vDone := TRUE;
       END_IF;
 
     (* === SINK: stages 6-8 — lasku altaaseen (z pienenee: z_total → 0) === *)
 
-    6: (* Init delay: device_delay + drip_delay *)
+    6: (* Init vDelay: device_delay + drip_delay *)
       z_timer_s := z_timer_s - delta_t;
       IF z_timer_s <= 0.0 THEN
         z_stage := 7;
@@ -147,7 +147,7 @@ END_VAR
       IF r_z <= 0.0 THEN
         z_mm := 0;
         z_stage := 0;
-        done := TRUE;
+        vDone := TRUE;
       ELSE
         z_mm := REAL_TO_DINT(r_z);
       END_IF;

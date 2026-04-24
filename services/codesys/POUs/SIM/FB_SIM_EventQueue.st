@@ -26,12 +26,12 @@ VAR_EXTERNAL
   g_event_ack_seq       : INT;
 END_VAR
 VAR
-  tail : INT;
+  vTail : INT;
 END_VAR
 
 (* ── 1. Enqueue: pick up pending message if queue not full ── *)
 IF g_event_pending_valid AND g_event.Count < 10 THEN
-  tail := ((g_event.Head - 1 + g_event.Count) MOD 10) + 1;
+  vTail := ((g_event.Head - 1 + g_event.Count) MOD 10) + 1;
 
   g_event_pending.Seq := g_event.NextSeq;
   g_event.NextSeq := g_event.NextSeq + 1;
@@ -39,7 +39,7 @@ IF g_event_pending_valid AND g_event.Count < 10 THEN
     g_event.NextSeq := 1;
   END_IF;
 
-  g_event.Buffer[tail] := g_event_pending;
+  g_event.Buffer[vTail] := g_event_pending;
   g_event.Count := g_event.Count + 1;
 
   g_event_pending_valid := FALSE;

@@ -11,9 +11,9 @@
  *
  *  When multiple transporters match, scores by:
  *  1. Fewest queued tasks (load balance)
- *  2. Closest last-sink to new lift (travel efficiency)
+ *  2. Closest last-sink to new lift (vTravel efficiency)
  *
- *  If i_sink_stn = 0, only lift coverage is checked.
+ *  If iSinkStn = 0, only lift coverage is checked.
  *
  *  NOTE: Kept as FUNCTION_BLOCK because MATIEC cannot handle
  *  ARRAY OF STRUCT as FUNCTION VAR_INPUT parameter.
@@ -33,12 +33,12 @@ FUNCTION_BLOCK FB_STC_FindTransporter
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  i_lift_stn                : INT;     (* lift station number *)
-  i_sink_stn                : INT;     (* sink station number, 0 = lift-only search *)
+  iLiftStn                : INT;     (* lift station number *)
+  iSinkStn                : INT;     (* sink station number, 0 = lift-only search *)
 END_VAR
 
 VAR_OUTPUT
-  o_trans                   : INT;         (* transporter ID 1..3, 0 = not found *)
+  oTrans                   : INT;         (* transporter ID 1..3, 0 = not vFound *)
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -53,51 +53,51 @@ END_VAR
 VAR
   ti                        : INT;
   ai                        : INT;
-  area                      : UDT_TaskAreaType;
-  can_lift                  : BOOL;
-  can_sink                  : BOOL;
+  vArea                      : UDT_TaskAreaType;
+  vCanLift                  : BOOL;
+  vCanSink                  : BOOL;
   (* Multi-transporter scoring *)
-  capable                   : ARRAY[1..3] OF INT;   (* capable transporter IDs *)
-  cap_count                 : INT;
-  best_idx                  : INT;
-  best_count                : INT;
-  best_dist                 : INT;
-  cur_count                 : INT;
-  cur_dist                  : INT;
-  last_sink                 : INT;
+  vCapable                   : ARRAY[1..3] OF INT;   (* vCapable transporter IDs *)
+  vCapCount                 : INT;
+  vBestIdx                  : INT;
+  vBestCount                : INT;
+  vBestDist                 : INT;
+  vCurCount                 : INT;
+  vCurDist                  : INT;
+  vLastSink                 : INT;
   ci                        : INT;
 END_VAR
 
-o_trans := 0;
-cap_count := 0;
+oTrans := 0;
+vCapCount := 0;
 
-(* Phase 1: Collect all capable transporters *)
+(* Phase 1: Collect all vCapable transporters *)
 FOR ti := 1 TO MAX_TRANSPORTERS DO
   FOR ai := 1 TO 4 DO
-    IF cap_count < 3 THEN
-      area := Transporters[ti].TaskArea[ai];
-      IF area.MinLift > 0 OR area.MaxLift > 0 THEN
-        can_lift := (i_lift_stn >= area.MinLift) AND (i_lift_stn <= area.MaxLift);
-        IF i_sink_stn = 0 THEN
-          IF can_lift THEN
-            (* Check not already added — nested IF to avoid array bounds on capable[0] *)
-            IF cap_count = 0 THEN
-              cap_count := cap_count + 1;
-              capable[cap_count] := ti;
-            ELSIF capable[cap_count] <> ti THEN
-              cap_count := cap_count + 1;
-              capable[cap_count] := ti;
+    IF vCapCount < 3 THEN
+      vArea := Transporters[ti].TaskArea[ai];
+      IF vArea.MinLift > 0 OR vArea.MaxLift > 0 THEN
+        vCanLift := (iLiftStn >= vArea.MinLift) AND (iLiftStn <= vArea.MaxLift);
+        IF iSinkStn = 0 THEN
+          IF vCanLift THEN
+            (* Check not vAlready added — nested IF to avoid array bounds on vCapable[0] *)
+            IF vCapCount = 0 THEN
+              vCapCount := vCapCount + 1;
+              vCapable[vCapCount] := ti;
+            ELSIF vCapable[vCapCount] <> ti THEN
+              vCapCount := vCapCount + 1;
+              vCapable[vCapCount] := ti;
             END_IF;
           END_IF;
         ELSE
-          can_sink := (i_sink_stn >= area.MinSink) AND (i_sink_stn <= area.MaxSink);
-          IF can_lift AND can_sink THEN
-            IF cap_count = 0 THEN
-              cap_count := cap_count + 1;
-              capable[cap_count] := ti;
-            ELSIF capable[cap_count] <> ti THEN
-              cap_count := cap_count + 1;
-              capable[cap_count] := ti;
+          vCanSink := (iSinkStn >= vArea.MinSink) AND (iSinkStn <= vArea.MaxSink);
+          IF vCanLift AND vCanSink THEN
+            IF vCapCount = 0 THEN
+              vCapCount := vCapCount + 1;
+              vCapable[vCapCount] := ti;
+            ELSIF vCapable[vCapCount] <> ti THEN
+              vCapCount := vCapCount + 1;
+              vCapable[vCapCount] := ti;
             END_IF;
           END_IF;
         END_IF;
@@ -106,50 +106,50 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
   END_FOR;
 END_FOR;
 
-(* Phase 2: Select best — score by task count then distance *)
-IF cap_count = 0 THEN
-  o_trans := 0;
-ELSIF cap_count = 1 THEN
-  o_trans := capable[1];
+(* Phase 2: Select best — score by task count then vDistance *)
+IF vCapCount = 0 THEN
+  oTrans := 0;
+ELSIF vCapCount = 1 THEN
+  oTrans := vCapable[1];
 ELSE
   (* JS: scored.sort((a,b) => a.count - b.count || a.distFromLastTask - b.distFromLastTask) *)
-  best_idx := 1;
-  best_count := g_task[capable[1]].Count;
+  vBestIdx := 1;
+  vBestCount := g_task[vCapable[1]].Count;
   (* Find last sink station for first candidate *)
-  last_sink := 0;
-  IF best_count > 0 THEN
-    last_sink := g_task[capable[1]].Queue[best_count].SinkStationTarget;
+  vLastSink := 0;
+  IF vBestCount > 0 THEN
+    vLastSink := g_task[vCapable[1]].Queue[vBestCount].SinkStationTarget;
   END_IF;
-  IF last_sink > 0 THEN
-    best_dist := ABS(last_sink - i_lift_stn);
+  IF vLastSink > 0 THEN
+    vBestDist := ABS(vLastSink - iLiftStn);
   ELSE
-    best_dist := 0;
+    vBestDist := 0;
   END_IF;
 
-  FOR ci := 2 TO cap_count DO
-    cur_count := g_task[capable[ci]].Count;
-    last_sink := 0;
-    IF cur_count > 0 THEN
-      last_sink := g_task[capable[ci]].Queue[cur_count].SinkStationTarget;
+  FOR ci := 2 TO vCapCount DO
+    vCurCount := g_task[vCapable[ci]].Count;
+    vLastSink := 0;
+    IF vCurCount > 0 THEN
+      vLastSink := g_task[vCapable[ci]].Queue[vCurCount].SinkStationTarget;
     END_IF;
-    IF last_sink > 0 THEN
-      cur_dist := ABS(last_sink - i_lift_stn);
+    IF vLastSink > 0 THEN
+      vCurDist := ABS(vLastSink - iLiftStn);
     ELSE
-      cur_dist := 0;
+      vCurDist := 0;
     END_IF;
 
-    IF cur_count < best_count THEN
-      best_idx := ci;
-      best_count := cur_count;
-      best_dist := cur_dist;
-    ELSIF cur_count = best_count AND cur_dist < best_dist THEN
-      best_idx := ci;
-      best_count := cur_count;
-      best_dist := cur_dist;
+    IF vCurCount < vBestCount THEN
+      vBestIdx := ci;
+      vBestCount := vCurCount;
+      vBestDist := vCurDist;
+    ELSIF vCurCount = vBestCount AND vCurDist < vBestDist THEN
+      vBestIdx := ci;
+      vBestCount := vCurCount;
+      vBestDist := vCurDist;
     END_IF;
   END_FOR;
 
-  o_trans := capable[best_idx];
+  oTrans := vCapable[vBestIdx];
 END_IF;
 
 END_FUNCTION_BLOCK

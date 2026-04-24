@@ -6,8 +6,8 @@
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  Identifies stations covered by 2+ transporters.
- *  Reads Transporters (read-only config). Writes io_overlap.
+ *  Identifies stations vCovered by 2+ transporters.
+ *  Reads Transporters (read-only config). Writes ioOverlap.
  *
  *  ------------------------------------------------------------------------------------------
  *
@@ -24,7 +24,7 @@ FUNCTION FC_DEP_CalcOverlap : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_IN_OUT
-  io_overlap                : UDT_JC_DepOverlapType;
+  ioOverlap                : UDT_JC_DepOverlapType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -38,42 +38,42 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  station_idx               : INT;
+  vStationIdx               : INT;
   ti                        : INT;
   ai                        : INT;
-  cover_count               : INT;
-  covered                   : BOOL;
-  area                      : UDT_TaskAreaType;
+  vCoverCount               : INT;
+  vCovered                   : BOOL;
+  vArea                      : UDT_TaskAreaType;
 END_VAR
 
-io_overlap.Count := 0;
+ioOverlap.Count := 0;
 
-FOR station_idx := 0 TO 200 DO
-  io_overlap.Flags[station_idx] := FALSE;
+FOR vStationIdx := 0 TO 200 DO
+  ioOverlap.Flags[vStationIdx] := FALSE;
 END_FOR;
 
-FOR station_idx := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
-  cover_count := 0;
+FOR vStationIdx := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
+  vCoverCount := 0;
 
   FOR ti := 1 TO MAX_TRANSPORTERS DO
-    covered := FALSE;
+    vCovered := FALSE;
     FOR ai := 1 TO 4 DO
-      IF NOT covered THEN
-        area := Transporters[ti].TaskArea[ai];
-        IF (area.MinLift > 0 AND station_idx >= area.MinLift AND station_idx <= area.MaxLift)
-           OR (area.MinSink > 0 AND station_idx >= area.MinSink AND station_idx <= area.MaxSink) THEN
-          covered := TRUE;
+      IF NOT vCovered THEN
+        vArea := Transporters[ti].TaskArea[ai];
+        IF (vArea.MinLift > 0 AND vStationIdx >= vArea.MinLift AND vStationIdx <= vArea.MaxLift)
+           OR (vArea.MinSink > 0 AND vStationIdx >= vArea.MinSink AND vStationIdx <= vArea.MaxSink) THEN
+          vCovered := TRUE;
         END_IF;
       END_IF;
     END_FOR;
-    IF covered THEN
-      cover_count := cover_count + 1;
+    IF vCovered THEN
+      vCoverCount := vCoverCount + 1;
     END_IF;
   END_FOR;
 
-  IF cover_count >= 2 THEN
-    io_overlap.Flags[station_idx] := TRUE;
-    io_overlap.Count := io_overlap.Count + 1;
+  IF vCoverCount >= 2 THEN
+    ioOverlap.Flags[vStationIdx] := TRUE;
+    ioOverlap.Count := ioOverlap.Count + 1;
   END_IF;
 END_FOR;
 

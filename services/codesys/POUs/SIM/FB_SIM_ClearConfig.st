@@ -69,7 +69,7 @@ FOR i := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
   Stations[i].DeviceDelay  := 0;
 END_FOR;
 
-(* --- Clear all location tracking (transporters 1..MAX_TRANSPORTERS + stations MIN..MAX) --- *)
+(* --- Clear all vLocation tracking (transporters 1..MAX_TRANSPORTERS + stations MIN..MAX) --- *)
 FOR i := 1 TO MAX_STATION_INDEX DO
   g_station_occupancy[i].UnitId     := 0;
   g_station_occupancy[i].ChangeTime := 0;
@@ -136,7 +136,7 @@ END_FOR;
 
 (* --- Clear all units --- *)
 FOR i := 1 TO MAX_UNITS DO
-  g_unit[i].location := 0;
+  g_unit[i].vLocation := 0;
   g_unit[i].Status   := 0;
   g_unit[i].Target   := 0;
 END_FOR;
