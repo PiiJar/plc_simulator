@@ -59,15 +59,15 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  ti                        : INT;     (* transporter loop *)
+  vTi                        : INT;     (* transporter loop *)
   (* Task fields — read from queue[1] to avoid struct copy *)
-  t_unit                    : INT;
-  t_stage                   : INT;
-  t_lift                    : INT;
-  t_sink                    : INT;
-  t_start                   : LINT;
-  t_finish                  : LINT;
-  t_calc_time               : DINT;
+  vTUnit                    : INT;
+  vTStage                   : INT;
+  vTLift                    : INT;
+  vTSink                    : INT;
+  vTStart                   : LINT;
+  vTFinish                  : LINT;
+  vTCalcTime               : DINT;
   (* Time check *)
   vTravelS                  : REAL;
   vMarginS                  : LINT;
@@ -78,23 +78,23 @@ VAR
   vSinkFree                 : BOOL;
   vBestStn                  : INT;
   vBestChange               : LINT;
-  si                        : INT;
+  vSi                        : INT;
   vCandStn                  : INT;
   vCandFree                 : BOOL;
-  uj                        : INT;
-  tgt                       : INT;
+  vUj                        : INT;
+  vTgt                       : INT;
   vNttIdx                   : INT;     (* resolved NTT index (buffer 6/7/8) *)
   vNttCnt                   : INT;
   vNttFbCnt                : INT;
   (* Conflict check *)
   vConflict                  : BOOL;
-  cj                        : INT;
+  vCj                        : INT;
   vTaskMin                  : INT;     (* min station of our proposed task *)
   vTaskMax                  : INT;     (* max station of our proposed task *)
   (* Queue position loop *)
-  qi                        : INT;
+  vQi                        : INT;
   (* Shift-down after dispatch *)
-  sh                        : INT;
+  vSh                        : INT;
   (* Transfer time for batch progress bar *)
   vXferTotal                : REAL;
   (* Program stage number for event *)
@@ -103,36 +103,36 @@ VAR
   vUnitOk                   : BOOL;
 END_VAR
 
-FOR ti := 1 TO MAX_TRANSPORTERS DO
+FOR vTi := 1 TO MAX_TRANSPORTERS DO
 
   (* ── 1. Skip if not idle or queue empty ── *)
   (* Accept idle (Phase=0) OR move-away in progress (Phase=1, Status=3) *)
-  IF (g_transporter[ti].Phase = 0 OR (g_transporter[ti].Phase = 1 AND g_transporter[ti].Status = 3))
-     AND g_task[ti].Count >= 1 THEN
+  IF (g_transporter[vTi].Phase = 0 OR (g_transporter[vTi].Phase = 1 AND g_transporter[vTi].Status = 3))
+     AND g_task[vTi].Count >= 1 THEN
 
     (* Try each queue position — skip blocked tasks, dispatch first feasible *)
-    FOR qi := 1 TO g_task[ti].Count DO
+    FOR vQi := 1 TO g_task[vTi].Count DO
 
-    (* Read task fields from queue position qi *)
-    t_unit      := g_task[ti].Queue[qi].Unit;
-    t_stage     := g_task[ti].Queue[qi].Stage;  (* schedule index *)
-    t_lift      := g_task[ti].Queue[qi].LiftStationTarget;
-    t_sink      := g_task[ti].Queue[qi].SinkStationTarget;
-    t_start     := g_task[ti].Queue[qi].StartTime;
-    t_finish    := g_task[ti].Queue[qi].FinishTime;
-    t_calc_time := g_task[ti].Queue[qi].CalcTime;
+    (* Read task fields from queue position vQi *)
+    vTUnit      := g_task[vTi].Queue[vQi].Unit;
+    vTStage     := g_task[vTi].Queue[vQi].Stage;  (* schedule index *)
+    vTLift      := g_task[vTi].Queue[vQi].LiftStationTarget;
+    vTSink      := g_task[vTi].Queue[vQi].SinkStationTarget;
+    vTStart     := g_task[vTi].Queue[vQi].StartTime;
+    vTFinish    := g_task[vTi].Queue[vQi].FinishTime;
+    vTCalcTime := g_task[vTi].Queue[vQi].CalcTime;
 
     (* Queue[].Stage vAlready contains ProgramStage (set by FC_STC_CreateTasks) *)
-    vProgStage := t_stage;
+    vProgStage := vTStage;
 
     (* ── 1b. Lift station unit check — unit must be AT the lift station ── *)
     (* Manual tasks have Unit=0 → skip unit-vLocation check *)
     (* NOTE: CODESYS does NOT short-circuit OR — use nested IFs *)
     vUnitOk := FALSE;
-    IF t_unit = 0 THEN
+    IF vTUnit = 0 THEN
       vUnitOk := TRUE;
-    ELSIF t_unit >= 1 AND t_unit <= MAX_UNITS THEN
-      IF g_unit[t_unit].Location = t_lift THEN
+    ELSIF vTUnit >= 1 AND vTUnit <= MAX_UNITS THEN
+      IF g_unit[vTUnit].Location = vTLift THEN
         vUnitOk := TRUE;
       END_IF;
     END_IF;
@@ -141,27 +141,27 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
 
     (* ── 2. Time check ── *)
     vTravelS := 0.0;
-    IF g_transporter[ti].CurrentStation > 0 AND t_lift > 0
-       AND g_transporter[ti].CurrentStation <> t_lift THEN
-      vFromIdx := g_transporter[ti].CurrentStation - MIN_STATION_INDEX;
-      vToIdx   := t_lift - MIN_STATION_INDEX;
+    IF g_transporter[vTi].CurrentStation > 0 AND vTLift > 0
+       AND g_transporter[vTi].CurrentStation <> vTLift THEN
+      vFromIdx := g_transporter[vTi].CurrentStation - MIN_STATION_INDEX;
+      vToIdx   := vTLift - MIN_STATION_INDEX;
       IF vFromIdx >= 1 AND vFromIdx <= 30 AND vToIdx >= 1 AND vToIdx <= 30 THEN
-        vTravelS := INT_TO_REAL(g_move[ti].Travel[vFromIdx].ToTime[vToIdx]) / 10.0;
+        vTravelS := INT_TO_REAL(g_move[vTi].Travel[vFromIdx].ToTime[vToIdx]) / 10.0;
       END_IF;
     END_IF;
 
-    vMarginS := t_start - g_time_s;
+    vMarginS := vTStart - g_time_s;
 
     IF vMarginS <= REAL_TO_LINT(vTravelS + SCH_DISPATCH_MARGIN_S) THEN
 
       (* ── 3. Sink station free check ── *)
-      vSinkStn := t_sink;
+      vSinkStn := vTSink;
       vSinkFree := FALSE;
 
       IF vSinkStn >= MIN_STATION_INDEX AND vSinkStn <= MAX_STATION_INDEX THEN
         vSinkFree := TRUE;
-        FOR uj := 1 TO MAX_UNITS DO
-          IF g_unit[uj].Location = vSinkStn AND g_unit[uj].Status = USED THEN
+        FOR vUj := 1 TO MAX_UNITS DO
+          IF g_unit[vUj].Location = vSinkStn AND g_unit[vUj].Status = USED THEN
             vSinkFree := FALSE;
           END_IF;
         END_FOR;
@@ -173,15 +173,15 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
         vBestChange := LINT#2000000000;
 
         IF vProgStage >= 1 AND vProgStage <= MAX_STEPS_PER_PROGRAM
-           AND t_unit >= 1 AND t_unit <= MAX_UNITS THEN
+           AND vTUnit >= 1 AND vTUnit <= MAX_UNITS THEN
           (* Treatment task — look in TreatmentPrograms for parallel stations *)
-          FOR si := 0 TO MAX_STATIONS_PER_STEP - 1 DO
-            vCandStn := TreatmentPrograms[t_unit].Steps[vProgStage].Stations[si];
-            IF vCandStn > 0 AND vCandStn <> t_sink THEN
+          FOR vSi := 0 TO MAX_STATIONS_PER_STEP - 1 DO
+            vCandStn := TreatmentPrograms[vTUnit].Steps[vProgStage].Stations[vSi];
+            IF vCandStn > 0 AND vCandStn <> vTSink THEN
               IF vCandStn >= MIN_STATION_INDEX AND vCandStn <= MAX_STATION_INDEX THEN
                 vCandFree := TRUE;
-                FOR uj := 1 TO MAX_UNITS DO
-                  IF g_unit[uj].Location = vCandStn AND g_unit[uj].Status = USED THEN
+                FOR vUj := 1 TO MAX_UNITS DO
+                  IF g_unit[vUj].Location = vCandStn AND g_unit[vUj].Status = USED THEN
                     vCandFree := FALSE;
                   END_IF;
                 END_FOR;
@@ -195,32 +195,32 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
             END_IF;
           END_FOR;
 
-        ELSIF vProgStage = 0 AND t_unit >= 1 AND t_unit <= MAX_UNITS THEN
+        ELSIF vProgStage = 0 AND vTUnit >= 1 AND vTUnit <= MAX_UNITS THEN
           (* No-treatment task — look in g_ntt for alternatives *)
-          tgt := g_unit[t_unit].Target;
-          IF tgt >= 1 AND tgt <= 5 THEN
+          vTgt := g_unit[vTUnit].Target;
+          IF vTgt >= 1 AND vTgt <= 5 THEN
             (* Resolve buffer NTT index like NoTreatment does *)
-            IF tgt = 2 THEN
-              IF g_batch[t_unit].BatchCode = 0 THEN
+            IF vTgt = 2 THEN
+              IF g_batch[vTUnit].BatchCode = 0 THEN
                 vNttIdx := 6;
-              ELSIF g_batch[t_unit].State = PROCESSED THEN
+              ELSIF g_batch[vTUnit].State = PROCESSED THEN
                 vNttIdx := 8;
               ELSE
                 vNttIdx := 7;
               END_IF;
             ELSE
-              vNttIdx := tgt;
+              vNttIdx := vTgt;
             END_IF;
             (* Check primary stations *)
-            vNttCnt := g_ntt[ti].Target[vNttIdx].StationCount;
-            FOR si := 1 TO vNttCnt DO
-              IF si <= MAX_STATIONS_PER_STEP THEN
-                vCandStn := g_ntt[ti].Target[vNttIdx].Stations[si];
-                IF vCandStn > 0 AND vCandStn <> t_sink THEN
+            vNttCnt := g_ntt[vTi].Target[vNttIdx].StationCount;
+            FOR vSi := 1 TO vNttCnt DO
+              IF vSi <= MAX_STATIONS_PER_STEP THEN
+                vCandStn := g_ntt[vTi].Target[vNttIdx].Stations[vSi];
+                IF vCandStn > 0 AND vCandStn <> vTSink THEN
                   IF vCandStn >= MIN_STATION_INDEX AND vCandStn <= MAX_STATION_INDEX THEN
                     vCandFree := TRUE;
-                    FOR uj := 1 TO MAX_UNITS DO
-                      IF g_unit[uj].Location = vCandStn AND g_unit[uj].Status = USED THEN
+                    FOR vUj := 1 TO MAX_UNITS DO
+                      IF g_unit[vUj].Location = vCandStn AND g_unit[vUj].Status = USED THEN
                         vCandFree := FALSE;
                       END_IF;
                     END_FOR;
@@ -235,15 +235,15 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
               END_IF;
             END_FOR;
             (* Check fallback stations *)
-            vNttFbCnt := g_ntt[ti].Target[vNttIdx].FallbackCount;
-            FOR si := 1 TO vNttFbCnt DO
-              IF si <= MAX_STATIONS_PER_STEP THEN
-                vCandStn := g_ntt[ti].Target[vNttIdx].FallbackStations[si];
-                IF vCandStn > 0 AND vCandStn <> t_sink THEN
+            vNttFbCnt := g_ntt[vTi].Target[vNttIdx].FallbackCount;
+            FOR vSi := 1 TO vNttFbCnt DO
+              IF vSi <= MAX_STATIONS_PER_STEP THEN
+                vCandStn := g_ntt[vTi].Target[vNttIdx].FallbackStations[vSi];
+                IF vCandStn > 0 AND vCandStn <> vTSink THEN
                   IF vCandStn >= MIN_STATION_INDEX AND vCandStn <= MAX_STATION_INDEX THEN
                     vCandFree := TRUE;
-                    FOR uj := 1 TO MAX_UNITS DO
-                      IF g_unit[uj].Location = vCandStn AND g_unit[uj].Status = USED THEN
+                    FOR vUj := 1 TO MAX_UNITS DO
+                      IF g_unit[vUj].Location = vCandStn AND g_unit[vUj].Status = USED THEN
                         vCandFree := FALSE;
                       END_IF;
                     END_FOR;
@@ -271,28 +271,28 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
         (* ── 4. Conflict check ── *)
         vConflict := FALSE;
 
-        IF t_lift <= vSinkStn THEN
-          vTaskMin := t_lift;
+        IF vTLift <= vSinkStn THEN
+          vTaskMin := vTLift;
           vTaskMax := vSinkStn;
         ELSE
           vTaskMin := vSinkStn;
-          vTaskMax := t_lift;
+          vTaskMax := vTLift;
         END_IF;
 
-        FOR cj := 1 TO MAX_TRANSPORTERS DO
-          IF cj <> ti AND g_transporter[cj].Phase > 0 THEN
+        FOR vCj := 1 TO MAX_TRANSPORTERS DO
+          IF vCj <> vTi AND g_transporter[vCj].Phase > 0 THEN
 
             (* a) T2's entire active task inside our range → vConflict *)
-            IF g_transporter[cj].LiftStationTarget >= vTaskMin
-               AND g_transporter[cj].LiftStationTarget <= vTaskMax
-               AND g_transporter[cj].SinkStationTarget >= vTaskMin
-               AND g_transporter[cj].SinkStationTarget <= vTaskMax THEN
+            IF g_transporter[vCj].LiftStationTarget >= vTaskMin
+               AND g_transporter[vCj].LiftStationTarget <= vTaskMax
+               AND g_transporter[vCj].SinkStationTarget >= vTaskMin
+               AND g_transporter[vCj].SinkStationTarget <= vTaskMax THEN
               vConflict := TRUE;
             END_IF;
 
             (* b) T2 delivers to one of our exact stations → vConflict *)
-            IF g_transporter[cj].SinkStationTarget = t_lift
-               OR g_transporter[cj].SinkStationTarget = vSinkStn THEN
+            IF g_transporter[vCj].SinkStationTarget = vTLift
+               OR g_transporter[vCj].SinkStationTarget = vSinkStn THEN
               vConflict := TRUE;
             END_IF;
 
@@ -301,103 +301,103 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
 
         IF NOT vConflict THEN
           (* ── 5. Dispatch: assign task to transporter ── *)
-          g_transporter[ti].TaskId      := t_start;
-          g_transporter[ti].LiftStationTarget := t_lift;
-          g_transporter[ti].SinkStationTarget := vSinkStn;
-          g_transporter[ti].CurrentTaskFinishTime := g_task[ti].Queue[qi].FinishTime;
-          g_station_occupancy[ti].UnitId      := t_unit;
-          g_transporter[ti].TaskRemainingTime := t_calc_time;
+          g_transporter[vTi].TaskId      := vTStart;
+          g_transporter[vTi].LiftStationTarget := vTLift;
+          g_transporter[vTi].SinkStationTarget := vSinkStn;
+          g_transporter[vTi].CurrentTaskFinishTime := g_task[vTi].Queue[vQi].FinishTime;
+          g_station_occupancy[vTi].UnitId      := vTUnit;
+          g_transporter[vTi].TaskRemainingTime := vTCalcTime;
 
           (* ── 5b. Fill dispatched task package ── *)
-          g_dispatched_task[ti].TaskId           := t_start;
-          g_dispatched_task[ti].UnitId           := t_unit;
-          g_dispatched_task[ti].LiftStation      := t_lift;
-          g_dispatched_task[ti].SinkStation      := vSinkStn;
-          IF t_lift >= MIN_STATION_INDEX AND t_lift <= MAX_STATION_INDEX THEN
-            g_dispatched_task[ti].LiftX              := Stations[t_lift].XPosition;
-            g_dispatched_task[ti].LiftKind           := Stations[t_lift].DryWet;
-            g_dispatched_task[ti].DroppingTime_x10   := Stations[t_lift].DrippingTime;
-            g_dispatched_task[ti].LiftDeviceDelay_x10 := Stations[t_lift].DeviceDelay;
+          g_dispatched_task[vTi].TaskId           := vTStart;
+          g_dispatched_task[vTi].UnitId           := vTUnit;
+          g_dispatched_task[vTi].LiftStation      := vTLift;
+          g_dispatched_task[vTi].SinkStation      := vSinkStn;
+          IF vTLift >= MIN_STATION_INDEX AND vTLift <= MAX_STATION_INDEX THEN
+            g_dispatched_task[vTi].LiftX              := Stations[vTLift].XPosition;
+            g_dispatched_task[vTi].LiftKind           := Stations[vTLift].DryWet;
+            g_dispatched_task[vTi].DroppingTime_x10   := Stations[vTLift].DrippingTime;
+            g_dispatched_task[vTi].LiftDeviceDelay_x10 := Stations[vTLift].DeviceDelay;
           END_IF;
           IF vSinkStn >= MIN_STATION_INDEX AND vSinkStn <= MAX_STATION_INDEX THEN
-            g_dispatched_task[ti].SinkX              := Stations[vSinkStn].XPosition;
-            g_dispatched_task[ti].SinkKind           := Stations[vSinkStn].DryWet;
-            g_dispatched_task[ti].SinkDeviceDelay_x10 := Stations[vSinkStn].DeviceDelay;
+            g_dispatched_task[vTi].SinkX              := Stations[vSinkStn].XPosition;
+            g_dispatched_task[vTi].SinkKind           := Stations[vSinkStn].DryWet;
+            g_dispatched_task[vTi].SinkDeviceDelay_x10 := Stations[vSinkStn].DeviceDelay;
           END_IF;
-          g_dispatched_task[ti].DripTrayDelay_x10 := Transporters[ti].DripTrayDelay;
-          g_dispatched_task[ti].TreatmentTime    := t_calc_time;
-          g_dispatched_task[ti].MinTime          := g_task[ti].Queue[qi].MinTime;
-          g_dispatched_task[ti].MaxTime          := g_task[ti].Queue[qi].MaxTime;
-          g_dispatched_task[ti].NttPrimary       := g_task[ti].Queue[qi].NttPrimary;
-          IF t_unit >= 1 AND t_unit <= MAX_UNITS THEN
-            g_dispatched_task[ti].BatchCode      := g_batch[t_unit].BatchCode;
-            g_dispatched_task[ti].ProgramStage   := g_batch[t_unit].CurStage;
+          g_dispatched_task[vTi].DripTrayDelay_x10 := Transporters[vTi].DripTrayDelay;
+          g_dispatched_task[vTi].TreatmentTime    := vTCalcTime;
+          g_dispatched_task[vTi].MinTime          := g_task[vTi].Queue[vQi].MinTime;
+          g_dispatched_task[vTi].MaxTime          := g_task[vTi].Queue[vQi].MaxTime;
+          g_dispatched_task[vTi].NttPrimary       := g_task[vTi].Queue[vQi].NttPrimary;
+          IF vTUnit >= 1 AND vTUnit <= MAX_UNITS THEN
+            g_dispatched_task[vTi].BatchCode      := g_batch[vTUnit].BatchCode;
+            g_dispatched_task[vTi].ProgramStage   := g_batch[vTUnit].CurStage;
           ELSE
-            g_dispatched_task[ti].BatchCode      := 0;
-            g_dispatched_task[ti].ProgramStage   := 0;
+            g_dispatched_task[vTi].BatchCode      := 0;
+            g_dispatched_task[vTi].ProgramStage   := 0;
           END_IF;
-          g_dispatched_task[ti].Active           := TRUE;
+          g_dispatched_task[vTi].Active           := TRUE;
 
           (* ── Emit TASK_DISPATCHED event (msg_type=1) ── *)
           vXferTotal := FC_STC_CalcTransferTime(
-            iFromStn            := t_lift,
+            iFromStn            := vTLift,
             iToStn              := vSinkStn,
-            iMove                := g_move[ti],
-            i_from_dropping_x10   := Stations[t_lift].DrippingTime,
-            i_to_device_delay_x10 := Stations[vSinkStn].DeviceDelay,
-            iDripTrayDelayX10 := Transporters[ti].DripTrayDelay
+            iMove                := g_move[vTi],
+            iFromDroppingX10   := Stations[vTLift].DrippingTime,
+            iToDeviceDelayX10 := Stations[vSinkStn].DeviceDelay,
+            iDripTrayDelayX10 := Transporters[vTi].DripTrayDelay
           );
           IF vXferTotal < 1.0 THEN
-            vXferTotal := INT_TO_REAL(ABS(vSinkStn - t_lift)) * 8.0;
+            vXferTotal := INT_TO_REAL(ABS(vSinkStn - vTLift)) * 8.0;
           END_IF;
   IF vXferTotal < 5.0 THEN vXferTotal := 60.0; END_IF;
-          g_dispatched_task[ti].TransferTime_x10 := REAL_TO_DINT(vXferTotal * 10.0);
+          g_dispatched_task[vTi].TransferTime_x10 := REAL_TO_DINT(vXferTotal * 10.0);
           IF NOT g_event_pending_valid THEN
             g_event_pending.MsgType := 1;
             g_event_pending.TsHi := LINT_TO_UINT(g_time_s / LINT#65536);
             g_event_pending.TsLo := LINT_TO_UINT(g_time_s MOD LINT#65536);
-            g_event_pending.Payload[1]  := LINT_TO_INT(t_start / LINT#65536);   (* TaskId_Hi *)
-            g_event_pending.Payload[2]  := LINT_TO_INT(t_start MOD LINT#65536);  (* TaskId_Lo *)
-            g_event_pending.Payload[3]  := ti;
-            g_event_pending.Payload[4]  := t_unit;
-            g_event_pending.Payload[5]  := t_lift;
+            g_event_pending.Payload[1]  := LINT_TO_INT(vTStart / LINT#65536);   (* TaskId_Hi *)
+            g_event_pending.Payload[2]  := LINT_TO_INT(vTStart MOD LINT#65536);  (* TaskId_Lo *)
+            g_event_pending.Payload[3]  := vTi;
+            g_event_pending.Payload[4]  := vTUnit;
+            g_event_pending.Payload[5]  := vTLift;
             g_event_pending.Payload[6]  := vSinkStn;
-            IF t_unit >= 1 AND t_unit <= MAX_UNITS THEN
-              vProgStage := g_batch[t_unit].CurStage;
+            IF vTUnit >= 1 AND vTUnit <= MAX_UNITS THEN
+              vProgStage := g_batch[vTUnit].CurStage;
               g_event_pending.Payload[7]  := vProgStage;
-              g_event_pending.Payload[8]  := g_batch[t_unit].BatchCode;
+              g_event_pending.Payload[8]  := g_batch[vTUnit].BatchCode;
             ELSE
               g_event_pending.Payload[7]  := 0;
               g_event_pending.Payload[8]  := 0;
             END_IF;
-            g_event_pending.Payload[9]  := DINT_TO_INT(t_calc_time);
-            g_event_pending.Payload[10] := DINT_TO_INT(g_task[ti].Queue[qi].MinTime);
-            g_event_pending.Payload[11] := DINT_TO_INT(g_task[ti].Queue[qi].MaxTime);
+            g_event_pending.Payload[9]  := DINT_TO_INT(vTCalcTime);
+            g_event_pending.Payload[10] := DINT_TO_INT(g_task[vTi].Queue[vQi].MinTime);
+            g_event_pending.Payload[11] := DINT_TO_INT(g_task[vTi].Queue[vQi].MaxTime);
             g_event_pending.Payload[12] := REAL_TO_INT(vXferTotal);
             g_event_pending_valid := TRUE;
           END_IF;
 
           (* Copy station-specific timing from config *)
-          IF t_lift >= MIN_STATION_INDEX AND t_lift <= MAX_STATION_INDEX THEN
-            g_transporter[ti].DrippingTime := Stations[t_lift].DrippingTime;
+          IF vTLift >= MIN_STATION_INDEX AND vTLift <= MAX_STATION_INDEX THEN
+            g_transporter[vTi].DrippingTime := Stations[vTLift].DrippingTime;
           END_IF;
 
-          (* Shift queue: remove position qi, move rest up *)
-          FOR sh := qi + 1 TO g_task[ti].Count DO
-            g_task[ti].Queue[sh - 1] := g_task[ti].Queue[sh];
+          (* Shift queue: remove position vQi, move rest up *)
+          FOR vSh := vQi + 1 TO g_task[vTi].Count DO
+            g_task[vTi].Queue[vSh - 1] := g_task[vTi].Queue[vSh];
           END_FOR;
           (* Clear last slot *)
-          g_task[ti].Queue[g_task[ti].Count].Unit := 0;
-          g_task[ti].Queue[g_task[ti].Count].Stage := 0;
-          g_task[ti].Queue[g_task[ti].Count].SrcStage := 0;
-          g_task[ti].Queue[g_task[ti].Count].LiftStationTarget := 0;
-          g_task[ti].Queue[g_task[ti].Count].SinkStationTarget := 0;
-          g_task[ti].Queue[g_task[ti].Count].StartTime := 0;
-          g_task[ti].Queue[g_task[ti].Count].FinishTime := 0;
-          g_task[ti].Queue[g_task[ti].Count].CalcTime := 0;
-          g_task[ti].Queue[g_task[ti].Count].MinTime := 0;
-          g_task[ti].Queue[g_task[ti].Count].MaxTime := 0;
-          g_task[ti].Count := g_task[ti].Count - 1;
+          g_task[vTi].Queue[g_task[vTi].Count].Unit := 0;
+          g_task[vTi].Queue[g_task[vTi].Count].Stage := 0;
+          g_task[vTi].Queue[g_task[vTi].Count].SrcStage := 0;
+          g_task[vTi].Queue[g_task[vTi].Count].LiftStationTarget := 0;
+          g_task[vTi].Queue[g_task[vTi].Count].SinkStationTarget := 0;
+          g_task[vTi].Queue[g_task[vTi].Count].StartTime := 0;
+          g_task[vTi].Queue[g_task[vTi].Count].FinishTime := 0;
+          g_task[vTi].Queue[g_task[vTi].Count].CalcTime := 0;
+          g_task[vTi].Queue[g_task[vTi].Count].MinTime := 0;
+          g_task[vTi].Queue[g_task[vTi].Count].MaxTime := 0;
+          g_task[vTi].Count := g_task[vTi].Count - 1;
           EXIT;  (* dispatched — stop searching this queue *)
 
         END_IF;  (* NOT vConflict *)
@@ -408,7 +408,7 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
 
     END_IF;  (* unit at lift station *)
 
-    END_FOR;  (* qi — try next queue position *)
+    END_FOR;  (* vQi — try next queue position *)
 
   END_IF;  (* idle + queue *)
 

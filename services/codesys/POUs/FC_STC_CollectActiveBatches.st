@@ -51,26 +51,26 @@ VAR_OUTPUT
 END_VAR
 
 VAR
-  ui                        : INT;
+  vUi                        : INT;
   vCnt                       : INT;
 END_VAR
 
 vCnt := 0;
-FOR ui := 1 TO MAX_UNITS DO
-  oList[ui] := 0;
+FOR vUi := 1 TO MAX_UNITS DO
+  oList[vUi] := 0;
 END_FOR;
 
 IF iMode = 1 THEN
   (* ── Waiting batch: direct lookup at station 114 ── *)
-  ui := g_station_occupancy[114].UnitId;
-  IF ui >= 1 AND ui <= MAX_UNITS THEN
-    IF g_unit[ui].Status = USED
-       AND g_unit[ui].Target = TO_NONE
-       AND g_batch[ui].State = NOT_PROCESSED
-       AND g_batch[ui].ProgId = TreatmentPrograms[ui].ProgramId
-       AND TreatmentPrograms[ui].ProgramId > 0 THEN
+  vUi := g_station_occupancy[114].UnitId;
+  IF vUi >= 1 AND vUi <= MAX_UNITS THEN
+    IF g_unit[vUi].Status = USED
+       AND g_unit[vUi].Target = TO_NONE
+       AND g_batch[vUi].State = NOT_PROCESSED
+       AND g_batch[vUi].ProgId = TreatmentPrograms[vUi].ProgramId
+       AND TreatmentPrograms[vUi].ProgramId > 0 THEN
       vCnt := 1;
-      oList[1] := ui;
+      oList[1] := vUi;
     END_IF;
   END_IF;
   FC_STC_CollectActiveBatches := vCnt;
@@ -78,17 +78,17 @@ IF iMode = 1 THEN
 END_IF;
 
 (* ── Mode 0: active batches — loop ── *)
-FOR ui := 1 TO MAX_UNITS DO
-  IF g_unit[ui].Status = USED
-     AND g_unit[ui].Target = TO_NONE
-     AND g_batch[ui].ProgId = TreatmentPrograms[ui].ProgramId
-     AND TreatmentPrograms[ui].ProgramId > 0 THEN
+FOR vUi := 1 TO MAX_UNITS DO
+  IF g_unit[vUi].Status = USED
+     AND g_unit[vUi].Target = TO_NONE
+     AND g_batch[vUi].ProgId = TreatmentPrograms[vUi].ProgramId
+     AND TreatmentPrograms[vUi].ProgramId > 0 THEN
 
-    IF g_batch[ui].State = IN_PROCESS
-       AND g_batch[ui].CurStage >= 0
-       AND g_batch[ui].CurStage <= 99 THEN
+    IF g_batch[vUi].State = IN_PROCESS
+       AND g_batch[vUi].CurStage >= 0
+       AND g_batch[vUi].CurStage <= 99 THEN
       vCnt := vCnt + 1;
-      oList[vCnt] := ui;
+      oList[vCnt] := vUi;
     END_IF;
   END_IF;
 END_FOR;

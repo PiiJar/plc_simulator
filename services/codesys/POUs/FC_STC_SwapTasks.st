@@ -34,8 +34,8 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR
-  ti                        : INT;
-  qi                        : INT;
+  vTi                        : INT;
+  vQi                        : INT;
   vCnt                       : INT;
   vTmp                       : UDT_JC_TskTaskType;
   vSwaps                     : INT;
@@ -43,15 +43,15 @@ END_VAR
 
 vSwaps := 0;
 
-FOR ti := 1 TO MAX_TRANSPORTERS DO
-  vCnt := ioTask[ti].Count;
+FOR vTi := 1 TO MAX_TRANSPORTERS DO
+  vCnt := ioTask[vTi].Count;
   IF vCnt >= 2 THEN
-    FOR qi := 1 TO vCnt - 1 DO
-      IF ioTask[ti].Queue[qi].Unit <> ioTask[ti].Queue[qi + 1].Unit
-         AND ioTask[ti].Queue[qi].SinkStationTarget = ioTask[ti].Queue[qi + 1].LiftStationTarget THEN
-        vTmp := ioTask[ti].Queue[qi];
-        ioTask[ti].Queue[qi] := ioTask[ti].Queue[qi + 1];
-        ioTask[ti].Queue[qi + 1] := vTmp;
+    FOR vQi := 1 TO vCnt - 1 DO
+      IF ioTask[vTi].Queue[vQi].Unit <> ioTask[vTi].Queue[vQi + 1].Unit
+         AND ioTask[vTi].Queue[vQi].SinkStationTarget = ioTask[vTi].Queue[vQi + 1].LiftStationTarget THEN
+        vTmp := ioTask[vTi].Queue[vQi];
+        ioTask[vTi].Queue[vQi] := ioTask[vTi].Queue[vQi + 1];
+        ioTask[vTi].Queue[vQi + 1] := vTmp;
         vSwaps := vSwaps + 1;
       END_IF;
     END_FOR;

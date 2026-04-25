@@ -45,9 +45,9 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  ti                        : INT;
-  t_start                   : INT;
-  t_end                     : INT;
+  vTi                        : INT;
+  vTStart                   : INT;
+  vTEnd                     : INT;
   vInsI                     : INT;
   vInsJ                     : INT;
   vInsCnt                   : INT;
@@ -64,18 +64,18 @@ END_VAR
 FC_STC_SortTasks := TRUE;
 
 IF iTrans >= 1 AND iTrans <= 3 THEN
-  t_start := iTrans;
-  t_end   := iTrans;
+  vTStart := iTrans;
+  vTEnd   := iTrans;
 ELSE
-  t_start := 1;
-  t_end   := 3;
+  vTStart := 1;
+  vTEnd   := 3;
 END_IF;
 
-FOR ti := t_start TO t_end DO
-  vInsCnt := ioTask[ti].Count;
+FOR vTi := vTStart TO vTEnd DO
+  vInsCnt := ioTask[vTi].Count;
   IF vInsCnt >= 2 THEN
     FOR vInsI := 2 TO vInsCnt DO
-      vTmpTask := ioTask[ti].Queue[vInsI];
+      vTmpTask := ioTask[vTi].Queue[vInsI];
 
       vTmpRatio := 0.0;
       vTmpUnit  := vTmpTask.Unit;
@@ -96,12 +96,12 @@ FOR ti := t_start TO t_end DO
       vInsJ := 0;
       FOR vInsJ := vInsI - 1 TO 1 BY -1 DO
         vCurRatio := 0.0;
-        vCurUnit  := ioTask[ti].Queue[vInsJ].Unit;
+        vCurUnit  := ioTask[vTi].Queue[vInsJ].Unit;
         IF vCurUnit >= 1 AND vCurUnit <= MAX_UNITS THEN
           IF ioBatch[vCurUnit].State = IN_PROCESS
-             AND ioTask[ti].Queue[vInsJ].Stage >= 1 THEN
-            IF ioBatch[vCurUnit].CurStage = ioTask[ti].Queue[vInsJ].Stage
-               AND g_unit[vCurUnit].Location = ioTask[ti].Queue[vInsJ].LiftStationTarget
+             AND ioTask[vTi].Queue[vInsJ].Stage >= 1 THEN
+            IF ioBatch[vCurUnit].CurStage = ioTask[vTi].Queue[vInsJ].Stage
+               AND g_unit[vCurUnit].Location = ioTask[vTi].Queue[vInsJ].LiftStationTarget
                AND ioBatch[vCurUnit].StartTime > LINT#0
                AND ioBatch[vCurUnit].MaxTime > 0 THEN
               vCurRatio := LINT_TO_REAL(iTimeS - ioBatch[vCurUnit].StartTime)
@@ -119,17 +119,17 @@ FOR ti := t_start TO t_end DO
             vDoShift := TRUE;
           END_IF;
         ELSIF NOT vTmpEmerg AND NOT vCurEmerg THEN
-          IF ioTask[ti].Queue[vInsJ].StartTime > vTmpTask.StartTime THEN
+          IF ioTask[vTi].Queue[vInsJ].StartTime > vTmpTask.StartTime THEN
             vDoShift := TRUE;
           END_IF;
         END_IF;
 
         IF NOT vDoShift THEN EXIT; END_IF;
 
-        ioTask[ti].Queue[vInsJ + 1] := ioTask[ti].Queue[vInsJ];
+        ioTask[vTi].Queue[vInsJ + 1] := ioTask[vTi].Queue[vInsJ];
       END_FOR;
 
-      ioTask[ti].Queue[vInsJ + 1] := vTmpTask;
+      ioTask[vTi].Queue[vInsJ + 1] := vTmpTask;
     END_FOR;
   END_IF;
 END_FOR;

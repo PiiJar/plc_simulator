@@ -35,8 +35,8 @@ VAR_INPUT
   iFromStn                : INT;     (* source station, e.g. 105 *)
   iToStn                  : INT;     (* destination station, e.g. 112 *)
   iMove                    : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
-  i_from_dropping_x10       : INT;     (* Stations[from].DrippingTime — tenths of second *)
-  i_to_device_delay_x10     : INT;     (* Stations[to].DeviceDelay   — tenths of second *)
+  iFromDroppingX10       : INT;     (* Stations[from].DrippingTime — tenths of second *)
+  iToDeviceDelayX10     : INT;     (* Stations[to].DeviceDelay   — tenths of second *)
   iDripTrayDelayX10     : INT;     (* Transporters[trans].DripTrayDelay  — tenths of second *)
 END_VAR
 
@@ -53,14 +53,14 @@ IF iFromStn > 0 AND iFromStn <> iToStn THEN
     FC_STC_CalcTransferTime :=
       (* Phase 2: lift + dropping + drip tray *)
       INT_TO_REAL(iMove.LiftTime[vFromIdx]) / 10.0
-      + INT_TO_REAL(i_from_dropping_x10) / 10.0
+      + INT_TO_REAL(iFromDroppingX10) / 10.0
       + INT_TO_REAL(iDripTrayDelayX10) / 10.0
       (* Phase 3: horizontal vTravel *)
       + INT_TO_REAL(iMove.Travel[vFromIdx].ToTime[vToIdx]) / 10.0
       (* Phase 4: sink + drip tray + device vDelay *)
       + INT_TO_REAL(iMove.SinkTime[vToIdx]) / 10.0
       + INT_TO_REAL(iDripTrayDelayX10) / 10.0
-      + INT_TO_REAL(i_to_device_delay_x10) / 10.0;
+      + INT_TO_REAL(iToDeviceDelayX10) / 10.0;
   END_IF;
 END_IF;
 

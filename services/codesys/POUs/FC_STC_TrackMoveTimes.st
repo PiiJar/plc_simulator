@@ -48,49 +48,49 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  t                         : INT;
+  vT                         : INT;
   vLiftStn                  : INT;
   vSinkStn                  : INT;
   vStartStn                 : INT;
-  li                        : INT;   (* lift station index = stn - 100 *)
-  si                        : INT;   (* sink station index = stn - 100 *)
-  st_i                      : INT;   (* start station index = stn - 100 *)
-  raw_lift                  : INT;   (* measured lift vDuration in 0.1s ticks *)
-  raw_sink                  : INT;   (* measured sink vDuration in 0.1s ticks *)
-  raw_trav1                 : INT;   (* measured vTravel start→lift in 0.1s ticks *)
-  raw_trav2                 : INT;   (* measured vTravel lift→sink in 0.1s ticks *)
-  drip_x10                  : INT;   (* DrippingTime in 0.1s ticks from lift station *)
-  tray_x10                  : INT;   (* DripTrayDelay in 0.1s ticks from transporter config *)
-  dev_x10                   : INT;   (* DeviceDelay in 0.1s ticks from sink station *)
+  vLi                        : INT;   (* lift station index = stn - 100 *)
+  vSi                        : INT;   (* sink station index = stn - 100 *)
+  vStI                      : INT;   (* start station index = stn - 100 *)
+  vRawLift                  : INT;   (* measured lift vDuration in 0.1s ticks *)
+  vRawSink                  : INT;   (* measured sink vDuration in 0.1s ticks *)
+  vRawTrav1                 : INT;   (* measured vTravel start→lift in 0.1s ticks *)
+  vRawTrav2                 : INT;   (* measured vTravel lift→sink in 0.1s ticks *)
+  vDripX10                  : INT;   (* DrippingTime in 0.1s ticks from lift station *)
+  vTrayX10                  : INT;   (* DripTrayDelay in 0.1s ticks from transporter config *)
+  vDevX10                   : INT;   (* DeviceDelay in 0.1s ticks from sink station *)
 END_VAR
 
-t := iTrans;
+vT := iTrans;
 
 (* Bounds check *)
-IF t < 1 OR t > MAX_TRANSPORTERS THEN
+IF vT < 1 OR vT > MAX_TRANSPORTERS THEN
     RETURN;
 END_IF;
 
 CASE iPrev OF
     0: (* 0→1 : siirto nostoasemalle alkaa *)
         IF iNew = 1 THEN
-            g_actual_move[t].StartStation := g_transporter[t].CurrentStation;
-            g_actual_move[t].LiftStation  := g_transporter[t].LiftStationTarget;
-            g_actual_move[t].SinkStation  := g_transporter[t].SinkStationTarget;
-            g_actual_move[t].ts0 := g_time_100ms;
-            g_actual_move[t].Invalidated := FALSE;
+            g_actual_move[vT].StartStation := g_transporter[vT].CurrentStation;
+            g_actual_move[vT].LiftStation  := g_transporter[vT].LiftStationTarget;
+            g_actual_move[vT].SinkStation  := g_transporter[vT].SinkStationTarget;
+            g_actual_move[vT].Ts0 := g_time_100ms;
+            g_actual_move[vT].Invalidated := FALSE;
         END_IF;
     1: (* 1→2 : nosto alkaa *)
         IF iNew = 2 THEN
-            g_actual_move[t].ts1 := g_time_100ms;
+            g_actual_move[vT].Ts1 := g_time_100ms;
         END_IF;
     2: (* 2→3 : siirto laskuasemalle alkaa *)
         IF iNew = 3 THEN
-            g_actual_move[t].ts2 := g_time_100ms;
+            g_actual_move[vT].Ts2 := g_time_100ms;
         END_IF;
     3: (* 3→4 : lasku alkaa *)
         IF iNew = 4 THEN
-            g_actual_move[t].ts3 := g_time_100ms;
+            g_actual_move[vT].Ts3 := g_time_100ms;
         END_IF;
     4: (* 4→0 : handled after CASE — see below *)
 END_CASE;
@@ -98,76 +98,76 @@ END_CASE;
 (* ── Invalidate on anomaly (checked at every vPhase transition) ── *)
 IF iNew > 0 THEN
     (* Not in automatic mode: task interrupted *)
-    IF g_transporter[t].Status < 4 THEN
-        g_actual_move[t].Invalidated := TRUE;
+    IF g_transporter[vT].Status < 4 THEN
+        g_actual_move[vT].Invalidated := TRUE;
     END_IF;
     (* Transporter fault active *)
-    IF g_transporter[t].Fault THEN
-        g_actual_move[t].Invalidated := TRUE;
+    IF g_transporter[vT].Fault THEN
+        g_actual_move[vT].Invalidated := TRUE;
     END_IF;
 END_IF;
 
 (* ── 4→0 completion: calculate and update g_move ── *)
 IF iPrev = 4 AND iNew = 0 THEN
-    g_actual_move[t].ts4 := g_time_100ms;
+    g_actual_move[vT].Ts4 := g_time_100ms;
 
     (* Only update if all timestamps are valid and transfer was normal *)
-    IF g_actual_move[t].ts0 > 0
-       AND g_actual_move[t].ts1 > 0
-       AND g_actual_move[t].ts2 > 0
-       AND g_actual_move[t].ts3 > 0
-       AND NOT g_actual_move[t].Invalidated
+    IF g_actual_move[vT].Ts0 > 0
+       AND g_actual_move[vT].Ts1 > 0
+       AND g_actual_move[vT].Ts2 > 0
+       AND g_actual_move[vT].Ts3 > 0
+       AND NOT g_actual_move[vT].Invalidated
     THEN
-                vLiftStn  := g_actual_move[t].LiftStation;
-                vSinkStn  := g_actual_move[t].SinkStation;
-                vStartStn := g_actual_move[t].StartStation;
-                li   := vLiftStn  - MIN_STATION_INDEX;
-                si   := vSinkStn  - MIN_STATION_INDEX;
-                st_i := vStartStn - MIN_STATION_INDEX;
+                vLiftStn  := g_actual_move[vT].LiftStation;
+                vSinkStn  := g_actual_move[vT].SinkStation;
+                vStartStn := g_actual_move[vT].StartStation;
+                vLi   := vLiftStn  - MIN_STATION_INDEX;
+                vSi   := vSinkStn  - MIN_STATION_INDEX;
+                vStI := vStartStn - MIN_STATION_INDEX;
 
                 (* Mechanical delays in 0.1s ticks *)
-                drip_x10 := Stations[vLiftStn].DrippingTime;
-                tray_x10 := Transporters[t].DripTrayDelay;
-                dev_x10  := Stations[vSinkStn].DeviceDelay;
+                vDripX10 := Stations[vLiftStn].DrippingTime;
+                vTrayX10 := Transporters[vT].DripTrayDelay;
+                vDevX10  := Stations[vSinkStn].DeviceDelay;
 
                 (* Raw durations are vAlready in 0.1s ticks *)
-                raw_trav1 := LINT_TO_INT(g_actual_move[t].ts1 - g_actual_move[t].ts0);
-                raw_trav2 := LINT_TO_INT(g_actual_move[t].ts3 - g_actual_move[t].ts2);
+                vRawTrav1 := LINT_TO_INT(g_actual_move[vT].Ts1 - g_actual_move[vT].Ts0);
+                vRawTrav2 := LINT_TO_INT(g_actual_move[vT].Ts3 - g_actual_move[vT].Ts2);
 
-                (* Net lift = (ts2-ts1) - DrippingTime - DripTrayDelay *)
-                raw_lift := LINT_TO_INT(g_actual_move[t].ts2 - g_actual_move[t].ts1)
-                            - drip_x10 - tray_x10;
+                (* Net lift = (Ts2-Ts1) - DrippingTime - DripTrayDelay *)
+                vRawLift := LINT_TO_INT(g_actual_move[vT].Ts2 - g_actual_move[vT].Ts1)
+                            - vDripX10 - vTrayX10;
 
-                (* Net sink = (ts4-ts3) - DripTrayDelay - DeviceDelay *)
-                raw_sink := LINT_TO_INT(g_actual_move[t].ts4 - g_actual_move[t].ts3)
-                            - tray_x10 - dev_x10;
+                (* Net sink = (Ts4-Ts3) - DripTrayDelay - DeviceDelay *)
+                vRawSink := LINT_TO_INT(g_actual_move[vT].Ts4 - g_actual_move[vT].Ts3)
+                            - vTrayX10 - vDevX10;
 
                 (* Clamp to minimum 0 *)
-  IF raw_lift < 0 THEN raw_lift := 0; END_IF;
-  IF raw_sink < 0 THEN raw_sink := 0; END_IF;
-  IF raw_trav1 < 0 THEN raw_trav1 := 0; END_IF;
-  IF raw_trav2 < 0 THEN raw_trav2 := 0; END_IF;
+  IF vRawLift < 0 THEN vRawLift := 0; END_IF;
+  IF vRawSink < 0 THEN vRawSink := 0; END_IF;
+  IF vRawTrav1 < 0 THEN vRawTrav1 := 0; END_IF;
+  IF vRawTrav2 < 0 THEN vRawTrav2 := 0; END_IF;
 
                 (* Bounds check indices *)
-                IF li >= 1 AND li <= 30
-                   AND si >= 1 AND si <= 30
-                   AND st_i >= 1 AND st_i <= 30
+                IF vLi >= 1 AND vLi <= 30
+                   AND vSi >= 1 AND vSi <= 30
+                   AND vStI >= 1 AND vStI <= 30
                 THEN
                     (* Weighted average: new = (old * 4 + measured) / 5 *)
 
                     (* Lift time at lift station *)
-                    g_move[t].LiftTime[li] :=
-                        (g_move[t].LiftTime[li] * 4 + raw_lift) / 5;
+                    g_move[vT].LiftTime[vLi] :=
+                        (g_move[vT].LiftTime[vLi] * 4 + vRawLift) / 5;
 
                     (* Sink time at sink station *)
-                    g_move[t].SinkTime[si] :=
-                        (g_move[t].SinkTime[si] * 4 + raw_sink) / 5;
+                    g_move[vT].SinkTime[vSi] :=
+                        (g_move[vT].SinkTime[vSi] * 4 + vRawSink) / 5;
 
                     (* Travel: lift → sink (both directions) — vPhase 3 is always exact station-to-station *)
-                    g_move[t].Travel[li].ToTime[si] :=
-                        (g_move[t].Travel[li].ToTime[si] * 4 + raw_trav2) / 5;
-                    g_move[t].Travel[si].ToTime[li] :=
-                        (g_move[t].Travel[si].ToTime[li] * 4 + raw_trav2) / 5;
+                    g_move[vT].Travel[vLi].ToTime[vSi] :=
+                        (g_move[vT].Travel[vLi].ToTime[vSi] * 4 + vRawTrav2) / 5;
+                    g_move[vT].Travel[vSi].ToTime[vLi] :=
+                        (g_move[vT].Travel[vSi].ToTime[vLi] * 4 + vRawTrav2) / 5;
                 END_IF;
             END_IF;
 END_IF;

@@ -69,23 +69,23 @@ VAR
   vCalcS                    : REAL;
   vMinS                     : REAL;
   vMaxS                     : REAL;
-  is_on_stn                 : BOOL;
-  is_first                  : BOOL;
+  vIsOnStn                 : BOOL;
+  vIsFirst                  : BOOL;
   vRemainS                  : REAL;
   vElapsedS                 : REAL;
-  p                         : INT;
+  vP                         : INT;
   vChosenStn                : INT;
   vTmpMove                  : UDT_JC_MoveTimesType;
   vCandArr                  : ARRAY[1..5] OF INT;
   vCandCnt                  : INT;
   vSchedOccupied            : ARRAY[1..5] OF BOOL;
   vBestChangeTime          : LINT;
-  my_entry                  : LINT;
-  my_exit                   : LINT;
-  ov_start                  : LINT;
-  ov_end                    : LINT;
-  uj                        : INT;
-  sj                        : INT;
+  vMyEntry                  : LINT;
+  vMyExit                   : LINT;
+  vOvStart                  : LINT;
+  vOvEnd                    : LINT;
+  vUj                        : INT;
+  vSj                        : INT;
 END_VAR
 
 FC_STC_CalcSchedule := FALSE;
@@ -94,7 +94,7 @@ IF iTrans < 1 OR iTrans > MAX_TRANSPORTERS THEN RETURN; END_IF;
 
 vCurStage := ioBatch[iUnit].CurStage;
 vLocation  := g_unit[iUnit].Location;
-is_on_stn := vLocation >= MIN_STATION_INDEX;
+vIsOnStn := vLocation >= MIN_STATION_INDEX;
 
 (* Clear old schedule *)
 FOR vStg := 0 TO MAX_STEPS_PER_PROGRAM DO
@@ -114,7 +114,7 @@ IF ioBatch[iUnit].State = NOT_PROCESSED THEN
   vCurStage := 0;
 END_IF;
 
-IF is_on_stn THEN
+IF vIsOnStn THEN
   vStartSt := vCurStage;
 ELSE
   vStartSt := vCurStage + 1;
@@ -123,7 +123,7 @@ IF vStartSt < 1 THEN
   vStartSt := 1;
 END_IF;
 
-IF is_on_stn THEN
+IF vIsOnStn THEN
   vPrevStn := vLocation;
 ELSIF vCurStage >= 1 AND vCurStage <= 30 THEN
   vPrevStn := ioProgram[iUnit].Steps[vCurStage].Stations[0];
@@ -132,13 +132,13 @@ ELSE
 END_IF;
 
 vExitT := iTimeS;
-is_first := TRUE;
+vIsFirst := TRUE;
 
 (* Prepend current vLocation to Stages[0] when unit needs pre-positioning *)
-IF is_on_stn AND vStartSt >= 1 THEN
+IF vIsOnStn AND vStartSt >= 1 THEN
   vStnNum := 0;
-  FOR p := 0 TO 4 DO
-    IF ioProgram[iUnit].Steps[vStartSt].Stations[p] = vLocation THEN
+  FOR vP := 0 TO 4 DO
+    IF ioProgram[iUnit].Steps[vStartSt].Stations[vP] = vLocation THEN
       vStnNum := vLocation;
     END_IF;
   END_FOR;
@@ -175,7 +175,7 @@ IF is_on_stn AND vStartSt >= 1 THEN
       ioSchedule[iUnit].Stages[0].MaxTime   := REAL_TO_DINT(2.0 * vCalcS);
     END_IF;
 
-    is_first := FALSE;
+    vIsFirst := FALSE;
   END_IF;
 END_IF;
 
@@ -185,10 +185,10 @@ END_IF;
 FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
 
   vCandCnt := 0;
-  FOR p := 0 TO 4 DO
-    IF ioProgram[iUnit].Steps[vStg].Stations[p] > 0 THEN
+  FOR vP := 0 TO 4 DO
+    IF ioProgram[iUnit].Steps[vStg].Stations[vP] > 0 THEN
       vCandCnt := vCandCnt + 1;
-      vCandArr[vCandCnt] := ioProgram[iUnit].Steps[vStg].Stations[p];
+      vCandArr[vCandCnt] := ioProgram[iUnit].Steps[vStg].Stations[vP];
       vSchedOccupied[vCandCnt] := FALSE;
     END_IF;
   END_FOR;
@@ -198,9 +198,9 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
   END_IF;
 
   vChosenStn := 0;
-  IF is_first AND is_on_stn AND vStg = vCurStage THEN
-    FOR p := 1 TO vCandCnt DO
-      IF vCandArr[p] = vLocation THEN
+  IF vIsFirst AND vIsOnStn AND vStg = vCurStage THEN
+    FOR vP := 1 TO vCandCnt DO
+      IF vCandArr[vP] = vLocation THEN
         vChosenStn := vLocation;
       END_IF;
     END_FOR;
@@ -214,33 +214,33 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
       vCalcS := DINT_TO_REAL(ioProgram[iUnit].Steps[vStg].CalTime);
       vTmpMove := g_move[iTrans];
 
-      FOR p := 1 TO vCandCnt DO
+      FOR vP := 1 TO vCandCnt DO
         (* Calculate entry/exit per candidate station individually *)
         vXferT := FC_STC_CalcTransferTime(
           iFromStn            := vPrevStn,
-          iToStn              := vCandArr[p],
+          iToStn              := vCandArr[vP],
           iMove                := vTmpMove,
-          i_from_dropping_x10   := Stations[vPrevStn].DrippingTime,
-          i_to_device_delay_x10 := Stations[vCandArr[p]].DeviceDelay,
+          iFromDroppingX10   := Stations[vPrevStn].DrippingTime,
+          iToDeviceDelayX10 := Stations[vCandArr[vP]].DeviceDelay,
           iDripTrayDelayX10 := Transporters[iTrans].DripTrayDelay
         );
-        my_entry := vExitT + REAL_TO_LINT(vXferT);
-        my_exit  := my_entry + REAL_TO_LINT(vCalcS);
+        vMyEntry := vExitT + REAL_TO_LINT(vXferT);
+        vMyExit  := vMyEntry + REAL_TO_LINT(vCalcS);
 
-        FOR uj := 1 TO MAX_UNITS DO
-          IF uj <> iUnit AND ioSchedule[uj].StageCount > 0 THEN
-            FOR sj := 0 TO ioSchedule[uj].StageCount DO
-              IF ioSchedule[uj].Stages[sj].Station = vCandArr[p] THEN
-                ov_start := my_entry;
-                IF ioSchedule[uj].Stages[sj].EntryTime > ov_start THEN
-                  ov_start := ioSchedule[uj].Stages[sj].EntryTime;
+        FOR vUj := 1 TO MAX_UNITS DO
+          IF vUj <> iUnit AND ioSchedule[vUj].StageCount > 0 THEN
+            FOR vSj := 0 TO ioSchedule[vUj].StageCount DO
+              IF ioSchedule[vUj].Stages[vSj].Station = vCandArr[vP] THEN
+                vOvStart := vMyEntry;
+                IF ioSchedule[vUj].Stages[vSj].EntryTime > vOvStart THEN
+                  vOvStart := ioSchedule[vUj].Stages[vSj].EntryTime;
                 END_IF;
-                ov_end := my_exit;
-                IF ioSchedule[uj].Stages[sj].ExitTime < ov_end THEN
-                  ov_end := ioSchedule[uj].Stages[sj].ExitTime;
+                vOvEnd := vMyExit;
+                IF ioSchedule[vUj].Stages[vSj].ExitTime < vOvEnd THEN
+                  vOvEnd := ioSchedule[vUj].Stages[vSj].ExitTime;
                 END_IF;
-                IF ov_end > ov_start THEN
-                  vSchedOccupied[p] := TRUE;
+                IF vOvEnd > vOvStart THEN
+                  vSchedOccupied[vP] := TRUE;
                 END_IF;
               END_IF;
             END_FOR;
@@ -251,12 +251,12 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
 
       (* Pass 1: prefer schedule-free station, pick vEarliest ChangeTime *)
       vBestChangeTime := LINT#9999999999;
-      FOR p := 1 TO vCandCnt DO
-        IF NOT vSchedOccupied[p] THEN
-          IF vCandArr[p] >= MIN_STATION_INDEX AND vCandArr[p] <= MAX_STATION_INDEX THEN
-            IF g_station_occupancy[vCandArr[p]].ChangeTime < vBestChangeTime THEN
-              vBestChangeTime := g_station_occupancy[vCandArr[p]].ChangeTime;
-              vChosenStn := vCandArr[p];
+      FOR vP := 1 TO vCandCnt DO
+        IF NOT vSchedOccupied[vP] THEN
+          IF vCandArr[vP] >= MIN_STATION_INDEX AND vCandArr[vP] <= MAX_STATION_INDEX THEN
+            IF g_station_occupancy[vCandArr[vP]].ChangeTime < vBestChangeTime THEN
+              vBestChangeTime := g_station_occupancy[vCandArr[vP]].ChangeTime;
+              vChosenStn := vCandArr[vP];
             END_IF;
           END_IF;
         END_IF;
@@ -286,8 +286,8 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
                   iFromStn            := Stations[vPrevStn].ChangeStation,
                   iToStn              := vStnNum,
                   iMove                := vTmpMove,
-                  i_from_dropping_x10   := Stations[Stations[vPrevStn].ChangeStation].DrippingTime,
-                  i_to_device_delay_x10 := Stations[vStnNum].DeviceDelay,
+                  iFromDroppingX10   := Stations[Stations[vPrevStn].ChangeStation].DrippingTime,
+                  iToDeviceDelayX10 := Stations[vStnNum].DeviceDelay,
                   iDripTrayDelayX10 := Transporters[iTrans].DripTrayDelay
                 );
     ELSE
@@ -295,8 +295,8 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
         iFromStn            := vPrevStn,
         iToStn              := vStnNum,
         iMove                := vTmpMove,
-        i_from_dropping_x10   := Stations[vPrevStn].DrippingTime,
-        i_to_device_delay_x10 := Stations[vStnNum].DeviceDelay,
+        iFromDroppingX10   := Stations[vPrevStn].DrippingTime,
+        iToDeviceDelayX10 := Stations[vStnNum].DeviceDelay,
         iDripTrayDelayX10 := Transporters[iTrans].DripTrayDelay
       );
     END_IF;
@@ -304,7 +304,7 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
     vXferT := 60.0;
   END_IF;
 
-  IF is_first AND is_on_stn AND vStg = vCurStage THEN
+  IF vIsFirst AND vIsOnStn AND vStg = vCurStage THEN
     vEntryT := iTimeS;
     IF ioBatch[iUnit].StartTime > 0 THEN
       vElapsedS := LINT_TO_REAL(iTimeS - ioBatch[iUnit].StartTime);
@@ -314,7 +314,7 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
     vRemainS := DINT_TO_REAL(ioBatch[iUnit].CalTime) - vElapsedS;
   IF vRemainS < 1.0 THEN vRemainS := 1.0; END_IF;
     vExitT := iTimeS + REAL_TO_LINT(vRemainS);
-  ELSIF is_first AND NOT is_on_stn THEN
+  ELSIF vIsFirst AND NOT vIsOnStn THEN
     IF ioBatch[iUnit].StartTime > 0 AND ioBatch[iUnit].CalTime > 0 THEN
       vEntryT := ioBatch[iUnit].StartTime + DINT_TO_LINT(ioBatch[iUnit].CalTime);
     ELSE
@@ -339,7 +339,7 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
   END_IF;
 
   vPrevStn := vStnNum;
-  is_first := FALSE;
+  vIsFirst := FALSE;
 
 END_FOR;
 

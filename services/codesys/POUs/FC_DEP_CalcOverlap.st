@@ -39,8 +39,8 @@ END_VAR
 
 VAR
   vStationIdx               : INT;
-  ti                        : INT;
-  ai                        : INT;
+  vTi                        : INT;
+  vAi                        : INT;
   vCoverCount               : INT;
   vCovered                   : BOOL;
   vArea                      : UDT_TaskAreaType;
@@ -55,11 +55,11 @@ END_FOR;
 FOR vStationIdx := MIN_STATION_INDEX TO MAX_STATION_INDEX DO
   vCoverCount := 0;
 
-  FOR ti := 1 TO MAX_TRANSPORTERS DO
+  FOR vTi := 1 TO MAX_TRANSPORTERS DO
     vCovered := FALSE;
-    FOR ai := 1 TO 4 DO
+    FOR vAi := 1 TO 4 DO
       IF NOT vCovered THEN
-        vArea := Transporters[ti].TaskArea[ai];
+        vArea := Transporters[vTi].TaskArea[vAi];
         IF (vArea.MinLift > 0 AND vStationIdx >= vArea.MinLift AND vStationIdx <= vArea.MaxLift)
            OR (vArea.MinSink > 0 AND vStationIdx >= vArea.MinSink AND vStationIdx <= vArea.MaxSink) THEN
           vCovered := TRUE;

@@ -88,7 +88,7 @@ VAR
   vFB_EventQueue                 : FB_SIM_EventQueue;
   vNowMs                    : LINT := 0;
   vPrevMs                   : UDINT := 0;
-  sim_delta_t               : REAL := 0.02;
+  vSimDeltaT               : REAL := 0.02;
   vPrevTskPhase            : INT := 0;
   vPrevDepPhase            : INT := 0;
 END_VAR
@@ -170,12 +170,12 @@ IF vInitDone THEN
 
   (* ── Actual cycle time for physics simulation ── *)
   IF vPrevMs > 0 THEN
-    sim_delta_t := UDINT_TO_REAL(LINT_TO_UDINT(vNowMs) - vPrevMs) / 1000.0;
+    vSimDeltaT := UDINT_TO_REAL(LINT_TO_UDINT(vNowMs) - vPrevMs) / 1000.0;
   END_IF;
   vPrevMs := LINT_TO_UDINT(vNowMs);
 
   (* ── Execute transporter tasks (physics simulation) ── *)
-  vFB_RunTasks(iRun := vInitDone, iDeltaT := sim_delta_t);
+  vFB_RunTasks(iRun := vInitDone, iDeltaT := vSimDeltaT);
 
 END_IF;  (* vInitDone *)
 

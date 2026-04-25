@@ -75,7 +75,7 @@ VAR
   vTurn                      : INT := 0;   (* 0=init, 1=TSK, 2=DEP *)
   vSkipCnt                  : INT := 0;
   vTskPhase                 : INT := 0;
-  ui                        : INT;
+  vUi                        : INT;
 END_VAR
 
 IF NOT iRun THEN
@@ -146,9 +146,9 @@ ELSIF vTurn = 2 THEN
 END_IF;
 
 (* ── Publish waiting batch schedules from DEP workspace for UI display ── *)
-FOR ui := 1 TO MAX_UNITS DO
-  IF g_batch[ui].State = NOT_PROCESSED AND g_dep_wk_schedule[ui].StageCount > 0 THEN
-    g_schedule[ui] := g_dep_wk_schedule[ui];
+FOR vUi := 1 TO MAX_UNITS DO
+  IF g_batch[vUi].State = NOT_PROCESSED AND g_dep_wk_schedule[vUi].StageCount > 0 THEN
+    g_schedule[vUi] := g_dep_wk_schedule[vUi];
   END_IF;
 END_FOR;
 

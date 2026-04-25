@@ -54,29 +54,29 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  ui                        : INT;
+  vUi                        : INT;
 END_VAR
 
 FC_DEP_Sandbox := TRUE;
 
 IF iCmd = 1 THEN
   (* SNAPSHOT: clear workspace, then copy live batch+program *)
-  FOR ui := 1 TO MAX_UNITS DO
-    ioWkSchedule[ui].StageCount := 0;
-    ioWkBatch[ui]    := g_batch[ui];
-    ioWkProgram[ui]  := TreatmentPrograms[ui];
+  FOR vUi := 1 TO MAX_UNITS DO
+    ioWkSchedule[vUi].StageCount := 0;
+    ioWkBatch[vUi]    := g_batch[vUi];
+    ioWkProgram[vUi]  := TreatmentPrograms[vUi];
   END_FOR;
-  FOR ui := 1 TO MAX_TRANSPORTERS DO
-    ioWkTask[ui].Count := 0;
+  FOR vUi := 1 TO MAX_TRANSPORTERS DO
+    ioWkTask[vUi].Count := 0;
   END_FOR;
 ELSIF iCmd = 2 THEN
   (* RESTORE: workspace batch+program → live (for REJECT rollback) *)
-  FOR ui := 1 TO MAX_UNITS DO
-    IF ioWkBatch[ui].BatchCode > 0 THEN
-      g_batch[ui] := ioWkBatch[ui];
+  FOR vUi := 1 TO MAX_UNITS DO
+    IF ioWkBatch[vUi].BatchCode > 0 THEN
+      g_batch[vUi] := ioWkBatch[vUi];
     END_IF;
-    IF ioWkProgram[ui].ProgramId > 0 THEN
-      TreatmentPrograms[ui] := ioWkProgram[ui];
+    IF ioWkProgram[vUi].ProgramId > 0 THEN
+      TreatmentPrograms[vUi] := ioWkProgram[vUi];
     END_IF;
   END_FOR;
 ELSIF iCmd = 3 THEN

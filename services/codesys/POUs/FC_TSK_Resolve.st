@@ -60,31 +60,31 @@ END_VAR
 
 VAR
   vRemain                    : REAL;
-  cap                       : REAL;
+  vCap                       : REAL;
   vAmount                    : REAL;
   vStageFlex                : REAL;
-  is_locked_adv             : BOOL;
-  is_locked_del             : BOOL;
+  vIsLockedAdv             : BOOL;
+  vIsLockedDel             : BOOL;
   vCanAdvance               : BOOL;
   vCanDelay                 : BOOL;
   vLockI                    : INT;
   vPrevConfStage           : INT;
-  is_pcs_locked             : BOOL;
+  vIsPcsLocked             : BOOL;
   vPrevSinkStn             : INT;
   vNextLiftStn             : INT;
-  is_blk_adv_locked         : BOOL;
-  qi                        : INT;
+  vIsBlkAdvLocked         : BOOL;
+  vQi                        : INT;
   vChainFlex                : REAL;
   vSuffixFlex               : REAL;
-  earlier_stg               : INT;
-  earlier_flex              : REAL;
+  vEarlierStg               : INT;
+  vEarlierFlex              : REAL;
   vChainAmount              : REAL;
   vSuffixAmount             : REAL;
   vSchedBlocked             : INT;
   vSchedConf                : INT;
   vSchedPrevConf           : INT;
   vTmpSi                    : INT;
-  cap_remain                : REAL;
+  vCapRemain                : REAL;
 END_VAR
 
 FC_TSK_Resolve := FALSE;
@@ -100,27 +100,27 @@ IF vRemain <= 0.1 THEN
 END_IF;
 
 (* Lock check: blocked stage locked DELAY? cannot ADVANCE *)
-is_locked_adv := FALSE;
+vIsLockedAdv := FALSE;
 FOR vLockI := 1 TO ioLockCnt DO
   IF ioLocks[vLockI].Unit = iBlockedUnit
      AND ioLocks[vLockI].Stage = iBlockedStage
      AND ioLocks[vLockI].Direction = 2 THEN
-    is_locked_adv := TRUE;
+    vIsLockedAdv := TRUE;
   END_IF;
 END_FOR;
 
 (* Lock check: conf stage locked ADVANCE? cannot DELAY *)
-is_locked_del := FALSE;
+vIsLockedDel := FALSE;
 FOR vLockI := 1 TO ioLockCnt DO
   IF ioLocks[vLockI].Unit = iConfUnit
      AND ioLocks[vLockI].Stage = iConfStage
      AND ioLocks[vLockI].Direction = 1 THEN
-    is_locked_del := TRUE;
+    vIsLockedDel := TRUE;
   END_IF;
 END_FOR;
 
-vCanAdvance := NOT is_locked_adv;
-vCanDelay   := NOT is_locked_del;
+vCanAdvance := NOT vIsLockedAdv;
+vCanDelay   := NOT vIsLockedDel;
 
 (* Map ProgramStage to schedule array index *)
 vSchedBlocked := 0;
@@ -149,7 +149,7 @@ IF vCanAdvance
    AND iBlockedStage >= 1 THEN
 IF vSchedBlocked >= 1 AND vSchedBlocked <= ioSchedule[iBlockedUnit].StageCount THEN
 
-  (* Absolute flex cap: use (MaxTime - MinTime) range, not (CalcTime - MinTime).
+  (* Absolute flex vCap: use (MaxTime - MinTime) range, not (CalcTime - MinTime).
      This prevents cumulative drift when CalcTime is vAdjusted across rounds. *)
   vStageFlex := DINT_TO_REAL(
     ioSchedule[iBlockedUnit].Stages[vSchedBlocked].MaxTime
@@ -157,30 +157,30 @@ IF vSchedBlocked >= 1 AND vSchedBlocked <= ioSchedule[iBlockedUnit].StageCount T
   IF vStageFlex < 0.0 THEN vStageFlex := 0.0; END_IF;
   vStageFlex := vStageFlex * SCH_TSK_FLEX_FACTOR;
   (* Cap to actual remaining advance room *)
-  cap_remain := DINT_TO_REAL(
+  vCapRemain := DINT_TO_REAL(
     ioSchedule[iBlockedUnit].Stages[vSchedBlocked].CalcTime
     - ioSchedule[iBlockedUnit].Stages[vSchedBlocked].MinTime);
-  IF cap_remain < 0.0 THEN cap_remain := 0.0; END_IF;
-  IF vStageFlex > cap_remain THEN vStageFlex := cap_remain; END_IF;
+  IF vCapRemain < 0.0 THEN vCapRemain := 0.0; END_IF;
+  IF vStageFlex > vCapRemain THEN vStageFlex := vCapRemain; END_IF;
 
   IF vStageFlex > 0.1 THEN
-    IF ioBatch[iBlockedUnit].CurStage = iBlockedStage THEN cap := 0.9;
-  ELSE cap := 0.5; END_IF;
+    IF ioBatch[iBlockedUnit].CurStage = iBlockedStage THEN vCap := 0.9;
+  ELSE vCap := 0.5; END_IF;
 
     (* Chain bottleneck search *)
     vChainFlex := vStageFlex;
-    FOR earlier_stg := 1 TO vSchedBlocked - 1 DO
-      earlier_flex := DINT_TO_REAL(
-        ioSchedule[iBlockedUnit].Stages[earlier_stg].CalcTime
-        - ioSchedule[iBlockedUnit].Stages[earlier_stg].MinTime);
-  IF earlier_flex < 0.0 THEN earlier_flex := 0.0; END_IF;
-      IF earlier_flex > 0.0 AND earlier_flex < vChainFlex THEN
-        vChainFlex := earlier_flex;
+    FOR vEarlierStg := 1 TO vSchedBlocked - 1 DO
+      vEarlierFlex := DINT_TO_REAL(
+        ioSchedule[iBlockedUnit].Stages[vEarlierStg].CalcTime
+        - ioSchedule[iBlockedUnit].Stages[vEarlierStg].MinTime);
+  IF vEarlierFlex < 0.0 THEN vEarlierFlex := 0.0; END_IF;
+      IF vEarlierFlex > 0.0 AND vEarlierFlex < vChainFlex THEN
+        vChainFlex := vEarlierFlex;
       END_IF;
     END_FOR;
 
     (* CHAIN_ADVANCE *)
-    vChainAmount := vChainFlex * cap;
+    vChainAmount := vChainFlex * vCap;
   IF vChainAmount > vRemain THEN vChainAmount := vRemain; END_IF;
 
     IF vChainAmount > 0.1 THEN
@@ -205,7 +205,7 @@ IF vSchedBlocked >= 1 AND vSchedBlocked <= ioSchedule[iBlockedUnit].StageCount T
     (* SUFFIX_ADVANCE *)
     vSuffixFlex := vStageFlex - vChainFlex;
     IF vSuffixFlex > 0.1 AND vRemain > 0.1 THEN
-      vSuffixAmount := vSuffixFlex * cap;
+      vSuffixAmount := vSuffixFlex * vCap;
   IF vSuffixAmount > vRemain THEN vSuffixAmount := vRemain; END_IF;
 
       IF vSuffixAmount > 0.1 THEN
@@ -252,7 +252,7 @@ IF vCanDelay AND vRemain > 0.1
    AND iConfStage >= 1 THEN
 IF vSchedConf >= 1 AND vSchedConf <= ioSchedule[iConfUnit].StageCount THEN
 
-  (* Absolute flex cap: use (MaxTime - MinTime) range, not (MaxTime - CalcTime).
+  (* Absolute flex vCap: use (MaxTime - MinTime) range, not (MaxTime - CalcTime).
      This prevents cumulative drift when CalcTime is vAdjusted across rounds. *)
   vStageFlex := DINT_TO_REAL(
     ioSchedule[iConfUnit].Stages[vSchedConf].MaxTime
@@ -260,16 +260,16 @@ IF vSchedConf >= 1 AND vSchedConf <= ioSchedule[iConfUnit].StageCount THEN
   IF vStageFlex < 0.0 THEN vStageFlex := 0.0; END_IF;
   vStageFlex := vStageFlex * SCH_TSK_FLEX_FACTOR;
   (* Cap to actual remaining vDelay room *)
-  cap_remain := DINT_TO_REAL(
+  vCapRemain := DINT_TO_REAL(
     ioSchedule[iConfUnit].Stages[vSchedConf].MaxTime
     - ioSchedule[iConfUnit].Stages[vSchedConf].CalcTime);
-  IF cap_remain < 0.0 THEN cap_remain := 0.0; END_IF;
-  IF vStageFlex > cap_remain THEN vStageFlex := cap_remain; END_IF;
+  IF vCapRemain < 0.0 THEN vCapRemain := 0.0; END_IF;
+  IF vStageFlex > vCapRemain THEN vStageFlex := vCapRemain; END_IF;
 
   IF vStageFlex > 0.1 THEN
-    IF ioBatch[iConfUnit].CurStage = iConfStage THEN cap := 0.9;
-  ELSE cap := 0.5; END_IF;
-    vAmount := vStageFlex * cap;
+    IF ioBatch[iConfUnit].CurStage = iConfStage THEN vCap := 0.9;
+  ELSE vCap := 0.5; END_IF;
+    vAmount := vStageFlex * vCap;
   IF vAmount > vRemain THEN vAmount := vRemain; END_IF;
 
     ioSchedule[iConfUnit].Stages[vSchedConf].CalcTime :=
@@ -322,17 +322,17 @@ END_IF;
 
 IF vRemain > 0.1 AND vPrevConfStage >= 1 AND iConfUnit >= 1 AND iConfUnit <= MAX_UNITS
    AND vSchedPrevConf >= 1 THEN
-  is_pcs_locked := FALSE;
+  vIsPcsLocked := FALSE;
   FOR vLockI := 1 TO ioLockCnt DO
     IF ioLocks[vLockI].Unit = iConfUnit
        AND ioLocks[vLockI].Stage = vPrevConfStage
        AND ioLocks[vLockI].Direction = 1 THEN
-      is_pcs_locked := TRUE;
+      vIsPcsLocked := TRUE;
     END_IF;
   END_FOR;
 
-  IF NOT is_pcs_locked THEN
-    (* Flex cap: min + factor × (max - min); available room = vFlexCap - CalcTime *)
+  IF NOT vIsPcsLocked THEN
+    (* Flex vCap: min + factor × (max - min); available room = vFlexCap - CalcTime *)
     vStageFlex := DINT_TO_REAL(
       ioSchedule[iConfUnit].Stages[vSchedPrevConf].MinTime
       + REAL_TO_DINT(SCH_TSK_FLEX_FACTOR * DINT_TO_REAL(
@@ -342,9 +342,9 @@ IF vRemain > 0.1 AND vPrevConfStage >= 1 AND iConfUnit >= 1 AND iConfUnit <= MAX
   IF vStageFlex < 0.0 THEN vStageFlex := 0.0; END_IF;
 
     IF vStageFlex > 0.1 THEN
-      IF ioBatch[iConfUnit].CurStage = vPrevConfStage THEN cap := 0.9;
-  ELSE cap := 0.5; END_IF;
-      vAmount := vStageFlex * cap;
+      IF ioBatch[iConfUnit].CurStage = vPrevConfStage THEN vCap := 0.9;
+  ELSE vCap := 0.5; END_IF;
+      vAmount := vStageFlex * vCap;
   IF vAmount > vRemain THEN vAmount := vRemain; END_IF;
 
       ioSchedule[iConfUnit].Stages[vSchedPrevConf].CalcTime :=
@@ -387,30 +387,30 @@ IF vRemain > 0.1 AND iBlockedUnit >= 1 AND iBlockedUnit <= MAX_UNITS THEN
   vPrevSinkStn := 0;
   vNextLiftStn := 0;
   IF iConfTrans >= 1 AND iConfTrans <= MAX_TRANSPORTERS THEN
-    FOR qi := 1 TO ioTask[iConfTrans].Count DO
-      IF ioTask[iConfTrans].Queue[qi].Unit = iBlockedUnit
-         AND ioTask[iConfTrans].Queue[qi].Stage = iBlockedStage THEN
-        vPrevSinkStn := ioTask[iConfTrans].Queue[qi].SinkStationTarget;
+    FOR vQi := 1 TO ioTask[iConfTrans].Count DO
+      IF ioTask[iConfTrans].Queue[vQi].Unit = iBlockedUnit
+         AND ioTask[iConfTrans].Queue[vQi].Stage = iBlockedStage THEN
+        vPrevSinkStn := ioTask[iConfTrans].Queue[vQi].SinkStationTarget;
       END_IF;
-      IF ioTask[iConfTrans].Queue[qi].Unit = iConfUnit
-         AND ioTask[iConfTrans].Queue[qi].Stage = iConfStage THEN
-        vNextLiftStn := ioTask[iConfTrans].Queue[qi].LiftStationTarget;
+      IF ioTask[iConfTrans].Queue[vQi].Unit = iConfUnit
+         AND ioTask[iConfTrans].Queue[vQi].Stage = iConfStage THEN
+        vNextLiftStn := ioTask[iConfTrans].Queue[vQi].LiftStationTarget;
       END_IF;
     END_FOR;
   END_IF;
 
   IF NOT (vPrevSinkStn > 0 AND vNextLiftStn > 0 AND vPrevSinkStn = vNextLiftStn) THEN
-    is_blk_adv_locked := FALSE;
+    vIsBlkAdvLocked := FALSE;
     FOR vLockI := 1 TO ioLockCnt DO
       IF ioLocks[vLockI].Unit = iBlockedUnit
          AND ioLocks[vLockI].Stage = iBlockedStage
          AND ioLocks[vLockI].Direction = 1 THEN
-        is_blk_adv_locked := TRUE;
+        vIsBlkAdvLocked := TRUE;
       END_IF;
     END_FOR;
 
-    IF NOT is_blk_adv_locked THEN
-      (* Flex cap: min + factor × (max - min); available room = vFlexCap - CalcTime *)
+    IF NOT vIsBlkAdvLocked THEN
+      (* Flex vCap: min + factor × (max - min); available room = vFlexCap - CalcTime *)
       vStageFlex := DINT_TO_REAL(
         ioSchedule[iBlockedUnit].Stages[vSchedBlocked].MinTime
         + REAL_TO_DINT(SCH_TSK_FLEX_FACTOR * DINT_TO_REAL(
@@ -420,9 +420,9 @@ IF vRemain > 0.1 AND iBlockedUnit >= 1 AND iBlockedUnit <= MAX_UNITS THEN
   IF vStageFlex < 0.0 THEN vStageFlex := 0.0; END_IF;
 
       IF vStageFlex > 0.1 THEN
-        IF ioBatch[iBlockedUnit].CurStage = iBlockedStage THEN cap := 0.9;
-  ELSE cap := 0.5; END_IF;
-        vAmount := vStageFlex * cap;
+        IF ioBatch[iBlockedUnit].CurStage = iBlockedStage THEN vCap := 0.9;
+  ELSE vCap := 0.5; END_IF;
+        vAmount := vStageFlex * vCap;
   IF vAmount > vRemain THEN vAmount := vRemain; END_IF;
 
         ioSchedule[iBlockedUnit].Stages[vSchedBlocked].CalcTime :=

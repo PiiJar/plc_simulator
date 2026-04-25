@@ -52,49 +52,49 @@ VAR_OUTPUT
   oBlockedUnit            : INT;
   oBlockedStage           : INT;
   oDeficit                 : REAL;
-  checked_count             : INT;
+  oCheckedCount             : INT;
 END_VAR
 
 VAR
-  ti                        : INT;
-  tj                        : INT;
-  qi                        : INT;
-  qj                        : INT;
+  vTi                        : INT;
+  vTj                        : INT;
+  vQi                        : INT;
+  vQj                        : INT;
   vPrevSink                 : INT;
   vNextLift                 : INT;
   vTravelS                  : REAL;
   vGapS                     : REAL;
-  deficit_s                 : REAL;
+  vDeficitS                 : REAL;
   vLiftX                    : REAL;
   vSinkX                    : REAL;
-  x1_min                    : REAL;
-  x1_max                    : REAL;
-  x2_min                    : REAL;
-  x2_max                    : REAL;
-  xo_start                  : REAL;
-  xo_end                    : REAL;
+  vX1Min                    : REAL;
+  vX1Max                    : REAL;
+  vX2Min                    : REAL;
+  vX2Max                    : REAL;
+  vXoStart                  : REAL;
+  vXoEnd                    : REAL;
   vToStart                  : LINT;
   vToEnd                    : LINT;
-  l_idx                     : INT;
-  s_idx                     : INT;
+  vLIdx                     : INT;
+  vSIdx                     : INT;
   vLiftX2                   : REAL;
   vSinkX2                   : REAL;
-  l_idx2                    : INT;
-  s_idx2                    : INT;
+  vLIdx2                    : INT;
+  vSIdx2                    : INT;
   vCurUnit                  : INT;
   vCurStage                 : INT;
   vFoundNext                : BOOL;
-  recv_prev_end             : LINT;
-  recv_prev_sink            : INT;
-  has_recv_prev             : BOOL;
-  rk                        : INT;
-  recv_prev_unit            : INT;
-  recv_prev_stg             : INT;
-  recv_travel               : REAL;
-  recv_earliest             : LINT;
-  handoff_deficit           : REAL;
+  vRecvPrevEnd             : LINT;
+  vRecvPrevSink            : INT;
+  vHasRecvPrev             : BOOL;
+  vRk                        : INT;
+  vRecvPrevUnit            : INT;
+  vRecvPrevStg             : INT;
+  vRecvTravel               : REAL;
+  vRecvEarliest             : LINT;
+  vHandoffDeficit           : REAL;
   vTotalTasks               : INT;
-  DEFICIT_TOL               : REAL := 1.0;
+  cDeficitTol               : REAL := 1.0;
   vTmpMove                  : UDT_JC_MoveTimesType;
 END_VAR
 
@@ -102,34 +102,34 @@ FC_TSK_Analyze := FALSE;
 oHasConflict := FALSE;
 oConfType    := 0;
 oDeficit      := 0.0;
-checked_count  := 0;
+oCheckedCount  := 0;
 
 vTotalTasks := 0;
-FOR ti := 1 TO MAX_TRANSPORTERS DO
-  vTotalTasks := vTotalTasks + ioTask[ti].Count;
+FOR vTi := 1 TO MAX_TRANSPORTERS DO
+  vTotalTasks := vTotalTasks + ioTask[vTi].Count;
 END_FOR;
 IF vTotalTasks = 0 THEN RETURN; END_IF;
 
 (* CHECK 1: TASK_SEQUENCE *)
-FOR ti := 1 TO MAX_TRANSPORTERS DO
-  FOR qi := 1 TO ioTask[ti].Count - 1 DO
-    IF ioTask[ti].Queue[qi].Unit > 0 AND ioTask[ti].Queue[qi + 1].Unit > 0 THEN
-      vPrevSink := ioTask[ti].Queue[qi].SinkStationTarget;
-      vNextLift := ioTask[ti].Queue[qi + 1].LiftStationTarget;
-      vTmpMove := g_move[ti];
+FOR vTi := 1 TO MAX_TRANSPORTERS DO
+  FOR vQi := 1 TO ioTask[vTi].Count - 1 DO
+    IF ioTask[vTi].Queue[vQi].Unit > 0 AND ioTask[vTi].Queue[vQi + 1].Unit > 0 THEN
+      vPrevSink := ioTask[vTi].Queue[vQi].SinkStationTarget;
+      vNextLift := ioTask[vTi].Queue[vQi + 1].LiftStationTarget;
+      vTmpMove := g_move[vTi];
       vTravelS := FC_STC_CalcHorizontalTravel(iFromStn := vPrevSink, iToStn := vNextLift, iMove := vTmpMove);
-      vGapS := LINT_TO_REAL(ioTask[ti].Queue[qi + 1].StartTime - ioTask[ti].Queue[qi].FinishTime);
-      deficit_s := vTravelS - vGapS;
-      IF deficit_s > DEFICIT_TOL THEN
+      vGapS := LINT_TO_REAL(ioTask[vTi].Queue[vQi + 1].StartTime - ioTask[vTi].Queue[vQi].FinishTime);
+      vDeficitS := vTravelS - vGapS;
+      IF vDeficitS > cDeficitTol THEN
   oHasConflict := TRUE;
   oConfType := 1;
-        oConfUnit := ioTask[ti].Queue[qi + 1].Unit;
-        oConfStage := ioTask[ti].Queue[qi + 1].Stage;
-        oConfTrans := ti;
-        oBlockedUnit := ioTask[ti].Queue[qi].Unit;
-        oBlockedStage := ioTask[ti].Queue[qi].Stage;
-  oDeficit := deficit_s;
-  checked_count := vTotalTasks;
+        oConfUnit := ioTask[vTi].Queue[vQi + 1].Unit;
+        oConfStage := ioTask[vTi].Queue[vQi + 1].Stage;
+        oConfTrans := vTi;
+        oBlockedUnit := ioTask[vTi].Queue[vQi].Unit;
+        oBlockedStage := ioTask[vTi].Queue[vQi].Stage;
+  oDeficit := vDeficitS;
+  oCheckedCount := vTotalTasks;
   FC_TSK_Analyze := TRUE; RETURN;
       END_IF;
     END_IF;
@@ -137,54 +137,54 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
 END_FOR;
 
 (* CHECK 2: CROSS_TRANSPORTER_HANDOFF *)
-FOR ti := 1 TO MAX_TRANSPORTERS DO
-  FOR qi := 1 TO ioTask[ti].Count DO
-    vCurUnit  := ioTask[ti].Queue[qi].Unit;
-    vCurStage := ioTask[ti].Queue[qi].Stage;
+FOR vTi := 1 TO MAX_TRANSPORTERS DO
+  FOR vQi := 1 TO ioTask[vTi].Count DO
+    vCurUnit  := ioTask[vTi].Queue[vQi].Unit;
+    vCurStage := ioTask[vTi].Queue[vQi].Stage;
     IF vCurUnit > 0 THEN
       vFoundNext := FALSE;
-      FOR tj := 1 TO MAX_TRANSPORTERS DO
-        IF tj <> ti AND NOT vFoundNext THEN
-          FOR qj := 1 TO ioTask[tj].Count DO
+      FOR vTj := 1 TO MAX_TRANSPORTERS DO
+        IF vTj <> vTi AND NOT vFoundNext THEN
+          FOR vQj := 1 TO ioTask[vTj].Count DO
             IF NOT vFoundNext THEN
-              IF ioTask[tj].Queue[qj].Unit = vCurUnit
-                 AND ioTask[tj].Queue[qj].Stage = vCurStage + 1 THEN
+              IF ioTask[vTj].Queue[vQj].Unit = vCurUnit
+                 AND ioTask[vTj].Queue[vQj].Stage = vCurStage + 1 THEN
                 vFoundNext := TRUE;
-                has_recv_prev := FALSE;
-  recv_prev_end := 0;
-  recv_prev_sink := 0;
-  recv_prev_unit := 0;
-  recv_prev_stg := 0;
-                FOR rk := 1 TO ioTask[tj].Count DO
-                  IF rk <> qj THEN
-                    IF ioTask[tj].Queue[rk].FinishTime <= ioTask[tj].Queue[qj].StartTime THEN
-                      IF NOT has_recv_prev OR ioTask[tj].Queue[rk].FinishTime > recv_prev_end THEN
-                        has_recv_prev := TRUE;
-                        recv_prev_end  := ioTask[tj].Queue[rk].FinishTime;
-                        recv_prev_sink := ioTask[tj].Queue[rk].SinkStationTarget;
-                        recv_prev_unit := ioTask[tj].Queue[rk].Unit;
-                        recv_prev_stg  := ioTask[tj].Queue[rk].Stage;
+                vHasRecvPrev := FALSE;
+  vRecvPrevEnd := 0;
+  vRecvPrevSink := 0;
+  vRecvPrevUnit := 0;
+  vRecvPrevStg := 0;
+                FOR vRk := 1 TO ioTask[vTj].Count DO
+                  IF vRk <> vQj THEN
+                    IF ioTask[vTj].Queue[vRk].FinishTime <= ioTask[vTj].Queue[vQj].StartTime THEN
+                      IF NOT vHasRecvPrev OR ioTask[vTj].Queue[vRk].FinishTime > vRecvPrevEnd THEN
+                        vHasRecvPrev := TRUE;
+                        vRecvPrevEnd  := ioTask[vTj].Queue[vRk].FinishTime;
+                        vRecvPrevSink := ioTask[vTj].Queue[vRk].SinkStationTarget;
+                        vRecvPrevUnit := ioTask[vTj].Queue[vRk].Unit;
+                        vRecvPrevStg  := ioTask[vTj].Queue[vRk].Stage;
                       END_IF;
                     END_IF;
                   END_IF;
                 END_FOR;
-                IF has_recv_prev THEN
-                  recv_travel := FC_STC_CalcHorizontalTravel(
-                    iFromStn := recv_prev_sink,
-                    iToStn   := ioTask[ti].Queue[qi].SinkStationTarget,
-                    iMove     := g_move[tj]);
-                  recv_earliest := recv_prev_end + REAL_TO_LINT(recv_travel);
-                  handoff_deficit := LINT_TO_REAL(recv_earliest - ioTask[ti].Queue[qi].FinishTime);
-                  IF handoff_deficit > DEFICIT_TOL THEN
+                IF vHasRecvPrev THEN
+                  vRecvTravel := FC_STC_CalcHorizontalTravel(
+                    iFromStn := vRecvPrevSink,
+                    iToStn   := ioTask[vTi].Queue[vQi].SinkStationTarget,
+                    iMove     := g_move[vTj]);
+                  vRecvEarliest := vRecvPrevEnd + REAL_TO_LINT(vRecvTravel);
+                  vHandoffDeficit := LINT_TO_REAL(vRecvEarliest - ioTask[vTi].Queue[vQi].FinishTime);
+                  IF vHandoffDeficit > cDeficitTol THEN
   oHasConflict := TRUE;
   oConfType := 3;
-                    oConfUnit := ioTask[ti].Queue[qi].Unit;
-                    oConfStage := ioTask[ti].Queue[qi].Stage;
-                    oConfTrans := ti;
-                    oBlockedUnit := recv_prev_unit;
-                    oBlockedStage := recv_prev_stg;
-  oDeficit := handoff_deficit;
-  checked_count := vTotalTasks;
+                    oConfUnit := ioTask[vTi].Queue[vQi].Unit;
+                    oConfStage := ioTask[vTi].Queue[vQi].Stage;
+                    oConfTrans := vTi;
+                    oBlockedUnit := vRecvPrevUnit;
+                    oBlockedStage := vRecvPrevStg;
+  oDeficit := vHandoffDeficit;
+  oCheckedCount := vTotalTasks;
   FC_TSK_Analyze := TRUE; RETURN;
                   END_IF;
                 END_IF;
@@ -198,66 +198,66 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
 END_FOR;
 
 (* CHECK 3: TRANSPORTER_COLLISION *)
-FOR ti := 1 TO MAX_TRANSPORTERS DO
-  FOR qi := 1 TO ioTask[ti].Count DO
-    IF ioTask[ti].Queue[qi].Unit > 0 THEN
-      l_idx := ioTask[ti].Queue[qi].LiftStationTarget - MIN_STATION_INDEX;
-      s_idx := ioTask[ti].Queue[qi].SinkStationTarget - MIN_STATION_INDEX;
-      IF l_idx >= 1 AND l_idx <= 30 THEN
-        vLiftX := DINT_TO_REAL(Stations[ioTask[ti].Queue[qi].LiftStationTarget].XPosition);
+FOR vTi := 1 TO MAX_TRANSPORTERS DO
+  FOR vQi := 1 TO ioTask[vTi].Count DO
+    IF ioTask[vTi].Queue[vQi].Unit > 0 THEN
+      vLIdx := ioTask[vTi].Queue[vQi].LiftStationTarget - MIN_STATION_INDEX;
+      vSIdx := ioTask[vTi].Queue[vQi].SinkStationTarget - MIN_STATION_INDEX;
+      IF vLIdx >= 1 AND vLIdx <= 30 THEN
+        vLiftX := DINT_TO_REAL(Stations[ioTask[vTi].Queue[vQi].LiftStationTarget].XPosition);
   ELSE vLiftX := 0.0; END_IF;
-      IF s_idx >= 1 AND s_idx <= 30 THEN
-        vSinkX := DINT_TO_REAL(Stations[ioTask[ti].Queue[qi].SinkStationTarget].XPosition);
+      IF vSIdx >= 1 AND vSIdx <= 30 THEN
+        vSinkX := DINT_TO_REAL(Stations[ioTask[vTi].Queue[vQi].SinkStationTarget].XPosition);
   ELSE vSinkX := 0.0; END_IF;
-  IF vLiftX < vSinkX THEN x1_min := vLiftX;
-  x1_max := vSinkX;
-  ELSE x1_min := vSinkX;
-  x1_max := vLiftX; END_IF;
+  IF vLiftX < vSinkX THEN vX1Min := vLiftX;
+  vX1Max := vSinkX;
+  ELSE vX1Min := vSinkX;
+  vX1Max := vLiftX; END_IF;
 
-      FOR tj := ti + 1 TO MAX_TRANSPORTERS DO
-        FOR qj := 1 TO ioTask[tj].Count DO
-          IF ioTask[tj].Queue[qj].Unit > 0 THEN
-            l_idx2 := ioTask[tj].Queue[qj].LiftStationTarget - MIN_STATION_INDEX;
-            s_idx2 := ioTask[tj].Queue[qj].SinkStationTarget - MIN_STATION_INDEX;
-            IF l_idx2 >= 1 AND l_idx2 <= 30 THEN
-              vLiftX2 := DINT_TO_REAL(Stations[ioTask[tj].Queue[qj].LiftStationTarget].XPosition);
+      FOR vTj := vTi + 1 TO MAX_TRANSPORTERS DO
+        FOR vQj := 1 TO ioTask[vTj].Count DO
+          IF ioTask[vTj].Queue[vQj].Unit > 0 THEN
+            vLIdx2 := ioTask[vTj].Queue[vQj].LiftStationTarget - MIN_STATION_INDEX;
+            vSIdx2 := ioTask[vTj].Queue[vQj].SinkStationTarget - MIN_STATION_INDEX;
+            IF vLIdx2 >= 1 AND vLIdx2 <= 30 THEN
+              vLiftX2 := DINT_TO_REAL(Stations[ioTask[vTj].Queue[vQj].LiftStationTarget].XPosition);
   ELSE vLiftX2 := 0.0; END_IF;
-            IF s_idx2 >= 1 AND s_idx2 <= 30 THEN
-              vSinkX2 := DINT_TO_REAL(Stations[ioTask[tj].Queue[qj].SinkStationTarget].XPosition);
+            IF vSIdx2 >= 1 AND vSIdx2 <= 30 THEN
+              vSinkX2 := DINT_TO_REAL(Stations[ioTask[vTj].Queue[vQj].SinkStationTarget].XPosition);
   ELSE vSinkX2 := 0.0; END_IF;
-  IF vLiftX2 < vSinkX2 THEN x2_min := vLiftX2;
-  x2_max := vSinkX2;
-  ELSE x2_min := vSinkX2;
-  x2_max := vLiftX2; END_IF;
+  IF vLiftX2 < vSinkX2 THEN vX2Min := vLiftX2;
+  vX2Max := vSinkX2;
+  ELSE vX2Min := vSinkX2;
+  vX2Max := vLiftX2; END_IF;
 
-  xo_start := x1_min; IF x2_min > xo_start THEN xo_start := x2_min; END_IF;
-  xo_end := x1_max; IF x2_max < xo_end THEN xo_end := x2_max; END_IF;
+  vXoStart := vX1Min; IF vX2Min > vXoStart THEN vXoStart := vX2Min; END_IF;
+  vXoEnd := vX1Max; IF vX2Max < vXoEnd THEN vXoEnd := vX2Max; END_IF;
 
-            IF xo_start < xo_end THEN
-              vToStart := ioTask[ti].Queue[qi].StartTime;
-  IF ioTask[tj].Queue[qj].StartTime > vToStart THEN vToStart := ioTask[tj].Queue[qj].StartTime; END_IF;
-              vToEnd := ioTask[ti].Queue[qi].FinishTime;
-  IF ioTask[tj].Queue[qj].FinishTime < vToEnd THEN vToEnd := ioTask[tj].Queue[qj].FinishTime; END_IF;
+            IF vXoStart < vXoEnd THEN
+              vToStart := ioTask[vTi].Queue[vQi].StartTime;
+  IF ioTask[vTj].Queue[vQj].StartTime > vToStart THEN vToStart := ioTask[vTj].Queue[vQj].StartTime; END_IF;
+              vToEnd := ioTask[vTi].Queue[vQi].FinishTime;
+  IF ioTask[vTj].Queue[vQj].FinishTime < vToEnd THEN vToEnd := ioTask[vTj].Queue[vQj].FinishTime; END_IF;
 
               IF vToStart < vToEnd THEN
-                deficit_s := LINT_TO_REAL(vToEnd - vToStart) + 2.0;
+                vDeficitS := LINT_TO_REAL(vToEnd - vToStart) + 2.0;
   oHasConflict := TRUE;
   oConfType := 2;
-                IF ioTask[ti].Queue[qi].StartTime <= ioTask[tj].Queue[qj].StartTime THEN
-                  oConfUnit := ioTask[tj].Queue[qj].Unit;
-                  oConfStage := ioTask[tj].Queue[qj].Stage;
-                  oConfTrans := tj;
-                  oBlockedUnit := ioTask[ti].Queue[qi].Unit;
-                  oBlockedStage := ioTask[ti].Queue[qi].Stage;
+                IF ioTask[vTi].Queue[vQi].StartTime <= ioTask[vTj].Queue[vQj].StartTime THEN
+                  oConfUnit := ioTask[vTj].Queue[vQj].Unit;
+                  oConfStage := ioTask[vTj].Queue[vQj].Stage;
+                  oConfTrans := vTj;
+                  oBlockedUnit := ioTask[vTi].Queue[vQi].Unit;
+                  oBlockedStage := ioTask[vTi].Queue[vQi].Stage;
                 ELSE
-                  oConfUnit := ioTask[ti].Queue[qi].Unit;
-                  oConfStage := ioTask[ti].Queue[qi].Stage;
-                  oConfTrans := ti;
-                  oBlockedUnit := ioTask[tj].Queue[qj].Unit;
-                  oBlockedStage := ioTask[tj].Queue[qj].Stage;
+                  oConfUnit := ioTask[vTi].Queue[vQi].Unit;
+                  oConfStage := ioTask[vTi].Queue[vQi].Stage;
+                  oConfTrans := vTi;
+                  oBlockedUnit := ioTask[vTj].Queue[vQj].Unit;
+                  oBlockedStage := ioTask[vTj].Queue[vQj].Stage;
                 END_IF;
-  oDeficit := deficit_s;
-  checked_count := vTotalTasks;
+  oDeficit := vDeficitS;
+  oCheckedCount := vTotalTasks;
   FC_TSK_Analyze := TRUE; RETURN;
               END_IF;
             END_IF;
@@ -268,6 +268,6 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
   END_FOR;
 END_FOR;
 
-checked_count := vTotalTasks;
+oCheckedCount := vTotalTasks;
 
 END_FUNCTION

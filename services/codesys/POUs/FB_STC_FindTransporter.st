@@ -51,8 +51,8 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  ti                        : INT;
-  ai                        : INT;
+  vTi                        : INT;
+  vAi                        : INT;
   vArea                      : UDT_TaskAreaType;
   vCanLift                  : BOOL;
   vCanSink                  : BOOL;
@@ -65,17 +65,17 @@ VAR
   vCurCount                 : INT;
   vCurDist                  : INT;
   vLastSink                 : INT;
-  ci                        : INT;
+  vCi                        : INT;
 END_VAR
 
 oTrans := 0;
 vCapCount := 0;
 
 (* Phase 1: Collect all vCapable transporters *)
-FOR ti := 1 TO MAX_TRANSPORTERS DO
-  FOR ai := 1 TO 4 DO
+FOR vTi := 1 TO MAX_TRANSPORTERS DO
+  FOR vAi := 1 TO 4 DO
     IF vCapCount < 3 THEN
-      vArea := Transporters[ti].TaskArea[ai];
+      vArea := Transporters[vTi].TaskArea[vAi];
       IF vArea.MinLift > 0 OR vArea.MaxLift > 0 THEN
         vCanLift := (iLiftStn >= vArea.MinLift) AND (iLiftStn <= vArea.MaxLift);
         IF iSinkStn = 0 THEN
@@ -83,10 +83,10 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
             (* Check not vAlready added — nested IF to avoid array bounds on vCapable[0] *)
             IF vCapCount = 0 THEN
               vCapCount := vCapCount + 1;
-              vCapable[vCapCount] := ti;
-            ELSIF vCapable[vCapCount] <> ti THEN
+              vCapable[vCapCount] := vTi;
+            ELSIF vCapable[vCapCount] <> vTi THEN
               vCapCount := vCapCount + 1;
-              vCapable[vCapCount] := ti;
+              vCapable[vCapCount] := vTi;
             END_IF;
           END_IF;
         ELSE
@@ -94,10 +94,10 @@ FOR ti := 1 TO MAX_TRANSPORTERS DO
           IF vCanLift AND vCanSink THEN
             IF vCapCount = 0 THEN
               vCapCount := vCapCount + 1;
-              vCapable[vCapCount] := ti;
-            ELSIF vCapable[vCapCount] <> ti THEN
+              vCapable[vCapCount] := vTi;
+            ELSIF vCapable[vCapCount] <> vTi THEN
               vCapCount := vCapCount + 1;
-              vCapable[vCapCount] := ti;
+              vCapable[vCapCount] := vTi;
             END_IF;
           END_IF;
         END_IF;
@@ -126,11 +126,11 @@ ELSE
     vBestDist := 0;
   END_IF;
 
-  FOR ci := 2 TO vCapCount DO
-    vCurCount := g_task[vCapable[ci]].Count;
+  FOR vCi := 2 TO vCapCount DO
+    vCurCount := g_task[vCapable[vCi]].Count;
     vLastSink := 0;
     IF vCurCount > 0 THEN
-      vLastSink := g_task[vCapable[ci]].Queue[vCurCount].SinkStationTarget;
+      vLastSink := g_task[vCapable[vCi]].Queue[vCurCount].SinkStationTarget;
     END_IF;
     IF vLastSink > 0 THEN
       vCurDist := ABS(vLastSink - iLiftStn);
@@ -139,11 +139,11 @@ ELSE
     END_IF;
 
     IF vCurCount < vBestCount THEN
-      vBestIdx := ci;
+      vBestIdx := vCi;
       vBestCount := vCurCount;
       vBestDist := vCurDist;
     ELSIF vCurCount = vBestCount AND vCurDist < vBestDist THEN
-      vBestIdx := ci;
+      vBestIdx := vCi;
       vBestCount := vCurCount;
       vBestDist := vCurDist;
     END_IF;

@@ -6,7 +6,7 @@
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  For each transporter, checks g_manual_task[ti].Valid.
+ *  For each transporter, checks g_manual_task[vTi].Valid.
  *  If the transporter is idle (Phase=0), validates stations,
  *  calculates transfer time, and inserts a task into the queue
  *  (same pattern as FC_TSK_NoTreatment).
@@ -52,11 +52,11 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 
 VAR
-  ti                        : INT;
-  ai                        : INT;
-  sh                        : INT;
-  lift                      : INT;
-  sink                      : INT;
+  vTi                        : INT;
+  vAi                        : INT;
+  vSh                        : INT;
+  vLift                      : INT;
+  vSink                      : INT;
   vCovers                    : BOOL;
   vTransPos                 : INT;
   vTmpMove                  : UDT_JC_MoveTimesType;
@@ -68,103 +68,103 @@ END_VAR
 
 FC_STC_ManualTask := TRUE;
 
-FOR ti := 1 TO MAX_TRANSPORTERS DO
-  IF NOT g_manual_task[ti].Valid THEN
+FOR vTi := 1 TO MAX_TRANSPORTERS DO
+  IF NOT g_manual_task[vTi].Valid THEN
     CONTINUE;
   END_IF;
 
-  lift := g_manual_task[ti].LiftStation;
-  sink := g_manual_task[ti].SinkStation;
+  vLift := g_manual_task[vTi].LiftStation;
+  vSink := g_manual_task[vTi].SinkStation;
 
   (* Validate station range *)
-  IF lift < MIN_STATION_INDEX OR lift > MAX_STATION_INDEX
-     OR sink < MIN_STATION_INDEX OR sink > MAX_STATION_INDEX
-     OR lift = sink THEN
-    g_manual_task[ti].Valid := FALSE;
+  IF vLift < MIN_STATION_INDEX OR vLift > MAX_STATION_INDEX
+     OR vSink < MIN_STATION_INDEX OR vSink > MAX_STATION_INDEX
+     OR vLift = vSink THEN
+    g_manual_task[vTi].Valid := FALSE;
     CONTINUE;
   END_IF;
 
   (* Transporter must be active and idle *)
   (* Transporter must be active and idle or in move-away *)
-  IF NOT g_transporter[ti].IsActive THEN
+  IF NOT g_transporter[vTi].IsActive THEN
     CONTINUE;
   END_IF;
-  IF g_transporter[ti].Phase <> 0
-     AND NOT (g_transporter[ti].Phase = 1 AND g_transporter[ti].Status = 3) THEN
+  IF g_transporter[vTi].Phase <> 0
+     AND NOT (g_transporter[vTi].Phase = 1 AND g_transporter[vTi].Status = 3) THEN
     CONTINUE;  (* keep Valid — retry next cycle *)
   END_IF;
 
-  (* Check lift station is within transporter TaskArea *)
+  (* Check vLift station is within transporter TaskArea *)
   vCovers := FALSE;
-  FOR ai := 1 TO 4 DO
-    IF Transporters[ti].TaskArea[ai].MinLift > 0
-       OR Transporters[ti].TaskArea[ai].MaxLift > 0 THEN
-      IF lift >= Transporters[ti].TaskArea[ai].MinLift
-         AND lift <= Transporters[ti].TaskArea[ai].MaxLift THEN
+  FOR vAi := 1 TO 4 DO
+    IF Transporters[vTi].TaskArea[vAi].MinLift > 0
+       OR Transporters[vTi].TaskArea[vAi].MaxLift > 0 THEN
+      IF vLift >= Transporters[vTi].TaskArea[vAi].MinLift
+         AND vLift <= Transporters[vTi].TaskArea[vAi].MaxLift THEN
         vCovers := TRUE;
       END_IF;
     END_IF;
   END_FOR;
 
   IF NOT vCovers THEN
-    g_manual_task[ti].Valid := FALSE;
+    g_manual_task[vTi].Valid := FALSE;
     CONTINUE;
   END_IF;
 
   (* Calculate transfer time *)
-  vTmpMove := g_move[ti];
+  vTmpMove := g_move[vTi];
   vXferS := FC_STC_CalcTransferTime(
-    iFromStn            := lift,
-    iToStn              := sink,
+    iFromStn            := vLift,
+    iToStn              := vSink,
     iMove                := vTmpMove,
-    i_from_dropping_x10   := Stations[lift].DrippingTime,
-    i_to_device_delay_x10 := Stations[sink].DeviceDelay,
-    iDripTrayDelayX10 := Transporters[ti].DripTrayDelay);
+    iFromDroppingX10   := Stations[vLift].DrippingTime,
+    iToDeviceDelayX10 := Stations[vSink].DeviceDelay,
+    iDripTrayDelayX10 := Transporters[vTi].DripTrayDelay);
 
-  (* Calculate vTravel-to-lift: time for transporter to reach lift station *)
+  (* Calculate vTravel-to-vLift: time for transporter to reach vLift station *)
   vTravelToLiftS := 0.0;
-  vTransPos := g_transporter[ti].CurrentStation;
-  IF vTransPos > 0 AND vTransPos <> lift THEN
+  vTransPos := g_transporter[vTi].CurrentStation;
+  IF vTransPos > 0 AND vTransPos <> vLift THEN
     vTravelToLiftS := FC_STC_CalcHorizontalTravel(
       iFromStn := vTransPos,
-      iToStn   := lift,
+      iToStn   := vLift,
       iMove     := vTmpMove);
   END_IF;
 
   vTaskStart := iTimeS + REAL_TO_LINT(vTravelToLiftS);
   vTaskEnd   := vTaskStart + REAL_TO_LINT(vXferS);
 
-  (* Check sink station is free — no unit occupying it *)
+  (* Check vSink station is free — no unit occupying it *)
   vCovers := TRUE;  (* reuse variable as vSinkFree flag *)
-  FOR sh := 1 TO MAX_UNITS DO
-    IF g_unit[sh].Location = sink AND g_unit[sh].Status = USED THEN
+  FOR vSh := 1 TO MAX_UNITS DO
+    IF g_unit[vSh].Location = vSink AND g_unit[vSh].Status = USED THEN
       vCovers := FALSE;
     END_IF;
   END_FOR;
   IF NOT vCovers THEN
-    g_manual_task[ti].Valid := FALSE;
+    g_manual_task[vTi].Valid := FALSE;
     CONTINUE;
   END_IF;
 
   (* Insert task at queue position 1 *)
-  IF ioTask[ti].Count < MAX_TASK_QUEUE THEN
-    FOR sh := ioTask[ti].Count TO 1 BY -1 DO
-      ioTask[ti].Queue[sh + 1] := ioTask[ti].Queue[sh];
+  IF ioTask[vTi].Count < MAX_TASK_QUEUE THEN
+    FOR vSh := ioTask[vTi].Count TO 1 BY -1 DO
+      ioTask[vTi].Queue[vSh + 1] := ioTask[vTi].Queue[vSh];
     END_FOR;
-    ioTask[ti].Queue[1].Unit              := 0;
-    ioTask[ti].Queue[1].Stage             := 0;
-    ioTask[ti].Queue[1].LiftStationTarget := lift;
-    ioTask[ti].Queue[1].SinkStationTarget := sink;
-    ioTask[ti].Queue[1].StartTime         := vTaskStart;
-    ioTask[ti].Queue[1].FinishTime        := vTaskEnd;
-    ioTask[ti].Queue[1].CalcTime          := 0;
-    ioTask[ti].Queue[1].MinTime           := 0;
-    ioTask[ti].Queue[1].MaxTime           := 0;
-    ioTask[ti].Queue[1].NttPrimary        := 0;
-    ioTask[ti].Count := ioTask[ti].Count + 1;
+    ioTask[vTi].Queue[1].Unit              := 0;
+    ioTask[vTi].Queue[1].Stage             := 0;
+    ioTask[vTi].Queue[1].LiftStationTarget := vLift;
+    ioTask[vTi].Queue[1].SinkStationTarget := vSink;
+    ioTask[vTi].Queue[1].StartTime         := vTaskStart;
+    ioTask[vTi].Queue[1].FinishTime        := vTaskEnd;
+    ioTask[vTi].Queue[1].CalcTime          := 0;
+    ioTask[vTi].Queue[1].MinTime           := 0;
+    ioTask[vTi].Queue[1].MaxTime           := 0;
+    ioTask[vTi].Queue[1].NttPrimary        := 0;
+    ioTask[vTi].Count := ioTask[vTi].Count + 1;
   END_IF;
 
-  g_manual_task[ti].Valid := FALSE;
+  g_manual_task[vTi].Valid := FALSE;
 END_FOR;
 
 END_FUNCTION

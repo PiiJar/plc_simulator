@@ -40,7 +40,7 @@ END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
   ioIdleSlot              : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
-  oResult                  : UDT_JC_DepFitResultType;
+  ioResult                  : UDT_JC_DepFitResultType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
@@ -54,7 +54,7 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  si                        : INT;
+  vSi                        : INT;
   vSlotCnt                  : INT;
   vSlotStart                : LINT;
   vSlotEnd                  : LINT;
@@ -63,27 +63,27 @@ VAR
   vTravelTo                 : REAL;
   vTravelFrom               : REAL;
   vEarliest                  : LINT;
-  latest                    : LINT;
+  vLatest                    : LINT;
   vTaskDur                  : LINT;
   vDelay                     : REAL;
   vFlexUp                   : REAL;
-  capped_flex               : REAL;
+  vCappedFlex               : REAL;
   vBestDelay                : REAL;
   vBestSlot                 : INT;
   vFound                     : BOOL;
-  overflow_best_delay       : REAL;
-  overflow_best_slot        : INT;
+  vOverflowBestDelay       : REAL;
+  vOverflowBestSlot        : INT;
   vTmpMove                  : UDT_JC_MoveTimesType;
   vTotalDelay               : REAL;
 END_VAR
 
-oResult.Fits         := FALSE;
-oResult.DelayTime    := 0;
-oResult.NeedExtraTime := 0;
-oResult.TaskEndTime  := 0;
-oResult.SlotIdx      := 0;
-oResult.OverflowSlotIdx := 0;
-oResult.TransporterId := iTransId;
+ioResult.Fits         := FALSE;
+ioResult.DelayTime    := 0;
+ioResult.NeedExtraTime := 0;
+ioResult.TaskEndTime  := 0;
+ioResult.SlotIdx      := 0;
+ioResult.OverflowSlotIdx := 0;
+ioResult.TransporterId := iTransId;
 FC_DEP_FitTaskToSlot := FALSE;
 
 IF iTransId < 1 OR iTransId > MAX_TRANSPORTERS THEN RETURN; END_IF;
@@ -93,29 +93,29 @@ vTaskDur   := iTaskEnd - iTaskStart;
    This prevents cumulative drift when CalcTime is vAdjusted across rounds. *)
 vFlexUp    := DINT_TO_REAL(iMaxTimeS - iMinTimeS);
   IF vFlexUp < 0.0 THEN vFlexUp := 0.0; END_IF;
-capped_flex := vFlexUp * iFlexFactor;
+vCappedFlex := vFlexUp * iFlexFactor;
 
 vSlotCnt   := ioIdleSlot[iTransId].Count;
 vBestDelay := 1.0E9;
 vBestSlot  := 0;
 vFound      := FALSE;
-overflow_best_delay := 1.0E9;
-overflow_best_slot  := 0;
+vOverflowBestDelay := 1.0E9;
+vOverflowBestSlot  := 0;
 
 vTmpMove := g_move[iTransId];
-FOR si := 1 TO DEP_MAX_IDLE_SLOTS DO
-  IF si > vSlotCnt THEN EXIT; END_IF;
+FOR vSi := 1 TO DEP_MAX_IDLE_SLOTS DO
+  IF vSi > vSlotCnt THEN EXIT; END_IF;
 
-  vSlotStart := ioIdleSlot[iTransId].Slots[si].StartTime;
-  vSlotEnd   := ioIdleSlot[iTransId].Slots[si].EndTime;
+  vSlotStart := ioIdleSlot[iTransId].Slots[vSi].StartTime;
+  vSlotEnd   := ioIdleSlot[iTransId].Slots[vSi].EndTime;
 
-  vFromStn := ioIdleSlot[iTransId].Slots[si].LiftStationTarget;
+  vFromStn := ioIdleSlot[iTransId].Slots[vSi].LiftStationTarget;
   vTravelTo := 0.0;
   IF vFromStn > 0 AND vFromStn <> iLiftStn THEN
     vTravelTo := FC_STC_CalcHorizontalTravel(iFromStn := vFromStn, iToStn := iLiftStn, iMove := vTmpMove);
   END_IF;
 
-  vToStn := ioIdleSlot[iTransId].Slots[si].SinkStationTarget;
+  vToStn := ioIdleSlot[iTransId].Slots[vSi].SinkStationTarget;
   vTravelFrom := 0.0;
   IF vToStn > 0 AND vToStn <> iSinkStn THEN
     vTravelFrom := FC_STC_CalcHorizontalTravel(iFromStn := iSinkStn, iToStn := vToStn, iMove := vTmpMove);
@@ -129,46 +129,46 @@ FOR si := 1 TO DEP_MAX_IDLE_SLOTS DO
   END_IF;
 
   IF vSlotEnd > LINT#9000000000 THEN
-    latest := LINT#9000000000;
+    vLatest := LINT#9000000000;
   ELSE
-    latest := vSlotEnd - REAL_TO_LINT(vTravelFrom + SCH_DISPATCH_MARGIN_S);
+    vLatest := vSlotEnd - REAL_TO_LINT(vTravelFrom + SCH_DISPATCH_MARGIN_S);
   END_IF;
 
-  IF vEarliest + vTaskDur <= latest THEN
+  IF vEarliest + vTaskDur <= vLatest THEN
     vDelay := LINT_TO_REAL(vEarliest - iTaskStart) - iShiftS;
   IF vDelay < 0.0 THEN vDelay := 0.0; END_IF;
     vTotalDelay := iShiftS + vDelay;
 
-    IF vTotalDelay <= iMarginS OR vTotalDelay <= capped_flex + 1.0 THEN
+    IF vTotalDelay <= iMarginS OR vTotalDelay <= vCappedFlex + 1.0 THEN
       IF vDelay < vBestDelay THEN
         vBestDelay := vDelay;
-        vBestSlot  := si;
+        vBestSlot  := vSi;
         vFound      := TRUE;
       END_IF;
     ELSE
-      IF vDelay < overflow_best_delay THEN
-        overflow_best_delay := vDelay;
-        overflow_best_slot  := si;
+      IF vDelay < vOverflowBestDelay THEN
+        vOverflowBestDelay := vDelay;
+        vOverflowBestSlot  := vSi;
       END_IF;
     END_IF;
   END_IF;
 END_FOR;
 
 IF vFound THEN
-  oResult.Fits      := TRUE;
-  oResult.DelayTime := REAL_TO_DINT(vBestDelay);
-  oResult.SlotIdx   := vBestSlot;
-  oResult.TaskEndTime := iTaskStart + REAL_TO_LINT(iShiftS + vBestDelay) + vTaskDur;
-  oResult.NeedExtraTime := 0;
+  ioResult.Fits      := TRUE;
+  ioResult.DelayTime := REAL_TO_DINT(vBestDelay);
+  ioResult.SlotIdx   := vBestSlot;
+  ioResult.TaskEndTime := iTaskStart + REAL_TO_LINT(iShiftS + vBestDelay) + vTaskDur;
+  ioResult.NeedExtraTime := 0;
 ELSE
-  oResult.Fits := FALSE;
-  IF overflow_best_delay < 1.0E8 THEN
-    oResult.DelayTime     := REAL_TO_DINT(overflow_best_delay);
-    oResult.NeedExtraTime := REAL_TO_DINT(iShiftS + overflow_best_delay - capped_flex);
-  IF oResult.NeedExtraTime < 0 THEN oResult.NeedExtraTime := 0; END_IF;
-    oResult.OverflowSlotIdx := overflow_best_slot;
+  ioResult.Fits := FALSE;
+  IF vOverflowBestDelay < 1.0E8 THEN
+    ioResult.DelayTime     := REAL_TO_DINT(vOverflowBestDelay);
+    ioResult.NeedExtraTime := REAL_TO_DINT(iShiftS + vOverflowBestDelay - vCappedFlex);
+  IF ioResult.NeedExtraTime < 0 THEN ioResult.NeedExtraTime := 0; END_IF;
+    ioResult.OverflowSlotIdx := vOverflowBestSlot;
   ELSE
-    oResult.NeedExtraTime := 0;
+    ioResult.NeedExtraTime := 0;
   END_IF;
 END_IF;
 

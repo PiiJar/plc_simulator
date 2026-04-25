@@ -47,15 +47,15 @@ VAR
   vLiftIsOverlap           : BOOL;
   vSinkIsOverlap           : BOOL;
   vRound                     : INT;
-  ti                        : INT;
-  qi                        : INT;
+  vTi                        : INT;
+  vQi                        : INT;
   vMaxConf                  : REAL;
-  t_start                   : LINT;
-  t_end                     : LINT;
-  e_start                   : LINT;
-  e_end                     : LINT;
-  e_lift                    : INT;
-  e_sink                    : INT;
+  vTStart                   : LINT;
+  vTEnd                     : LINT;
+  vEStart                   : LINT;
+  vEEnd                     : LINT;
+  vELift                    : INT;
+  vESink                    : INT;
   vHasOvlp                  : BOOL;
   vNeeded                    : REAL;
   vDelay                     : REAL;
@@ -81,30 +81,30 @@ END_IF;
 
 FOR vRound := 1 TO DEP_MAX_DELAY_ACTS DO
   vMaxConf := 0.0;
-  t_start  := iTaskStart + REAL_TO_LINT(vDelay);
-  t_end    := iTaskEnd + REAL_TO_LINT(vDelay);
+  vTStart  := iTaskStart + REAL_TO_LINT(vDelay);
+  vTEnd    := iTaskEnd + REAL_TO_LINT(vDelay);
 
-  FOR ti := 1 TO MAX_TRANSPORTERS DO
-    IF ti <> iTransId THEN
-      FOR qi := 1 TO MAX_UNITS DO
-        IF qi > ioTask[ti].Count THEN EXIT; END_IF;
+  FOR vTi := 1 TO MAX_TRANSPORTERS DO
+    IF vTi <> iTransId THEN
+      FOR vQi := 1 TO MAX_UNITS DO
+        IF vQi > ioTask[vTi].Count THEN EXIT; END_IF;
 
-        e_lift  := ioTask[ti].Queue[qi].LiftStationTarget;
-        e_sink  := ioTask[ti].Queue[qi].SinkStationTarget;
-        e_start := ioTask[ti].Queue[qi].StartTime;
-        e_end   := ioTask[ti].Queue[qi].FinishTime;
+        vELift  := ioTask[vTi].Queue[vQi].LiftStationTarget;
+        vESink  := ioTask[vTi].Queue[vQi].SinkStationTarget;
+        vEStart := ioTask[vTi].Queue[vQi].StartTime;
+        vEEnd   := ioTask[vTi].Queue[vQi].FinishTime;
 
         vHasOvlp := FALSE;
-        IF e_lift >= 0 AND e_lift <= 200 THEN
-  IF ioOverlap.Flags[e_lift] THEN vHasOvlp := TRUE; END_IF;
+        IF vELift >= 0 AND vELift <= 200 THEN
+  IF ioOverlap.Flags[vELift] THEN vHasOvlp := TRUE; END_IF;
         END_IF;
-        IF NOT vHasOvlp AND e_sink >= 0 AND e_sink <= 200 THEN
-  IF ioOverlap.Flags[e_sink] THEN vHasOvlp := TRUE; END_IF;
+        IF NOT vHasOvlp AND vESink >= 0 AND vESink <= 200 THEN
+  IF ioOverlap.Flags[vESink] THEN vHasOvlp := TRUE; END_IF;
         END_IF;
 
         IF vHasOvlp THEN
-          IF t_start < (e_end + REAL_TO_LINT(iMarginS)) AND t_end > (e_start - REAL_TO_LINT(iMarginS)) THEN
-            vNeeded := LINT_TO_REAL(e_end - t_start) + iMarginS;
+          IF vTStart < (vEEnd + REAL_TO_LINT(iMarginS)) AND vTEnd > (vEStart - REAL_TO_LINT(iMarginS)) THEN
+            vNeeded := LINT_TO_REAL(vEEnd - vTStart) + iMarginS;
   IF vNeeded > vMaxConf THEN vMaxConf := vNeeded; END_IF;
           END_IF;
         END_IF;

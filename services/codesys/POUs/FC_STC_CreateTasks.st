@@ -47,12 +47,12 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  si                        : INT;
-  sc                        : INT;
+  vSi                        : INT;
+  vSc                        : INT;
   vLiftStn                  : INT;
   vSinkStn                  : INT;
-  tid                       : INT;
-  qi                        : INT;
+  vTid                       : INT;
+  vQi                        : INT;
   vFB_FindTransporter                   : FB_STC_FindTransporter;
   vEffLiftStn              : INT;
 END_VAR
@@ -60,16 +60,16 @@ END_VAR
 FC_STC_CreateTasks := FALSE;
 IF iUnit < 1 OR iUnit > MAX_UNITS THEN RETURN; END_IF;
 
-sc := ioSchedule[iUnit].StageCount;
-IF sc < 1 THEN RETURN; END_IF;
+vSc := ioSchedule[iUnit].StageCount;
+IF vSc < 1 THEN RETURN; END_IF;
 
 (* Start from 0 if Stages[0] exists (prepend), else from 1 *)
-FOR si := 0 TO sc - 1 DO
-  IF ioSchedule[iUnit].Stages[si].Station = 0 THEN
+FOR vSi := 0 TO vSc - 1 DO
+  IF ioSchedule[iUnit].Stages[vSi].Station = 0 THEN
     (* Skip unused stage slot *)
   ELSE
-    vLiftStn := ioSchedule[iUnit].Stages[si].Station;
-    vSinkStn := ioSchedule[iUnit].Stages[si + 1].Station;
+    vLiftStn := ioSchedule[iUnit].Stages[vSi].Station;
+    vSinkStn := ioSchedule[iUnit].Stages[vSi + 1].Station;
 
     IF vLiftStn > 0 AND vSinkStn > 0 THEN
       vEffLiftStn := vLiftStn;
@@ -83,22 +83,22 @@ FOR si := 0 TO sc - 1 DO
       END_IF;
 
       vFB_FindTransporter(iLiftStn := vEffLiftStn, iSinkStn := vSinkStn);
-      tid := vFB_FindTransporter.oTrans;
+      vTid := vFB_FindTransporter.oTrans;
 
-      IF tid >= 1 AND tid <= 3 THEN
-        qi := ioTask[tid].Count + 1;
-        IF qi <= MAX_TASK_QUEUE THEN
-          ioTask[tid].Queue[qi].Unit         := iUnit;
-          ioTask[tid].Queue[qi].Stage        := ioSchedule[iUnit].Stages[si + 1].ProgramStage;
-          ioTask[tid].Queue[qi].SrcStage     := ioSchedule[iUnit].Stages[si].ProgramStage;
-          ioTask[tid].Queue[qi].LiftStationTarget := vEffLiftStn;
-          ioTask[tid].Queue[qi].SinkStationTarget := vSinkStn;
-          ioTask[tid].Queue[qi].StartTime   := ioSchedule[iUnit].Stages[si].ExitTime;
-          ioTask[tid].Queue[qi].FinishTime  := ioSchedule[iUnit].Stages[si + 1].EntryTime;
-          ioTask[tid].Queue[qi].CalcTime    := ioSchedule[iUnit].Stages[si].CalcTime;
-          ioTask[tid].Queue[qi].MinTime     := ioSchedule[iUnit].Stages[si].MinTime;
-          ioTask[tid].Queue[qi].MaxTime     := ioSchedule[iUnit].Stages[si].MaxTime;
-          ioTask[tid].Count := qi;
+      IF vTid >= 1 AND vTid <= 3 THEN
+        vQi := ioTask[vTid].Count + 1;
+        IF vQi <= MAX_TASK_QUEUE THEN
+          ioTask[vTid].Queue[vQi].Unit         := iUnit;
+          ioTask[vTid].Queue[vQi].Stage        := ioSchedule[iUnit].Stages[vSi + 1].ProgramStage;
+          ioTask[vTid].Queue[vQi].SrcStage     := ioSchedule[iUnit].Stages[vSi].ProgramStage;
+          ioTask[vTid].Queue[vQi].LiftStationTarget := vEffLiftStn;
+          ioTask[vTid].Queue[vQi].SinkStationTarget := vSinkStn;
+          ioTask[vTid].Queue[vQi].StartTime   := ioSchedule[iUnit].Stages[vSi].ExitTime;
+          ioTask[vTid].Queue[vQi].FinishTime  := ioSchedule[iUnit].Stages[vSi + 1].EntryTime;
+          ioTask[vTid].Queue[vQi].CalcTime    := ioSchedule[iUnit].Stages[vSi].CalcTime;
+          ioTask[vTid].Queue[vQi].MinTime     := ioSchedule[iUnit].Stages[vSi].MinTime;
+          ioTask[vTid].Queue[vQi].MaxTime     := ioSchedule[iUnit].Stages[vSi].MaxTime;
+          ioTask[vTid].Count := vQi;
         END_IF;
       END_IF;
     END_IF;

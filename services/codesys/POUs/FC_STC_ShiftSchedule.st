@@ -50,10 +50,10 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  sc                        : INT;
-  si                        : INT;
-  qi                        : INT;
-  ti                        : INT;
+  vSc                        : INT;
+  vSi                        : INT;
+  vQi                        : INT;
+  vTi                        : INT;
   vDuration                  : LINT;
 END_VAR
 
@@ -62,37 +62,37 @@ IF iUnit < 1 OR iUnit > MAX_UNITS THEN RETURN; END_IF;
 IF ABS(iAmount) < 0.001 THEN RETURN; END_IF;
 
 (* -- Shift schedule stages entry/exit times -- *)
-sc := ioSchedule[iUnit].StageCount;
-FOR si := 1 TO sc DO
-  IF si >= 1 AND si <= 30
-     AND ioSchedule[iUnit].Stages[si].ProgramStage >= iFromStage THEN
-    ioSchedule[iUnit].Stages[si].EntryTime :=
-      ioSchedule[iUnit].Stages[si].EntryTime + REAL_TO_LINT(iAmount);
-    ioSchedule[iUnit].Stages[si].ExitTime :=
-      ioSchedule[iUnit].Stages[si].ExitTime + REAL_TO_LINT(iAmount);
+vSc := ioSchedule[iUnit].StageCount;
+FOR vSi := 1 TO vSc DO
+  IF vSi >= 1 AND vSi <= 30
+     AND ioSchedule[iUnit].Stages[vSi].ProgramStage >= iFromStage THEN
+    ioSchedule[iUnit].Stages[vSi].EntryTime :=
+      ioSchedule[iUnit].Stages[vSi].EntryTime + REAL_TO_LINT(iAmount);
+    ioSchedule[iUnit].Stages[vSi].ExitTime :=
+      ioSchedule[iUnit].Stages[vSi].ExitTime + REAL_TO_LINT(iAmount);
     (* GAP-3: Past-clamp -- don't let EntryTime go before now+1 *)
-    IF iAmount < 0.0 AND ioSchedule[iUnit].Stages[si].EntryTime < g_time_s + LINT#1 THEN
-      ioSchedule[iUnit].Stages[si].ExitTime := g_time_s + LINT#1
-        + (ioSchedule[iUnit].Stages[si].ExitTime - ioSchedule[iUnit].Stages[si].EntryTime);
-      ioSchedule[iUnit].Stages[si].EntryTime := g_time_s + LINT#1;
+    IF iAmount < 0.0 AND ioSchedule[iUnit].Stages[vSi].EntryTime < g_time_s + LINT#1 THEN
+      ioSchedule[iUnit].Stages[vSi].ExitTime := g_time_s + LINT#1
+        + (ioSchedule[iUnit].Stages[vSi].ExitTime - ioSchedule[iUnit].Stages[vSi].EntryTime);
+      ioSchedule[iUnit].Stages[vSi].EntryTime := g_time_s + LINT#1;
     END_IF;
   END_IF;
 END_FOR;
 
 (* -- Shift matching tasks in all transporter queues -- *)
-FOR ti := 1 TO MAX_TRANSPORTERS DO
-  FOR qi := 1 TO ioTask[ti].Count DO
-    IF ioTask[ti].Queue[qi].Unit = iUnit
-       AND ioTask[ti].Queue[qi].Stage >= iFromStage THEN
-      ioTask[ti].Queue[qi].StartTime :=
-        ioTask[ti].Queue[qi].StartTime + REAL_TO_LINT(iAmount);
-      ioTask[ti].Queue[qi].FinishTime :=
-        ioTask[ti].Queue[qi].FinishTime + REAL_TO_LINT(iAmount);
+FOR vTi := 1 TO MAX_TRANSPORTERS DO
+  FOR vQi := 1 TO ioTask[vTi].Count DO
+    IF ioTask[vTi].Queue[vQi].Unit = iUnit
+       AND ioTask[vTi].Queue[vQi].Stage >= iFromStage THEN
+      ioTask[vTi].Queue[vQi].StartTime :=
+        ioTask[vTi].Queue[vQi].StartTime + REAL_TO_LINT(iAmount);
+      ioTask[vTi].Queue[vQi].FinishTime :=
+        ioTask[vTi].Queue[vQi].FinishTime + REAL_TO_LINT(iAmount);
       (* GAP-3: Past-clamp -- don't let StartTime go before now+1 *)
-      IF iAmount < 0.0 AND ioTask[ti].Queue[qi].StartTime < g_time_s + LINT#1 THEN
-        vDuration := ioTask[ti].Queue[qi].FinishTime - ioTask[ti].Queue[qi].StartTime;
-        ioTask[ti].Queue[qi].StartTime := g_time_s + LINT#1;
-        ioTask[ti].Queue[qi].FinishTime := g_time_s + LINT#1 + vDuration;
+      IF iAmount < 0.0 AND ioTask[vTi].Queue[vQi].StartTime < g_time_s + LINT#1 THEN
+        vDuration := ioTask[vTi].Queue[vQi].FinishTime - ioTask[vTi].Queue[vQi].StartTime;
+        ioTask[vTi].Queue[vQi].StartTime := g_time_s + LINT#1;
+        ioTask[vTi].Queue[vQi].FinishTime := g_time_s + LINT#1 + vDuration;
       END_IF;
     END_IF;
   END_FOR;

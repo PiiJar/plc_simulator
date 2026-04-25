@@ -44,55 +44,55 @@ VAR_EXTERNAL
 END_VAR
 
 VAR
-  qi                        : INT;
-  si                        : INT;
+  vQi                        : INT;
+  vSi                        : INT;
   vCnt                       : INT;
   vPrevEnd                  : LINT;
   vPrevSink                 : INT;
   vGapStart                 : LINT;
   vGapEnd                   : LINT;
-  HORIZON                   : LINT := 9999999999;
+  cHorizon                   : LINT := 9999999999;
 END_VAR
 
 FC_DEP_CalcIdleSlots := FALSE;
 IF iTrans < 1 OR iTrans > MAX_TRANSPORTERS THEN RETURN; END_IF;
 
 ioIdleSlot[iTrans].Count := 0;
-si := 0;
+vSi := 0;
 vCnt := ioTask[iTrans].Count;
 
 vPrevEnd  := iTimeS;
 vPrevSink := g_transporter[iTrans].CurrentStation;
 
-FOR qi := 1 TO MAX_UNITS DO
-  IF qi > vCnt THEN EXIT; END_IF;
+FOR vQi := 1 TO MAX_UNITS DO
+  IF vQi > vCnt THEN EXIT; END_IF;
 
   vGapStart := vPrevEnd;
-  vGapEnd   := ioTask[iTrans].Queue[qi].StartTime;
+  vGapEnd   := ioTask[iTrans].Queue[vQi].StartTime;
 
   IF vGapEnd > vGapStart + LINT#1 THEN
-    si := si + 1;
-    IF si <= DEP_MAX_IDLE_SLOTS THEN
-      ioIdleSlot[iTrans].Slots[si].StartTime   := vGapStart;
-      ioIdleSlot[iTrans].Slots[si].EndTime     := vGapEnd;
-      ioIdleSlot[iTrans].Slots[si].LiftStationTarget := vPrevSink;
-      ioIdleSlot[iTrans].Slots[si].SinkStationTarget := ioTask[iTrans].Queue[qi].LiftStationTarget;
+    vSi := vSi + 1;
+    IF vSi <= DEP_MAX_IDLE_SLOTS THEN
+      ioIdleSlot[iTrans].Slots[vSi].StartTime   := vGapStart;
+      ioIdleSlot[iTrans].Slots[vSi].EndTime     := vGapEnd;
+      ioIdleSlot[iTrans].Slots[vSi].LiftStationTarget := vPrevSink;
+      ioIdleSlot[iTrans].Slots[vSi].SinkStationTarget := ioTask[iTrans].Queue[vQi].LiftStationTarget;
     END_IF;
   END_IF;
 
-  vPrevEnd  := ioTask[iTrans].Queue[qi].FinishTime;
-  vPrevSink := ioTask[iTrans].Queue[qi].SinkStationTarget;
+  vPrevEnd  := ioTask[iTrans].Queue[vQi].FinishTime;
+  vPrevSink := ioTask[iTrans].Queue[vQi].SinkStationTarget;
 END_FOR;
 
-si := si + 1;
-IF si <= DEP_MAX_IDLE_SLOTS THEN
-  ioIdleSlot[iTrans].Slots[si].StartTime   := vPrevEnd;
-  ioIdleSlot[iTrans].Slots[si].EndTime     := HORIZON;
-  ioIdleSlot[iTrans].Slots[si].LiftStationTarget := vPrevSink;
-  ioIdleSlot[iTrans].Slots[si].SinkStationTarget := 0;
+vSi := vSi + 1;
+IF vSi <= DEP_MAX_IDLE_SLOTS THEN
+  ioIdleSlot[iTrans].Slots[vSi].StartTime   := vPrevEnd;
+  ioIdleSlot[iTrans].Slots[vSi].EndTime     := cHorizon;
+  ioIdleSlot[iTrans].Slots[vSi].LiftStationTarget := vPrevSink;
+  ioIdleSlot[iTrans].Slots[vSi].SinkStationTarget := 0;
 END_IF;
 
-ioIdleSlot[iTrans].Count := si;
+ioIdleSlot[iTrans].Count := vSi;
 FC_DEP_CalcIdleSlots := TRUE;
 
 END_FUNCTION
