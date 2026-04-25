@@ -26,19 +26,19 @@ FUNCTION FC_STC_SwapTasks : INT   (* returns swap count *)
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
-  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioTask : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
+    MAX_TRANSPORTERS : INT;
 END_VAR
 
 VAR
-  vTi                        : INT;
-  vQi                        : INT;
-  vCnt                       : INT;
-  vTmp                       : UDT_JC_TskTaskType;
-  vSwaps                     : INT;
+  vTi    : INT;
+  vQi    : INT;
+  vCnt   : INT;
+  vTmp   : UDT_JC_TskTaskType;
+  vSwaps : INT;
 END_VAR
 
 vSwaps := 0;

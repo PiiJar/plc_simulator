@@ -30,20 +30,20 @@
 FUNCTION_BLOCK FB_SIM_ZMotion
 VAR_INPUT
   iDeltaT         : REAL;    (* Cycle time in seconds — simulation internal *)
-  iVStationKind    : INT;     (* KIND_DRY=0, KIND_WET=1 *)
-  iZPosUp          : DINT;    (* Z position at full up mm *)
-  iZPosDown        : DINT;    (* Z position at full down mm *)
-  iZPosSlowUp      : DINT;    (* Slow zone when going up (dry) mm *)
-  iZPosSlowDown    : DINT;    (* Slow zone when going down (wet) mm *)
-  iZPosSlowEnd     : DINT;    (* Slow zone at end of vTravel mm *)
+  iVStationKind   : INT;     (* KIND_DRY=0, KIND_WET=1 *)
+  iZPosUp         : DINT;    (* Z position at full up mm *)
+  iZPosDown       : DINT;    (* Z position at full down mm *)
+  iZPosSlowUp     : DINT;    (* Slow zone when going up (dry) mm *)
+  iZPosSlowDown   : DINT;    (* Slow zone when going down (wet) mm *)
+  iZPosSlowEnd    : DINT;    (* Slow zone at end of vTravel mm *)
   iSpeedLiftSlowZ : DINT;    (* Slow speed mm/s *)
   iSpeedLiftFastZ : DINT;    (* Fast speed mm/s *)
-  iDripTrayDelay   : INT;     (* Drip tray open/close vDelay ×10 = tenths of second *)
-  iDroppingTime    : INT;     (* Dropping/dripping time ×10 = tenths of second *)
+  iDripTrayDelay  : INT;     (* Drip tray open/close vDelay ×10 = tenths of second *)
+  iDroppingTime   : INT;     (* Dropping/dripping time ×10 = tenths of second *)
 END_VAR
 VAR_IN_OUT
-  ioZMm      : DINT;        (* Current Z position mm *)
-  ioZStage   : INT;         (* Current motion stage *)
+  ioZMm     : DINT;        (* Current Z position mm *)
+  ioZStage  : INT;         (* Current motion stage *)
   ioZTimerS : REAL;        (* Delay timer — simulation internal *)
 END_VAR
 VAR_OUTPUT
@@ -54,15 +54,15 @@ VAR_EXTERNAL CONSTANT
 END_VAR
 VAR
   (* Internal REAL copies for physics integration *)
-  vRZ          : REAL;
-  vRTotal      : REAL;
-  vRSlowZone  : REAL;
-  vRSlowEnd   : REAL;
-  vRSlowSpd   : REAL;
-  vRFastSpd   : REAL;
-  vRDrip       : REAL;
-  vRDrop       : REAL;     (* dropping/dripping time seconds *)
-  vZTotalMm   : DINT;     (* computed: iZPosDown - iZPosUp *)
+  vRZ        : REAL;
+  vRTotal    : REAL;
+  vRSlowZone : REAL;
+  vRSlowEnd  : REAL;
+  vRSlowSpd  : REAL;
+  vRFastSpd  : REAL;
+  vRDrip     : REAL;
+  vRDrop     : REAL;     (* dropping/dripping time seconds *)
+  vZTotalMm  : DINT;     (* computed: iZPosDown - iZPosUp *)
 END_VAR
 
   oDone := FALSE;

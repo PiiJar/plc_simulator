@@ -28,74 +28,74 @@ FUNCTION FC_TSK_Analyze : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
-  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioTask : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    MAX_UNITS               : INT;
-    MIN_STATION_INDEX        : INT;
-    MAX_STATION_INDEX        : INT;
+    MAX_TRANSPORTERS  : INT;
+    MAX_UNITS         : INT;
+    MIN_STATION_INDEX : INT;
+    MAX_STATION_INDEX : INT;
 END_VAR
 
 VAR_EXTERNAL
-  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
-  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  Stations : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  gMove    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
 END_VAR
 
 VAR_OUTPUT
-  oHasConflict            : BOOL;
-  oConfType               : INT;     (* 1=TASK_SEQUENCE, 2=COLLISION, 3=HANDOFF *)
-  oConfUnit               : INT;
-  oConfStage              : INT;
-  oConfTrans              : INT;
-  oBlockedUnit            : INT;
-  oBlockedStage           : INT;
-  oDeficit                 : REAL;
-  oCheckedCount             : INT;
+  oHasConflict  : BOOL;
+  oConfType     : INT;     (* 1=TASK_SEQUENCE, 2=COLLISION, 3=HANDOFF *)
+  oConfUnit     : INT;
+  oConfStage    : INT;
+  oConfTrans    : INT;
+  oBlockedUnit  : INT;
+  oBlockedStage : INT;
+  oDeficit      : REAL;
+  oCheckedCount : INT;
 END_VAR
 
 VAR
-  vTi                        : INT;
-  vTj                        : INT;
-  vQi                        : INT;
-  vQj                        : INT;
-  vPrevSink                 : INT;
-  vNextLift                 : INT;
-  vTravelS                  : REAL;
-  vGapS                     : REAL;
-  vDeficitS                 : REAL;
-  vLiftX                    : REAL;
-  vSinkX                    : REAL;
-  vX1Min                    : REAL;
-  vX1Max                    : REAL;
-  vX2Min                    : REAL;
-  vX2Max                    : REAL;
-  vXoStart                  : REAL;
-  vXoEnd                    : REAL;
-  vToStart                  : LINT;
-  vToEnd                    : LINT;
-  vLIdx                     : INT;
-  vSIdx                     : INT;
-  vLiftX2                   : REAL;
-  vSinkX2                   : REAL;
-  vLIdx2                    : INT;
-  vSIdx2                    : INT;
-  vCurUnit                  : INT;
-  vCurStage                 : INT;
-  vFoundNext                : BOOL;
-  vRecvPrevEnd             : LINT;
-  vRecvPrevSink            : INT;
-  vHasRecvPrev             : BOOL;
-  vRk                        : INT;
-  vRecvPrevUnit            : INT;
-  vRecvPrevStg             : INT;
-  vRecvTravel               : REAL;
-  vRecvEarliest             : LINT;
-  vHandoffDeficit           : REAL;
-  vTotalTasks               : INT;
-  cDeficitTol               : REAL := 1.0;
-  vTmpMove                  : UDT_JC_MoveTimesType;
+  vTi             : INT;
+  vTj             : INT;
+  vQi             : INT;
+  vQj             : INT;
+  vPrevSink       : INT;
+  vNextLift       : INT;
+  vTravelS        : REAL;
+  vGapS           : REAL;
+  vDeficitS       : REAL;
+  vLiftX          : REAL;
+  vSinkX          : REAL;
+  vX1Min          : REAL;
+  vX1Max          : REAL;
+  vX2Min          : REAL;
+  vX2Max          : REAL;
+  vXoStart        : REAL;
+  vXoEnd          : REAL;
+  vToStart        : LINT;
+  vToEnd          : LINT;
+  vLIdx           : INT;
+  vSIdx           : INT;
+  vLiftX2         : REAL;
+  vSinkX2         : REAL;
+  vLIdx2          : INT;
+  vSIdx2          : INT;
+  vCurUnit        : INT;
+  vCurStage       : INT;
+  vFoundNext      : BOOL;
+  vRecvPrevEnd    : LINT;
+  vRecvPrevSink   : INT;
+  vHasRecvPrev    : BOOL;
+  vRk             : INT;
+  vRecvPrevUnit   : INT;
+  vRecvPrevStg    : INT;
+  vRecvTravel     : REAL;
+  vRecvEarliest   : LINT;
+  vHandoffDeficit : REAL;
+  vTotalTasks     : INT;
+  cDeficitTol     : REAL := 1.0;
+  vTmpMove        : UDT_JC_MoveTimesType;
 END_VAR
 
 FC_TSK_Analyze := FALSE;
@@ -116,7 +116,7 @@ FOR vTi := 1 TO MAX_TRANSPORTERS DO
     IF ioTask[vTi].Queue[vQi].Unit > 0 AND ioTask[vTi].Queue[vQi + 1].Unit > 0 THEN
       vPrevSink := ioTask[vTi].Queue[vQi].SinkStationTarget;
       vNextLift := ioTask[vTi].Queue[vQi + 1].LiftStationTarget;
-      vTmpMove := g_move[vTi];
+      vTmpMove := gMove[vTi];
       vTravelS := FC_STC_CalcHorizontalTravel(iFromStn := vPrevSink, iToStn := vNextLift, iMove := vTmpMove);
       vGapS := LINT_TO_REAL(ioTask[vTi].Queue[vQi + 1].StartTime - ioTask[vTi].Queue[vQi].FinishTime);
       vDeficitS := vTravelS - vGapS;
@@ -172,7 +172,7 @@ FOR vTi := 1 TO MAX_TRANSPORTERS DO
                   vRecvTravel := FC_STC_CalcHorizontalTravel(
                     iFromStn := vRecvPrevSink,
                     iToStn   := ioTask[vTi].Queue[vQi].SinkStationTarget,
-                    iMove     := g_move[vTj]);
+                    iMove     := gMove[vTj]);
                   vRecvEarliest := vRecvPrevEnd + REAL_TO_LINT(vRecvTravel);
                   vHandoffDeficit := LINT_TO_REAL(vRecvEarliest - ioTask[vTi].Queue[vQi].FinishTime);
                   IF vHandoffDeficit > cDeficitTol THEN

@@ -276,8 +276,8 @@ class OpcuaAdapter extends PlcAdapter {
 
   /**
    * Send a PLC command via OPC UA.
-   * Writes g_cmd_code + g_cmd_param atomically.
-   * PLC processes when g_cmd_code <> 0 and clears it.
+   * Writes gCmdCode + gCmdParam atomically.
+   * PLC processes when gCmdCode <> 0 and clears it.
    */
   async _sendCommand(code, param = 0) {
     await this._writeNodes([
@@ -312,7 +312,7 @@ class OpcuaAdapter extends PlcAdapter {
       const batchLint = await this._readLintNodes(this._batchLintList);
       Object.assign(v, batchLint);
 
-      // Read g_time_s (LINT) separately
+      // Read gTimeS (LINT) separately
       if (!this._metaLintList) {
         this._metaLintList = [{ key: 'meta.time_seconds', nodeId: nodes.META.time_seconds }];
       }
@@ -497,7 +497,7 @@ class OpcuaAdapter extends PlcAdapter {
       for (const k of Object.keys(nodes.SCHED_DEBUG)) {
         schedulerDebug[k] = toNum(v[`sched.${k}`]);
       }
-      // Program CalTime snapshot per unit (g_dbg_prog_cal[1..10])
+      // Program CalTime snapshot per unit (gDbgProgCal[1..10])
       schedulerDebug.prog_cal = {};
       for (let u = 1; u <= 10; u++) {
         const val = toNum(v[`sched.prog_cal.${u}`]);
@@ -528,7 +528,7 @@ class OpcuaAdapter extends PlcAdapter {
         }
       }
 
-      // ── Parse manual task state (g_manual_task[1..3]) ────────
+      // ── Parse manual task state (gManualTask[1..3]) ────────
       const manualTaskState = [];
       for (let t = 1; t <= 3; t++) {
         manualTaskState.push({
@@ -691,7 +691,7 @@ class OpcuaAdapter extends PlcAdapter {
 
   // ── Write operations ──────────────────────────────────────────
   // Protocol: write struct data directly via OPC UA, then trigger
-  // commands via g_cmd_code/g_cmd_param (PLC clears after processing).
+  // commands via gCmdCode/gCmdParam (PLC clears after processing).
 
   async uploadConfig(config) {
     const { stations, transporters, units, nttData, stationCount } = config;
@@ -786,7 +786,7 @@ class OpcuaAdapter extends PlcAdapter {
       }
       console.log(`[OPC-UA] Wrote ${transporters.length} transporter configs`);
 
-      // Step 4: Write NTT destinations to g_ntt[tid]
+      // Step 4: Write NTT destinations to gNtt[tid]
       if (nttData) {
         const TARGET_MAP = {
           'to_loading': 1, 'to_buffer': 2, 'to_process': 3, 'to_unload': 4, 'to_unloading': 4,
@@ -820,7 +820,7 @@ class OpcuaAdapter extends PlcAdapter {
         console.log('[OPC-UA] Wrote NTT destinations');
       }
 
-      // Step 5: Write units to g_unit[uid]
+      // Step 5: Write units to gUnit[uid]
       if (units && units.length > 0) {
         const STATUS_MAP = { 'not_used': 0, 'used': 1 };
         const TARGET_STR_TO_INT = { 'none': 0, 'to_loading': 1, 'to_buffer': 2, 'to_process': 3, 'to_unload': 4, 'to_avoid': 5 };
@@ -918,7 +918,7 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   /**
-   * Write movement times for one transporter to g_move[tid].
+   * Write movement times for one transporter to gMove[tid].
    * @param {number} tid - transporter id (1..3)
    * @param {object} data - { lift_s: {stn: seconds}, sink_s: {stn: seconds}, travel: {from: {to: seconds}} }
    */
@@ -966,7 +966,7 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   /**
-   * Read movement times for one transporter from g_move[tid].
+   * Read movement times for one transporter from gMove[tid].
    * @param {number} tid - transporter id (1..3)
    * @returns {object} { lift_s: {stn: seconds}, sink_s: {stn: seconds}, travel: {from: {to: seconds}} }
    */
@@ -1038,7 +1038,7 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   async writeTime(unixSeconds) {
-    // g_time_s is LINT (64-bit signed integer)
+    // gTimeS is LINT (64-bit signed integer)
     // node-opcua requires arrayType: Scalar when writing Int64 with [high, low]
     if (!this.session) throw new Error('No OPC-UA session');
     const high = Math.floor(unixSeconds / 0x100000000) & 0xFFFFFFFF;
@@ -1055,7 +1055,7 @@ class OpcuaAdapter extends PlcAdapter {
       },
     });
     if (statusCode !== StatusCodes.Good) {
-      throw new Error(`OPC-UA write g_time_s failed: ${statusCode.toString()}`);
+      throw new Error(`OPC-UA write gTimeS failed: ${statusCode.toString()}`);
     }
   }
 
@@ -1064,7 +1064,7 @@ class OpcuaAdapter extends PlcAdapter {
   }
 
   async writeScheduleRequest(unitId) {
-    // No schedule request needed — PLC fills g_schedule[] continuously
+    // No schedule request needed — PLC fills gSchedule[] continuously
     // This is a no-op in the CODESYS OPC UA version
   }
 

@@ -142,22 +142,30 @@ def expected_name(name: str, section: str) -> str:
 
     # ── VAR_GLOBAL ────────────────────────────────────────────────
     elif s == 'VAR_GLOBAL':
-        # g_ prefix or PascalCase both acceptable
-        if re.match(r'^g_', name) or re.match(r'^[A-Z]', name):
+        # gPascalCase (e.g. gBatch, gTimeS) or plain PascalCase (e.g. Stations)
+        if re.match(r'^g[A-Z]', name) or re.match(r'^[A-Z]', name):
             return name
-        if '_' in name:
-            return 'g_' + name
-        return name[0].upper() + name[1:]
+        if re.match(r'^g_', name):  # old g_ style
+            pascal = to_pascal_case(name[2:])
+            return 'g' + pascal
+        return 'g' + name[0].upper() + name[1:]
 
     # ── VAR_EXTERNAL ─────────────────────────────────────────────
     elif s == 'VAR_EXTERNAL':
-        # Must match GVL names: g_ prefix, PascalCase, or ALL_CAPS
-        if (re.match(r'^g_', name) or
-                re.match(r'^[A-Z][a-z]', name) or          # PascalCase
-                re.match(r'^[A-Z][A-Z0-9_]*$', name)):     # ALL_CAPS
+        # Must match GVL variable names: gPascalCase or plain PascalCase
+        # ALL_CAPS names are constants and belong in VAR_EXTERNAL CONSTANT, not here
+        if re.match(r'^g[A-Z]', name):                      # gPascalCase
             return name
-        # snake_case without g_ → leave for manual review
-        return name
+        if re.match(r'^[A-Z][a-zA-Z0-9]*$', name):         # PascalCase (no underscores)
+            return name
+        if re.match(r'^[A-Z][A-Z0-9_]*$', name):
+            # ALL_CAPS in plain VAR_EXTERNAL → should be VAR_EXTERNAL CONSTANT
+            return '→ VAR_EXTERNAL_CONSTANT: ' + name
+        # anything else is a violation
+        if re.match(r'^g_', name):
+            pascal = to_pascal_case(name[2:])
+            return 'g' + pascal
+        return 'g' + name[0].upper() + name[1:]
 
     # ── STRUCT fields ─────────────────────────────────────────────
     elif s == 'STRUCT_FIELD':

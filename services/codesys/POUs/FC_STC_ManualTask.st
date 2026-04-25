@@ -6,7 +6,7 @@
  *  Created : 25.03.2026
  *
  * -------------------------------------------------------------------------------------------
- *  For each transporter, checks g_manual_task[vTi].Valid.
+ *  For each transporter, checks gManualTask[vTi].Valid.
  *  If the transporter is idle (Phase=0), validates stations,
  *  calculates transfer time, and inserts a task into the queue
  *  (same pattern as FC_TSK_NoTreatment).
@@ -29,68 +29,68 @@ FUNCTION FC_STC_ManualTask : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iTimeS                  : LINT;
+  iTimeS : LINT;
 END_VAR
 
 VAR_IN_OUT
-  ioTask                   : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  ioTask : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL
-  g_manual_task             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_ManualTaskType;
-  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
-  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
-  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
-  Stations                  : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
-  Transporters              : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  gManualTask  : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_ManualTaskType;
+  gTransporter : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  gMove        : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  gUnit        : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  Stations     : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  Transporters : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-  MAX_TASK_QUEUE            : INT;
-  MAX_UNITS                 : INT;
-  USED                      : INT;
+  MAX_TASK_QUEUE : INT;
+  MAX_UNITS      : INT;
+  USED           : INT;
 END_VAR
 
 VAR
-  vTi                        : INT;
-  vAi                        : INT;
-  vSh                        : INT;
-  vLift                      : INT;
-  vSink                      : INT;
-  vCovers                    : BOOL;
-  vTransPos                 : INT;
-  vTmpMove                  : UDT_JC_MoveTimesType;
-  vXferS                    : REAL;
-  vTravelToLiftS          : REAL;
-  vTaskStart                : LINT;
-  vTaskEnd                  : LINT;
+  vTi            : INT;
+  vAi            : INT;
+  vSh            : INT;
+  vLift          : INT;
+  vSink          : INT;
+  vCovers        : BOOL;
+  vTransPos      : INT;
+  vTmpMove       : UDT_JC_MoveTimesType;
+  vXferS         : REAL;
+  vTravelToLiftS : REAL;
+  vTaskStart     : LINT;
+  vTaskEnd       : LINT;
 END_VAR
 
 FC_STC_ManualTask := TRUE;
 
 FOR vTi := 1 TO MAX_TRANSPORTERS DO
-  IF NOT g_manual_task[vTi].Valid THEN
+  IF NOT gManualTask[vTi].Valid THEN
     CONTINUE;
   END_IF;
 
-  vLift := g_manual_task[vTi].LiftStation;
-  vSink := g_manual_task[vTi].SinkStation;
+  vLift := gManualTask[vTi].LiftStation;
+  vSink := gManualTask[vTi].SinkStation;
 
   (* Validate station range *)
   IF vLift < MIN_STATION_INDEX OR vLift > MAX_STATION_INDEX
      OR vSink < MIN_STATION_INDEX OR vSink > MAX_STATION_INDEX
      OR vLift = vSink THEN
-    g_manual_task[vTi].Valid := FALSE;
+    gManualTask[vTi].Valid := FALSE;
     CONTINUE;
   END_IF;
 
   (* Transporter must be active and idle *)
   (* Transporter must be active and idle or in move-away *)
-  IF NOT g_transporter[vTi].IsActive THEN
+  IF NOT gTransporter[vTi].IsActive THEN
     CONTINUE;
   END_IF;
-  IF g_transporter[vTi].Phase <> 0
-     AND NOT (g_transporter[vTi].Phase = 1 AND g_transporter[vTi].Status = 3) THEN
+  IF gTransporter[vTi].Phase <> 0
+     AND NOT (gTransporter[vTi].Phase = 1 AND gTransporter[vTi].Status = 3) THEN
     CONTINUE;  (* keep Valid — retry next cycle *)
   END_IF;
 
@@ -107,12 +107,12 @@ FOR vTi := 1 TO MAX_TRANSPORTERS DO
   END_FOR;
 
   IF NOT vCovers THEN
-    g_manual_task[vTi].Valid := FALSE;
+    gManualTask[vTi].Valid := FALSE;
     CONTINUE;
   END_IF;
 
   (* Calculate transfer time *)
-  vTmpMove := g_move[vTi];
+  vTmpMove := gMove[vTi];
   vXferS := FC_STC_CalcTransferTime(
     iFromStn            := vLift,
     iToStn              := vSink,
@@ -123,7 +123,7 @@ FOR vTi := 1 TO MAX_TRANSPORTERS DO
 
   (* Calculate vTravel-to-vLift: time for transporter to reach vLift station *)
   vTravelToLiftS := 0.0;
-  vTransPos := g_transporter[vTi].CurrentStation;
+  vTransPos := gTransporter[vTi].CurrentStation;
   IF vTransPos > 0 AND vTransPos <> vLift THEN
     vTravelToLiftS := FC_STC_CalcHorizontalTravel(
       iFromStn := vTransPos,
@@ -137,12 +137,12 @@ FOR vTi := 1 TO MAX_TRANSPORTERS DO
   (* Check vSink station is free — no unit occupying it *)
   vCovers := TRUE;  (* reuse variable as vSinkFree flag *)
   FOR vSh := 1 TO MAX_UNITS DO
-    IF g_unit[vSh].Location = vSink AND g_unit[vSh].Status = USED THEN
+    IF gUnit[vSh].Location = vSink AND gUnit[vSh].Status = USED THEN
       vCovers := FALSE;
     END_IF;
   END_FOR;
   IF NOT vCovers THEN
-    g_manual_task[vTi].Valid := FALSE;
+    gManualTask[vTi].Valid := FALSE;
     CONTINUE;
   END_IF;
 
@@ -164,7 +164,7 @@ FOR vTi := 1 TO MAX_TRANSPORTERS DO
     ioTask[vTi].Count := ioTask[vTi].Count + 1;
   END_IF;
 
-  g_manual_task[vTi].Valid := FALSE;
+  gManualTask[vTi].Valid := FALSE;
 END_FOR;
 
 END_FUNCTION

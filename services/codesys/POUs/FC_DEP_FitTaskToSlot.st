@@ -24,57 +24,57 @@ FUNCTION FC_DEP_FitTaskToSlot : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iLiftStn                : INT;
-  iSinkStn                : INT;
-  iTransId                : INT;
-  iTaskStart              : LINT;
-  iTaskEnd                : LINT;
-  iShiftS                 : REAL;
-  iCalcTimeS             : DINT;
-  iMinTimeS              : DINT;
-  iMaxTimeS              : DINT;
-  iFlexFactor             : REAL;
-  iMarginS                : REAL;
-  iConflictMarginS       : REAL;
+  iLiftStn         : INT;
+  iSinkStn         : INT;
+  iTransId         : INT;
+  iTaskStart       : LINT;
+  iTaskEnd         : LINT;
+  iShiftS          : REAL;
+  iCalcTimeS       : DINT;
+  iMinTimeS        : DINT;
+  iMaxTimeS        : DINT;
+  iFlexFactor      : REAL;
+  iMarginS         : REAL;
+  iConflictMarginS : REAL;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
-  ioIdleSlot              : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
-  ioResult                  : UDT_JC_DepFitResultType;
+  ioIdleSlot : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
+  ioResult   : UDT_JC_DepFitResultType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    DEP_MAX_IDLE_SLOTS      : INT;
-    SCH_DISPATCH_MARGIN_S   : REAL;
+    MAX_TRANSPORTERS      : INT;
+    DEP_MAX_IDLE_SLOTS    : INT;
+    SCH_DISPATCH_MARGIN_S : REAL;
 END_VAR
 
 VAR_EXTERNAL
-  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  gMove : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
 END_VAR
 
 VAR
-  vSi                        : INT;
-  vSlotCnt                  : INT;
-  vSlotStart                : LINT;
-  vSlotEnd                  : LINT;
-  vFromStn                  : INT;
-  vToStn                    : INT;
-  vTravelTo                 : REAL;
-  vTravelFrom               : REAL;
-  vEarliest                  : LINT;
-  vLatest                    : LINT;
-  vTaskDur                  : LINT;
-  vDelay                     : REAL;
-  vFlexUp                   : REAL;
-  vCappedFlex               : REAL;
-  vBestDelay                : REAL;
-  vBestSlot                 : INT;
-  vFound                     : BOOL;
-  vOverflowBestDelay       : REAL;
-  vOverflowBestSlot        : INT;
-  vTmpMove                  : UDT_JC_MoveTimesType;
-  vTotalDelay               : REAL;
+  vSi                : INT;
+  vSlotCnt           : INT;
+  vSlotStart         : LINT;
+  vSlotEnd           : LINT;
+  vFromStn           : INT;
+  vToStn             : INT;
+  vTravelTo          : REAL;
+  vTravelFrom        : REAL;
+  vEarliest          : LINT;
+  vLatest            : LINT;
+  vTaskDur           : LINT;
+  vDelay             : REAL;
+  vFlexUp            : REAL;
+  vCappedFlex        : REAL;
+  vBestDelay         : REAL;
+  vBestSlot          : INT;
+  vFound             : BOOL;
+  vOverflowBestDelay : REAL;
+  vOverflowBestSlot  : INT;
+  vTmpMove           : UDT_JC_MoveTimesType;
+  vTotalDelay        : REAL;
 END_VAR
 
 ioResult.Fits         := FALSE;
@@ -102,7 +102,7 @@ vFound      := FALSE;
 vOverflowBestDelay := 1.0E9;
 vOverflowBestSlot  := 0;
 
-vTmpMove := g_move[iTransId];
+vTmpMove := gMove[iTransId];
 FOR vSi := 1 TO DEP_MAX_IDLE_SLOTS DO
   IF vSi > vSlotCnt THEN EXIT; END_IF;
 

@@ -26,14 +26,14 @@ FUNCTION FC_STC_CalcHorizontalTravel : REAL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iFromStn                : INT;     (* source station number *)
-  iToStn                  : INT;     (* destination station number *)
-  iMove                    : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
+  iFromStn : INT;     (* source station number *)
+  iToStn   : INT;     (* destination station number *)
+  iMove    : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
 END_VAR
 
 VAR
-  vFromIdx                  : INT;
-  vToIdx                    : INT;
+  vFromIdx : INT;
+  vToIdx   : INT;
 END_VAR
 
 FC_STC_CalcHorizontalTravel := 0.0;

@@ -25,40 +25,40 @@ FUNCTION FC_STC_SortTasks : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iTrans                   : INT;    (* 0 = all, 1..3 = specific transporter *)
-  iTimeS                  : LINT;
+  iTrans : INT;    (* 0 = all, 1..3 = specific transporter *)
+  iTimeS : LINT;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS, 10=MAX_UNITS *)
-  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
-  ioBatch                  : ARRAY[1..10] OF UDT_BatchType;
+  ioTask  : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioBatch : ARRAY[1..10] OF UDT_BatchType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    MAX_UNITS               : INT;
-    IN_PROCESS              : INT;
+    MAX_TRANSPORTERS : INT;
+    MAX_UNITS        : INT;
+    IN_PROCESS       : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  gUnit : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
 END_VAR
 
 VAR
-  vTi                        : INT;
-  vTStart                   : INT;
-  vTEnd                     : INT;
-  vInsI                     : INT;
-  vInsJ                     : INT;
-  vInsCnt                   : INT;
-  vTmpTask                  : UDT_JC_TskTaskType;
-  vTmpUnit                  : INT;
-  vCurUnit                  : INT;
-  vTmpRatio                 : REAL;
-  vCurRatio                 : REAL;
-  vTmpEmerg                 : BOOL;
-  vCurEmerg                 : BOOL;
-  vDoShift                  : BOOL;
+  vTi       : INT;
+  vTStart   : INT;
+  vTEnd     : INT;
+  vInsI     : INT;
+  vInsJ     : INT;
+  vInsCnt   : INT;
+  vTmpTask  : UDT_JC_TskTaskType;
+  vTmpUnit  : INT;
+  vCurUnit  : INT;
+  vTmpRatio : REAL;
+  vCurRatio : REAL;
+  vTmpEmerg : BOOL;
+  vCurEmerg : BOOL;
+  vDoShift  : BOOL;
 END_VAR
 
 FC_STC_SortTasks := TRUE;
@@ -83,7 +83,7 @@ FOR vTi := vTStart TO vTEnd DO
         IF ioBatch[vTmpUnit].State = IN_PROCESS
            AND vTmpTask.Stage >= 1 THEN
           IF ioBatch[vTmpUnit].CurStage = vTmpTask.Stage
-             AND g_unit[vTmpUnit].Location = vTmpTask.LiftStationTarget
+             AND gUnit[vTmpUnit].Location = vTmpTask.LiftStationTarget
              AND ioBatch[vTmpUnit].StartTime > LINT#0
              AND ioBatch[vTmpUnit].MaxTime > 0 THEN
             vTmpRatio := LINT_TO_REAL(iTimeS - ioBatch[vTmpUnit].StartTime)
@@ -101,7 +101,7 @@ FOR vTi := vTStart TO vTEnd DO
           IF ioBatch[vCurUnit].State = IN_PROCESS
              AND ioTask[vTi].Queue[vInsJ].Stage >= 1 THEN
             IF ioBatch[vCurUnit].CurStage = ioTask[vTi].Queue[vInsJ].Stage
-               AND g_unit[vCurUnit].Location = ioTask[vTi].Queue[vInsJ].LiftStationTarget
+               AND gUnit[vCurUnit].Location = ioTask[vTi].Queue[vInsJ].LiftStationTarget
                AND ioBatch[vCurUnit].StartTime > LINT#0
                AND ioBatch[vCurUnit].MaxTime > 0 THEN
               vCurRatio := LINT_TO_REAL(iTimeS - ioBatch[vCurUnit].StartTime)

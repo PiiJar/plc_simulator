@@ -24,41 +24,41 @@ FUNCTION FC_DEP_OverlapDelay : REAL   (* returns delay_s, 0 = no vConflict *)
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iLiftStn                : INT;
-  iSinkStn                : INT;
-  iTransId                : INT;
-  iTaskStart              : LINT;
-  iTaskEnd                : LINT;
-  iMarginS                : REAL;
+  iLiftStn   : INT;
+  iSinkStn   : INT;
+  iTransId   : INT;
+  iTaskStart : LINT;
+  iTaskEnd   : LINT;
+  iMarginS   : REAL;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
-  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
-  ioOverlap                : UDT_JC_DepOverlapType;
+  ioTask    : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioOverlap : UDT_JC_DepOverlapType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    MAX_UNITS               : INT;
-    DEP_MAX_DELAY_ACTS      : INT;
+    MAX_TRANSPORTERS   : INT;
+    MAX_UNITS          : INT;
+    DEP_MAX_DELAY_ACTS : INT;
 END_VAR
 
 VAR
-  vLiftIsOverlap           : BOOL;
-  vSinkIsOverlap           : BOOL;
-  vRound                     : INT;
-  vTi                        : INT;
-  vQi                        : INT;
-  vMaxConf                  : REAL;
-  vTStart                   : LINT;
-  vTEnd                     : LINT;
-  vEStart                   : LINT;
-  vEEnd                     : LINT;
-  vELift                    : INT;
-  vESink                    : INT;
-  vHasOvlp                  : BOOL;
-  vNeeded                    : REAL;
-  vDelay                     : REAL;
+  vLiftIsOverlap : BOOL;
+  vSinkIsOverlap : BOOL;
+  vRound         : INT;
+  vTi            : INT;
+  vQi            : INT;
+  vMaxConf       : REAL;
+  vTStart        : LINT;
+  vTEnd          : LINT;
+  vEStart        : LINT;
+  vEEnd          : LINT;
+  vELift         : INT;
+  vESink         : INT;
+  vHasOvlp       : BOOL;
+  vNeeded        : REAL;
+  vDelay         : REAL;
 END_VAR
 
 vDelay := 0.0;

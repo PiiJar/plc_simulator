@@ -11,6 +11,6 @@ STRUCT
     Ts2 : LINT;  (* 2→3 : Siirto laskuasemalle alkaa / Travel to sink begins *)
     Ts3 : LINT;  (* 3→4 : Lasku alkaa / Sink begins *)
     Ts4 : LINT;  (* 4→0 : Lasku päättyy / Sink complete *)
-    Invalidated : BOOL;  (* TRUE = poikkeuksellinen siirto (väistö/häiriö), ei päivitä g_move[] *)
+    Invalidated : BOOL;  (* TRUE = poikkeuksellinen siirto (väistö/häiriö), ei päivitä gMove[] *)
 END_STRUCT;
 END_TYPE

@@ -379,7 +379,7 @@ app.delete('/api/manual-tasks/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// Read movement times from PLC (g_move[1..3])
+// Read movement times from PLC (gMove[1..3])
 app.get('/api/movement-times', async (req, res) => {
   if (!adapter.isConnected()) {
     return res.status(503).json({ success: false, error: 'PLC not connected' });

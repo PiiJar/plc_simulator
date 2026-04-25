@@ -5,13 +5,13 @@
    Author  : Jarmo Piipponen
    Created : 25.03.2026
    ============================================================
-   Manages a circular 10-slot event queue (g_event).
+   Manages a circular 10-slot event queue (gEvent).
 
-   Enqueue: caller writes msg to g_event_pending, sets
-   g_event_pending_valid := TRUE. This FB picks it up.
+   Enqueue: caller writes msg to gEventPending, sets
+   gEventPendingValid := TRUE. This FB picks it up.
 
-   Dequeue: Gateway reads g_event.Buffer[Head] via OPC UA,
-   then writes g_event_ack_seq to acknowledge.
+   Dequeue: Gateway reads gEvent.Buffer[Head] via OPC UA,
+   then writes gEventAckSeq to acknowledge.
 
    Called every PLC scan from PLC_PRG.
    ------------------------------------------------------------
@@ -20,36 +20,36 @@
 
 FUNCTION_BLOCK FB_SIM_EventQueue
 VAR_EXTERNAL
-  g_event               : UDT_JC_EventQueueType;
-  g_event_pending       : UDT_JC_EventMsgType;
-  g_event_pending_valid : BOOL;
-  g_event_ack_seq       : INT;
+  gEvent             : UDT_JC_EventQueueType;
+  gEventPending      : UDT_JC_EventMsgType;
+  gEventPendingValid : BOOL;
+  gEventAckSeq       : INT;
 END_VAR
 VAR
   vTail : INT;
 END_VAR
 
 (* ── 1. Enqueue: pick up pending message if queue not full ── *)
-IF g_event_pending_valid AND g_event.Count < 10 THEN
-  vTail := ((g_event.Head - 1 + g_event.Count) MOD 10) + 1;
+IF gEventPendingValid AND gEvent.Count < 10 THEN
+  vTail := ((gEvent.Head - 1 + gEvent.Count) MOD 10) + 1;
 
-  g_event_pending.Seq := g_event.NextSeq;
-  g_event.NextSeq := g_event.NextSeq + 1;
-  IF g_event.NextSeq > 32000 THEN
-    g_event.NextSeq := 1;
+  gEventPending.Seq := gEvent.NextSeq;
+  gEvent.NextSeq := gEvent.NextSeq + 1;
+  IF gEvent.NextSeq > 32000 THEN
+    gEvent.NextSeq := 1;
   END_IF;
 
-  g_event.Buffer[vTail] := g_event_pending;
-  g_event.Count := g_event.Count + 1;
+  gEvent.Buffer[vTail] := gEventPending;
+  gEvent.Count := gEvent.Count + 1;
 
-  g_event_pending_valid := FALSE;
+  gEventPendingValid := FALSE;
 END_IF;
 
 (* ── 2. Dequeue: check gateway ack for head message ── *)
-IF g_event.Count > 0 THEN
-  IF g_event_ack_seq = g_event.Buffer[g_event.Head].Seq THEN
-    g_event.Head := (g_event.Head MOD 10) + 1;
-    g_event.Count := g_event.Count - 1;
+IF gEvent.Count > 0 THEN
+  IF gEventAckSeq = gEvent.Buffer[gEvent.Head].Seq THEN
+    gEvent.Head := (gEvent.Head MOD 10) + 1;
+    gEvent.Count := gEvent.Count - 1;
   END_IF;
 END_IF;
 

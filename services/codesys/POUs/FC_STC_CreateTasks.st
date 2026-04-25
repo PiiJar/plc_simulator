@@ -25,36 +25,36 @@ FUNCTION FC_STC_CreateTasks : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iUnit                    : INT;
+  iUnit : INT;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_UNITS, 3=MAX_TRANSPORTERS *)
-  ioSchedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
-  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioSchedule : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  ioTask     : ARRAY[1..3] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    MAX_UNITS               : INT;
-    MAX_TASK_QUEUE          : INT;
-    MIN_STATION_INDEX        : INT;
-    MAX_STATION_INDEX        : INT;
+    MAX_TRANSPORTERS  : INT;
+    MAX_UNITS         : INT;
+    MAX_TASK_QUEUE    : INT;
+    MIN_STATION_INDEX : INT;
+    MAX_STATION_INDEX : INT;
 END_VAR
 
 VAR_EXTERNAL
-  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
-  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  Transporters : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  Stations     : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
 END_VAR
 
 VAR
-  vSi                        : INT;
-  vSc                        : INT;
-  vLiftStn                  : INT;
-  vSinkStn                  : INT;
-  vTid                       : INT;
-  vQi                        : INT;
-  vFB_FindTransporter                   : FB_STC_FindTransporter;
-  vEffLiftStn              : INT;
+  vSi                 : INT;
+  vSc                 : INT;
+  vLiftStn            : INT;
+  vSinkStn            : INT;
+  vTid                : INT;
+  vQi                 : INT;
+  vFB_FindTransporter : FB_STC_FindTransporter;
+  vEffLiftStn         : INT;
 END_VAR
 
 FC_STC_CreateTasks := FALSE;

@@ -28,7 +28,7 @@ VAR_IN_OUT
 END_VAR
 VAR_OUTPUT
   oArrived : BOOL;
-  oXDrive : DINT;      (* actual drive target after limit clamping *)
+  oXDrive  : DINT;      (* actual drive target after limit clamping *)
 END_VAR
 VAR
   (* Internal REAL copies for physics integration *)
@@ -41,13 +41,13 @@ VAR
   vRPos        : REAL;
   vRVel        : REAL;
   vDriveTarget : REAL;
-  vDistance     : REAL;
-  vDir          : REAL;
+  vDistance    : REAL;
+  vDir         : REAL;
   vAAcc        : REAL;
   vADec        : REAL;
   vBrakeDist   : REAL;
   vNewVel      : REAL;
-  vTravel       : REAL;
+  vTravel      : REAL;
 END_VAR
   (* Convert DINT/INT inputs to REAL for physics *)
   vRTarget := DINT_TO_REAL(iXTarget);

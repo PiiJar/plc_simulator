@@ -13,7 +13,7 @@
  *  Uses sandbox workspace arrays (g_dep_wk_xxx): DEP never touches
  *  live globals. Sandbox SNAPSHOT copies live -> workspace at INIT.
  *  All computation happens on workspace arrays. Only ACTIVATE
- *  writes results to g_dep_pending for TSK to apply.
+ *  writes results to gDepPending for TSK to apply.
  *
  *  Phase flow (structured by 100/1000 groups):
  *  0        STOPPED
@@ -64,166 +64,166 @@ FUNCTION_BLOCK FB_DEP_Scheduler
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iRun                     : BOOL;     (* TRUE = run *)
-  iTimeS                  : LINT;     (* current absolute time (s), unix seconds *)
-  iTskPhase               : INT;      (* FB_TSK_Scheduler.oPhase *)
+  iRun      : BOOL;     (* TRUE = run *)
+  iTimeS    : LINT;     (* current absolute time (s), unix seconds *)
+  iTskPhase : INT;      (* FB_TSK_Scheduler.oPhase *)
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    MAX_UNITS               : INT;
-    DEP_MAX_WAITING         : INT;
-    DEP_MAX_IDLE_SLOTS      : INT;
-    MIN_STATION_INDEX        : INT;
-    MAX_STATION_INDEX        : INT;
-    NOT_PROCESSED           : INT;
-    IN_PROCESS              : INT;
-    USED                    : INT;
-    TO_NONE                 : INT;
-    SCH_DEP_FLEX_FACTOR         : REAL;
-    SCH_MARGIN_S            : REAL;
-    SCH_CONFLICT_MARGIN_S   : REAL;
-    SCH_MAX_INIT_WAIT_S     : REAL;
-    SCH_MAX_FIT_ROUNDS      : INT;
-    MAX_TASK_QUEUE          : INT;
+    MAX_TRANSPORTERS      : INT;
+    MAX_UNITS             : INT;
+    DEP_MAX_WAITING       : INT;
+    DEP_MAX_IDLE_SLOTS    : INT;
+    MIN_STATION_INDEX     : INT;
+    MAX_STATION_INDEX     : INT;
+    NOT_PROCESSED         : INT;
+    IN_PROCESS            : INT;
+    USED                  : INT;
+    TO_NONE               : INT;
+    SCH_DEP_FLEX_FACTOR   : REAL;
+    SCH_MARGIN_S          : REAL;
+    SCH_CONFLICT_MARGIN_S : REAL;
+    SCH_MAX_INIT_WAIT_S   : REAL;
+    SCH_MAX_FIT_ROUNDS    : INT;
+    MAX_TASK_QUEUE        : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_batch                   : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
-  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
-  TreatmentPrograms                 : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
-  g_schedule                : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
-  g_task                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
-  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
-  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
-  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
-  g_dep_idle_slot           : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_DepIdleSlotSetType;
-  g_dep_overlap             : UDT_JC_DepOverlapType;
-  g_dep_pending             : UDT_JC_DepPendingWriteType;
-  g_dep_activated           : BOOL;
-  g_tsk_stable              : BOOL;
-  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
-  g_dep_waiting             : ARRAY[1..DEP_MAX_WAITING] OF INT;
-  g_dep_waiting_count       : INT;
-  g_dep_wk_schedule         : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
-  g_dep_wk_task             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
-  g_dep_wk_program          : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
-  g_dep_wk_batch            : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
-  g_event_pending           : UDT_JC_EventMsgType;
-  g_event_pending_valid     : BOOL;
+  gBatch             : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  gUnit              : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  TreatmentPrograms  : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  gSchedule          : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  gTask              : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  Stations           : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  Transporters       : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  gTransporter       : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  gDepIdleSlot       : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_DepIdleSlotSetType;
+  gDepOverlap        : UDT_JC_DepOverlapType;
+  gDepPending        : UDT_JC_DepPendingWriteType;
+  gDepActivated      : BOOL;
+  gTskStable         : BOOL;
+  gMove              : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  gDepWaiting        : ARRAY[1..DEP_MAX_WAITING] OF INT;
+  gDepWaitingCount   : INT;
+  gDepWkSchedule     : ARRAY[1..MAX_UNITS] OF UDT_JC_TskScheduleType;
+  gDepWkTask         : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  gDepWkProgram      : ARRAY[1..MAX_UNITS] OF UDT_TreatmentProgramType;
+  gDepWkBatch        : ARRAY[1..MAX_UNITS] OF UDT_BatchType;
+  gEventPending      : UDT_JC_EventMsgType;
+  gEventPendingValid : BOOL;
 END_VAR
 
 VAR_OUTPUT
-  oPhase                   : INT;
-  oWaitCnt                : INT;
-  oActivated               : BOOL;
-  oRejectCnt              : INT;
-  oFitRound               : INT;
-  oCurWaitUnit           : INT;
-  oRoundTicks             : INT;     (* ticks consumed by last completed vRound *)
+  oPhase       : INT;
+  oWaitCnt     : INT;
+  oActivated   : BOOL;
+  oRejectCnt   : INT;
+  oFitRound    : INT;
+  oCurWaitUnit : INT;
+  oRoundTicks  : INT;     (* ticks consumed by last completed vRound *)
 END_VAR
 
 VAR
-  vPhase                     : INT := 0;
-  vNextPhase                : INT;
+  vPhase              : INT := 0;
+  vNextPhase          : INT;
 
   (* ── Waiting batch management ── *)
-  vWaitingList              : ARRAY[1..MAX_UNITS] OF INT;
-  vWaitingCnt               : INT;
-  vCurWaitIdx              : INT;
-  vCurWaitUnit             : INT;
+  vWaitingList        : ARRAY[1..MAX_UNITS] OF INT;
+  vWaitingCnt         : INT;
+  vCurWaitIdx         : INT;
+  vCurWaitUnit        : INT;
 
   (* ── Active batch list for rebuild ── *)
-  vBatchList                : ARRAY[1..MAX_UNITS] OF INT;
-  vBatchCount               : INT;
+  vBatchList          : ARRAY[1..MAX_UNITS] OF INT;
+  vBatchCount         : INT;
 
   (* ── Extracted waiting batch tasks ── *)
-  vWTasks                   : ARRAY[1..30] OF UDT_JC_TskTaskType;
-  vWTrans                   : ARRAY[1..30] OF INT;
-  vWTaskCnt                : INT;
+  vWTasks             : ARRAY[1..30] OF UDT_JC_TskTaskType;
+  vWTrans             : ARRAY[1..30] OF INT;
+  vWTaskCnt           : INT;
 
   (* ── Phase index: derived from vPhase number ── *)
-  vIdx                       : INT;
+  vIdx                : INT;
 
   (* ── First fit task index (skip stage 0 if prepended) ── *)
-  vFitTaskStart            : INT;
+  vFitTaskStart       : INT;
 
   (* ── Fit state ── *)
-  vFitRound                 : INT;
-  vSchedBaseTime           : LINT;
+  vFitRound           : INT;
+  vSchedBaseTime      : LINT;
 
   (* ── Delay recording ── *)
-  vDelayStage               : INT;
-  vDelayAmount              : REAL;
-  vDelayTarget              : INT;
+  vDelayStage         : INT;
+  vDelayAmount        : REAL;
+  vDelayTarget        : INT;
 
   (* Sub-FB instances *)
-  vFB_FindTransporter                   : FB_STC_FindTransporter;
-  vFitResult                : UDT_JC_DepFitResultType;
+  vFB_FindTransporter : FB_STC_FindTransporter;
+  vFitResult          : UDT_JC_DepFitResultType;
 
   (* ── Temp variables ── *)
-  vTi                        : INT;
-  vQi                        : INT;
-  vBi                        : INT;
-  vUi                        : INT;
-  vSi                        : INT;
-  vSchedTrans               : INT;
-  vWriteIdx                 : INT;
-  vOvlpDelayS              : REAL;
-  vTotalDelayS             : REAL;
-  vProgIdx                  : INT;
-  vOldCal                   : DINT;
-  vNewCal                   : DINT;
-  vMaxCal                   : DINT;
-  vEstFinish                : LINT;
+  vTi                 : INT;
+  vQi                 : INT;
+  vBi                 : INT;
+  vUi                 : INT;
+  vSi                 : INT;
+  vSchedTrans         : INT;
+  vWriteIdx           : INT;
+  vOvlpDelayS         : REAL;
+  vTotalDelayS        : REAL;
+  vProgIdx            : INT;
+  vOldCal             : DINT;
+  vNewCal             : DINT;
+  vMaxCal             : DINT;
+  vEstFinish          : LINT;
 
 
 
   (* ── Backward chaining variables ── *)
-  vRemainingNeed            : REAL;
-  vChainDelays              : ARRAY[1..10] OF UDT_JC_DepDelayActionType;
-  vChainDelayCnt           : INT;
-  vChainOk                  : BOOL;
-  vPrevFlexUp              : REAL;
-  vPrevCapped               : REAL;
-  vUseDelay                 : REAL;
-  vBk                        : INT;
-  vCi                        : INT;
+  vRemainingNeed      : REAL;
+  vChainDelays        : ARRAY[1..10] OF UDT_JC_DepDelayActionType;
+  vChainDelayCnt      : INT;
+  vChainOk            : BOOL;
+  vPrevFlexUp         : REAL;
+  vPrevCapped         : REAL;
+  vUseDelay           : REAL;
+  vBk                 : INT;
+  vCi                 : INT;
 
   (* ── Idle-slot widening: stretch IN_PROCESS batches ── *)
-  vOvSlotIdx               : INT;
-  vWidenNeed                : REAL;
-  vWidenOk                  : BOOL;
-  vBorderUnit               : INT;
-  vBorderSrcStage          : INT;
-  vBorderFlex               : REAL;
-  vBorderCapped             : REAL;
-  vBorderUse                : REAL;
-  vMinCal                   : DINT;
+  vOvSlotIdx          : INT;
+  vWidenNeed          : REAL;
+  vWidenOk            : BOOL;
+  vBorderUnit         : INT;
+  vBorderSrcStage     : INT;
+  vBorderFlex         : REAL;
+  vBorderCapped       : REAL;
+  vBorderUse          : REAL;
+  vMinCal             : DINT;
 
   (* ── Sort variables ── *)
-  vTmpUnit                  : INT;
-  vTmpKey                   : LINT;
-  vJi                        : INT;
+  vTmpUnit            : INT;
+  vTmpKey             : LINT;
+  vJi                 : INT;
 
   (* ── Station vConflict (Phase 2600) ── *)
-  vCapWs                    : INT;
-  vCapAs                    : INT;
-  vCapBi                    : INT;
-  vCapStn                   : INT;
-  vCapWEntry               : LINT;
-  vCapWExit                : LINT;
-  vCapAEntry               : LINT;
-  vCapAExit                : LINT;
-  vCapNeed                  : LINT;
-  vCapProgStg              : INT;
-  vCapAProgStg            : INT;
-  vCapAUnit                : INT;
-  vCapConflict              : BOOL;
-  vCapMargin                : LINT := 2;
-  vFlexCap                  : DINT;
+  vCapWs              : INT;
+  vCapAs              : INT;
+  vCapBi              : INT;
+  vCapStn             : INT;
+  vCapWEntry          : LINT;
+  vCapWExit           : LINT;
+  vCapAEntry          : LINT;
+  vCapAExit           : LINT;
+  vCapNeed            : LINT;
+  vCapProgStg         : INT;
+  vCapAProgStg        : INT;
+  vCapAUnit           : INT;
+  vCapConflict        : BOOL;
+  vCapMargin          : LINT := 2;
+  vFlexCap            : DINT;
 
-  vRoundTicks               : INT := 0;  (* ticks since last RESTART *)
+  vRoundTicks         : INT := 0;  (* ticks since last RESTART *)
 END_VAR
 
 IF NOT iRun THEN
@@ -246,7 +246,7 @@ IF vPhase = 0 THEN
 (* PHASE 1: WAIT_STABLE                                       *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 1 THEN
-  IF iTskPhase >= 10000 AND g_tsk_stable THEN
+  IF iTskPhase >= 10000 AND gTskStable THEN
     vNextPhase := 100;
   ELSE
     vNextPhase := 1;  (* stay *)
@@ -257,8 +257,8 @@ ELSIF vPhase = 1 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 100 THEN
   FC_DEP_Sandbox(iCmd := 1,
-    ioWkSchedule := g_dep_wk_schedule, ioWkBatch := g_dep_wk_batch,
-    ioWkProgram := g_dep_wk_program, ioWkTask := g_dep_wk_task);
+    ioWkSchedule := gDepWkSchedule, ioWkBatch := gDepWkBatch,
+    ioWkProgram := gDepWkProgram, ioWkTask := gDepWkTask);
   (* vPhase + 1 -> 101 *)
 
 (* ════════════════════════════════════════════════════════════ *)
@@ -270,9 +270,9 @@ ELSIF vPhase = 101 THEN
   oRejectCnt := 0;
   oFitRound := 0;
   oCurWaitUnit := 0;
-  g_dep_waiting_count := vWaitingCnt;
+  gDepWaitingCount := vWaitingCnt;
   FOR vUi := 1 TO vWaitingCnt DO
-    g_dep_waiting[vUi] := vWaitingList[vUi];
+    gDepWaiting[vUi] := vWaitingList[vUi];
   END_FOR;
 
   vBatchCount := FC_STC_CollectActiveBatches(iMode := 0, oList => vBatchList);
@@ -288,10 +288,10 @@ ELSIF vPhase = 101 THEN
 ELSIF vPhase = 102 THEN
   FOR vSi := 2 TO vWaitingCnt DO
     vTmpUnit := vWaitingList[vSi];
-    vTmpKey  := g_dep_wk_batch[vTmpUnit].StartTime;
+    vTmpKey  := gDepWkBatch[vTmpUnit].StartTime;
     vJi := 0;
     FOR vJi := vSi - 1 TO 1 BY -1 DO
-      IF g_dep_wk_batch[vWaitingList[vJi]].StartTime > vTmpKey THEN
+      IF gDepWkBatch[vWaitingList[vJi]].StartTime > vTmpKey THEN
         vWaitingList[vJi + 1] := vWaitingList[vJi];
       ELSE
         EXIT;
@@ -306,7 +306,7 @@ ELSIF vPhase = 102 THEN
 (* PHASE 103: INIT_CALC_OVERLAP — compute overlap stations     *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 103 THEN
-  FC_DEP_CalcOverlap(ioOverlap := g_dep_overlap);
+  FC_DEP_CalcOverlap(ioOverlap := gDepOverlap);
   vNextPhase := 200;
 
 (* ════════════════════════════════════════════════════════════ *)
@@ -335,7 +335,7 @@ ELSIF vPhase >= 1000 AND vPhase <= 1999 THEN
 
   IF vIdx < vBatchCount THEN
     (* Calculate schedule for active batch FIRST *)
-    vFB_FindTransporter(iLiftStn := g_unit[vBatchList[vIdx + 1]].Location, iSinkStn := 0);
+    vFB_FindTransporter(iLiftStn := gUnit[vBatchList[vIdx + 1]].Location, iSinkStn := 0);
     vSchedTrans := vFB_FindTransporter.oTrans;
   IF vSchedTrans = 0 THEN vSchedTrans := 1; END_IF;
 
@@ -343,9 +343,9 @@ ELSIF vPhase >= 1000 AND vPhase <= 1999 THEN
       iUnit   := vBatchList[vIdx + 1],
       iTrans  := vSchedTrans,
       iTimeS := iTimeS,
-      ioSchedule := g_dep_wk_schedule,
-      ioBatch    := g_dep_wk_batch,
-      ioProgram  := g_dep_wk_program
+      ioSchedule := gDepWkSchedule,
+      ioBatch    := gDepWkBatch,
+      ioProgram  := gDepWkProgram
     );
     (* vPhase + 1 -> next active batch *)
 
@@ -359,9 +359,9 @@ ELSIF vPhase >= 1000 AND vPhase <= 1999 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 2000 THEN
   FOR vTi := 1 TO MAX_TRANSPORTERS DO
-    g_dep_wk_task[vTi].Count := 0;
+    gDepWkTask[vTi].Count := 0;
     FOR vQi := 1 TO MAX_TASK_QUEUE DO
-      g_dep_wk_task[vTi].Queue[vQi].Unit := 0;
+      gDepWkTask[vTi].Queue[vQi].Unit := 0;
     END_FOR;
   END_FOR;
   (* vPhase + 1 -> 2001 *)
@@ -375,7 +375,7 @@ ELSIF vPhase >= 2001 AND vPhase <= 2099 THEN
   vIdx := vPhase - 2001;
 
   IF vIdx < vBatchCount THEN
-    FC_STC_CreateTasks(iUnit := vBatchList[vIdx + 1], ioSchedule := g_dep_wk_schedule, ioTask := g_dep_wk_task);
+    FC_STC_CreateTasks(iUnit := vBatchList[vIdx + 1], ioSchedule := gDepWkSchedule, ioTask := gDepWkTask);
     (* vPhase + 1 -> next batch *)
 
   ELSE
@@ -386,14 +386,14 @@ ELSIF vPhase >= 2001 AND vPhase <= 2099 THEN
 (* PHASE 2100: SORT_TASKS — sort all queues by start_time      *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 2100 THEN
-  FC_STC_SortTasks(iTrans := 0, iTimeS := iTimeS, ioTask := g_dep_wk_task, ioBatch := g_dep_wk_batch);
+  FC_STC_SortTasks(iTrans := 0, iTimeS := iTimeS, ioTask := gDepWkTask, ioBatch := gDepWkBatch);
   (* vPhase + 1 -> 2101 *)
 
 (* ════════════════════════════════════════════════════════════ *)
 (* PHASE 2101: SWAP_TASKS — swap same-station pairs            *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 2101 THEN
-  FC_STC_SwapTasks(ioTask := g_dep_wk_task);
+  FC_STC_SwapTasks(ioTask := gDepWkTask);
   vNextPhase := 2200;
 
 (* ════════════════════════════════════════════════════════════ *)
@@ -404,36 +404,36 @@ ELSIF vPhase = 2200 THEN
 
   (* Inject in-flight pseudo-tasks for active transporters *)
   FOR vTi := 1 TO MAX_TRANSPORTERS DO
-    IF g_transporter[vTi].Phase >= 1 AND g_transporter[vTi].Phase <= 4 THEN
-      vEstFinish := iTimeS + DINT_TO_LINT(g_transporter[vTi].TaskRemainingTime);
-      IF vEstFinish > iTimeS AND g_dep_wk_task[vTi].Count < 30 THEN
+    IF gTransporter[vTi].Phase >= 1 AND gTransporter[vTi].Phase <= 4 THEN
+      vEstFinish := iTimeS + DINT_TO_LINT(gTransporter[vTi].TaskRemainingTime);
+      IF vEstFinish > iTimeS AND gDepWkTask[vTi].Count < 30 THEN
         (* Remove schedule-derived task matching in-flight transfer *)
-        FOR vQi := 1 TO g_dep_wk_task[vTi].Count DO
-          IF g_dep_wk_task[vTi].Queue[vQi].LiftStationTarget = g_transporter[vTi].LiftStationTarget
-             AND g_dep_wk_task[vTi].Queue[vQi].SinkStationTarget = g_transporter[vTi].SinkStationTarget THEN
-            FOR vBi := vQi TO g_dep_wk_task[vTi].Count - 1 DO
-              g_dep_wk_task[vTi].Queue[vBi] := g_dep_wk_task[vTi].Queue[vBi + 1];
+        FOR vQi := 1 TO gDepWkTask[vTi].Count DO
+          IF gDepWkTask[vTi].Queue[vQi].LiftStationTarget = gTransporter[vTi].LiftStationTarget
+             AND gDepWkTask[vTi].Queue[vQi].SinkStationTarget = gTransporter[vTi].SinkStationTarget THEN
+            FOR vBi := vQi TO gDepWkTask[vTi].Count - 1 DO
+              gDepWkTask[vTi].Queue[vBi] := gDepWkTask[vTi].Queue[vBi + 1];
             END_FOR;
-            g_dep_wk_task[vTi].Queue[g_dep_wk_task[vTi].Count].Unit := 0;
-            g_dep_wk_task[vTi].Count := g_dep_wk_task[vTi].Count - 1;
+            gDepWkTask[vTi].Queue[gDepWkTask[vTi].Count].Unit := 0;
+            gDepWkTask[vTi].Count := gDepWkTask[vTi].Count - 1;
             EXIT;
           END_IF;
         END_FOR;
         (* Shift existing tasks up by 1 *)
-        FOR vQi := g_dep_wk_task[vTi].Count TO 1 BY -1 DO
-          g_dep_wk_task[vTi].Queue[vQi + 1] := g_dep_wk_task[vTi].Queue[vQi];
+        FOR vQi := gDepWkTask[vTi].Count TO 1 BY -1 DO
+          gDepWkTask[vTi].Queue[vQi + 1] := gDepWkTask[vTi].Queue[vQi];
         END_FOR;
         (* Insert in-flight pseudo-task at position 1 *)
-        g_dep_wk_task[vTi].Queue[1].Unit              := 0;
-        g_dep_wk_task[vTi].Queue[1].Stage             := -1;
-        g_dep_wk_task[vTi].Queue[1].LiftStationTarget := g_transporter[vTi].LiftStationTarget;
-        g_dep_wk_task[vTi].Queue[1].SinkStationTarget := g_transporter[vTi].SinkStationTarget;
-        g_dep_wk_task[vTi].Queue[1].StartTime         := iTimeS;
-        g_dep_wk_task[vTi].Queue[1].FinishTime        := vEstFinish;
-        g_dep_wk_task[vTi].Queue[1].CalcTime          := 0;
-        g_dep_wk_task[vTi].Queue[1].MinTime           := 0;
-        g_dep_wk_task[vTi].Queue[1].MaxTime           := 0;
-        g_dep_wk_task[vTi].Count := g_dep_wk_task[vTi].Count + 1;
+        gDepWkTask[vTi].Queue[1].Unit              := 0;
+        gDepWkTask[vTi].Queue[1].Stage             := -1;
+        gDepWkTask[vTi].Queue[1].LiftStationTarget := gTransporter[vTi].LiftStationTarget;
+        gDepWkTask[vTi].Queue[1].SinkStationTarget := gTransporter[vTi].SinkStationTarget;
+        gDepWkTask[vTi].Queue[1].StartTime         := iTimeS;
+        gDepWkTask[vTi].Queue[1].FinishTime        := vEstFinish;
+        gDepWkTask[vTi].Queue[1].CalcTime          := 0;
+        gDepWkTask[vTi].Queue[1].MinTime           := 0;
+        gDepWkTask[vTi].Queue[1].MaxTime           := 0;
+        gDepWkTask[vTi].Count := gDepWkTask[vTi].Count + 1;
       END_IF;
     END_IF;
   END_FOR;
@@ -446,7 +446,7 @@ ELSIF vPhase = 2200 THEN
 ELSIF vPhase = 2300 THEN
   FOR vTi := 1 TO MAX_TRANSPORTERS DO
     FC_DEP_CalcIdleSlots(iTrans := vTi, iTimeS := iTimeS,
-                      ioTask := g_dep_wk_task, ioIdleSlot := g_dep_idle_slot);
+                      ioTask := gDepWkTask, ioIdleSlot := gDepIdleSlot);
   END_FOR;
 
   vNextPhase := 2400;
@@ -456,7 +456,7 @@ ELSIF vPhase = 2300 THEN
 (*   schedule (after idle slots are ready)                     *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 2400 THEN
-  vFB_FindTransporter(iLiftStn := g_unit[vCurWaitUnit].Location, iSinkStn := 0);
+  vFB_FindTransporter(iLiftStn := gUnit[vCurWaitUnit].Location, iSinkStn := 0);
   vSchedTrans := vFB_FindTransporter.oTrans;
   IF vSchedTrans = 0 THEN vSchedTrans := 1; END_IF;
 
@@ -464,9 +464,9 @@ ELSIF vPhase = 2400 THEN
     iUnit   := vCurWaitUnit,
     iTrans  := vSchedTrans,
     iTimeS := vSchedBaseTime,
-    ioSchedule := g_dep_wk_schedule,
-    ioBatch    := g_dep_wk_batch,
-    ioProgram  := g_dep_wk_program
+    ioSchedule := gDepWkSchedule,
+    ioBatch    := gDepWkBatch,
+    ioProgram  := gDepWkProgram
   );
   vNextPhase := 2500;
 
@@ -476,30 +476,30 @@ ELSIF vPhase = 2400 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 2500 THEN
   (* Create tasks for waiting batch (appends to queues) *)
-  FC_STC_CreateTasks(iUnit := vCurWaitUnit, ioSchedule := g_dep_wk_schedule, ioTask := g_dep_wk_task);
+  FC_STC_CreateTasks(iUnit := vCurWaitUnit, ioSchedule := gDepWkSchedule, ioTask := gDepWkTask);
 
   (* Extract waiting batch tasks from queues into vWTasks *)
   vWTaskCnt := 0;
   FOR vTi := 1 TO MAX_TRANSPORTERS DO
     vWriteIdx := 0;
-    FOR vQi := 1 TO g_dep_wk_task[vTi].Count DO
-      IF g_dep_wk_task[vTi].Queue[vQi].Unit = vCurWaitUnit THEN
+    FOR vQi := 1 TO gDepWkTask[vTi].Count DO
+      IF gDepWkTask[vTi].Queue[vQi].Unit = vCurWaitUnit THEN
         vWTaskCnt := vWTaskCnt + 1;
         IF vWTaskCnt <= 30 THEN
-          vWTasks[vWTaskCnt] := g_dep_wk_task[vTi].Queue[vQi];
+          vWTasks[vWTaskCnt] := gDepWkTask[vTi].Queue[vQi];
           vWTrans[vWTaskCnt] := vTi;
         END_IF;
       ELSE
         vWriteIdx := vWriteIdx + 1;
         IF vWriteIdx <> vQi THEN
-          g_dep_wk_task[vTi].Queue[vWriteIdx] := g_dep_wk_task[vTi].Queue[vQi];
+          gDepWkTask[vTi].Queue[vWriteIdx] := gDepWkTask[vTi].Queue[vQi];
         END_IF;
       END_IF;
     END_FOR;
-    FOR vQi := vWriteIdx + 1 TO g_dep_wk_task[vTi].Count DO
-      g_dep_wk_task[vTi].Queue[vQi].Unit := 0;
+    FOR vQi := vWriteIdx + 1 TO gDepWkTask[vTi].Count DO
+      gDepWkTask[vTi].Queue[vQi].Unit := 0;
     END_FOR;
-    g_dep_wk_task[vTi].Count := vWriteIdx;
+    gDepWkTask[vTi].Count := vWriteIdx;
   END_FOR;
 
   vNextPhase := 2600;
@@ -511,12 +511,12 @@ ELSIF vPhase = 2500 THEN
 ELSIF vPhase = 2600 THEN
   vCapConflict := FALSE;
 
-  FOR vCapWs := 1 TO g_dep_wk_schedule[vCurWaitUnit].StageCount DO
+  FOR vCapWs := 1 TO gDepWkSchedule[vCurWaitUnit].StageCount DO
     IF vCapConflict THEN EXIT; END_IF;
 
-    vCapStn   := g_dep_wk_schedule[vCurWaitUnit].Stages[vCapWs].Station;
-    vCapWEntry := g_dep_wk_schedule[vCurWaitUnit].Stages[vCapWs].EntryTime;
-    vCapWExit  := g_dep_wk_schedule[vCurWaitUnit].Stages[vCapWs].ExitTime;
+    vCapStn   := gDepWkSchedule[vCurWaitUnit].Stages[vCapWs].Station;
+    vCapWEntry := gDepWkSchedule[vCurWaitUnit].Stages[vCapWs].EntryTime;
+    vCapWExit  := gDepWkSchedule[vCurWaitUnit].Stages[vCapWs].ExitTime;
     IF vCapStn = 0 OR vCapWEntry >= vCapWExit THEN
       (* skip invalid *)
     ELSE
@@ -525,12 +525,12 @@ ELSIF vPhase = 2600 THEN
       IF vCapConflict THEN EXIT; END_IF;
       vUi := vBatchList[vCapBi];
 
-      FOR vCapAs := 1 TO g_dep_wk_schedule[vUi].StageCount DO
+      FOR vCapAs := 1 TO gDepWkSchedule[vUi].StageCount DO
         IF vCapConflict THEN EXIT; END_IF;
 
-        IF g_dep_wk_schedule[vUi].Stages[vCapAs].Station = vCapStn THEN
-          vCapAEntry := g_dep_wk_schedule[vUi].Stages[vCapAs].EntryTime;
-          vCapAExit  := g_dep_wk_schedule[vUi].Stages[vCapAs].ExitTime;
+        IF gDepWkSchedule[vUi].Stages[vCapAs].Station = vCapStn THEN
+          vCapAEntry := gDepWkSchedule[vUi].Stages[vCapAs].EntryTime;
+          vCapAExit  := gDepWkSchedule[vUi].Stages[vCapAs].ExitTime;
 
           (* Check overlap: max(w_entry, a_entry) < min(w_exit, a_exit) *)
           IF vCapWEntry < vCapAExit AND vCapAEntry < vCapWExit THEN
@@ -544,34 +544,34 @@ ELSIF vPhase = 2600 THEN
 
               (* Option 1: extend waiting's previous stage *)
               IF vCapWs >= 2 THEN
-                vCapProgStg := g_dep_wk_schedule[vCurWaitUnit].Stages[vCapWs - 1].ProgramStage;
+                vCapProgStg := gDepWkSchedule[vCurWaitUnit].Stages[vCapWs - 1].ProgramStage;
               ELSE
                 vCapProgStg := 0;
               END_IF;
 
               IF vCapProgStg >= 0 AND vCapProgStg <= 30 THEN
-                vOldCal := g_dep_wk_program[vCurWaitUnit].Steps[vCapProgStg].CalTime;
-                vMaxCal := g_dep_wk_program[vCurWaitUnit].Steps[vCapProgStg].MaxTime;
-                vMinCal := g_dep_wk_program[vCurWaitUnit].Steps[vCapProgStg].MinTime;
+                vOldCal := gDepWkProgram[vCurWaitUnit].Steps[vCapProgStg].CalTime;
+                vMaxCal := gDepWkProgram[vCurWaitUnit].Steps[vCapProgStg].MaxTime;
+                vMinCal := gDepWkProgram[vCurWaitUnit].Steps[vCapProgStg].MinTime;
                 vNewCal := vOldCal + LINT_TO_DINT(vCapNeed);
                 (* Flex cap: min + factor × (max - min) *)
                 vFlexCap := vMinCal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(vMaxCal - vMinCal));
                 IF vMaxCal > 0 AND vNewCal > vFlexCap THEN vNewCal := vFlexCap; END_IF;
                 IF vMaxCal <= 0 OR vNewCal <= vMaxCal THEN
-                  g_dep_wk_program[vCurWaitUnit].Steps[vCapProgStg].CalTime := vNewCal;
+                  gDepWkProgram[vCurWaitUnit].Steps[vCapProgStg].CalTime := vNewCal;
                   vCapConflict := TRUE;
                 END_IF;
               END_IF;
 
               (* Option 2: shorten active's current stage *)
               IF NOT vCapConflict THEN
-                vCapAProgStg := g_dep_wk_schedule[vCapAUnit].Stages[vCapAs].ProgramStage;
+                vCapAProgStg := gDepWkSchedule[vCapAUnit].Stages[vCapAs].ProgramStage;
                 IF vCapAProgStg >= 1 AND vCapAProgStg <= 30 THEN
-                  vOldCal := g_dep_wk_program[vCapAUnit].Steps[vCapAProgStg].CalTime;
-                  vMinCal := g_dep_wk_program[vCapAUnit].Steps[vCapAProgStg].MinTime;
+                  vOldCal := gDepWkProgram[vCapAUnit].Steps[vCapAProgStg].CalTime;
+                  vMinCal := gDepWkProgram[vCapAUnit].Steps[vCapAProgStg].MinTime;
                   vNewCal := vOldCal - LINT_TO_DINT(vCapNeed);
                   IF vNewCal >= vMinCal THEN
-                    g_dep_wk_program[vCapAUnit].Steps[vCapAProgStg].CalTime := vNewCal;
+                    gDepWkProgram[vCapAUnit].Steps[vCapAProgStg].CalTime := vNewCal;
                     vCapConflict := TRUE;
                   ELSE
                     vNextPhase := 9000;  (* Neither option works — reject *)
@@ -589,14 +589,14 @@ ELSIF vPhase = 2600 THEN
               vCapAUnit := vUi;
 
               (* Option 1: shorten waiting's current stage *)
-              vCapProgStg := g_dep_wk_schedule[vCurWaitUnit].Stages[vCapWs].ProgramStage;
+              vCapProgStg := gDepWkSchedule[vCurWaitUnit].Stages[vCapWs].ProgramStage;
 
               IF vCapProgStg >= 0 AND vCapProgStg <= 30 THEN
-                vOldCal := g_dep_wk_program[vCurWaitUnit].Steps[vCapProgStg].CalTime;
-                vMinCal := g_dep_wk_program[vCurWaitUnit].Steps[vCapProgStg].MinTime;
+                vOldCal := gDepWkProgram[vCurWaitUnit].Steps[vCapProgStg].CalTime;
+                vMinCal := gDepWkProgram[vCurWaitUnit].Steps[vCapProgStg].MinTime;
                 vNewCal := vOldCal - LINT_TO_DINT(vCapNeed);
                 IF vNewCal >= vMinCal THEN
-                  g_dep_wk_program[vCurWaitUnit].Steps[vCapProgStg].CalTime := vNewCal;
+                  gDepWkProgram[vCurWaitUnit].Steps[vCapProgStg].CalTime := vNewCal;
                   vCapConflict := TRUE;
                 END_IF;
               END_IF;
@@ -604,17 +604,17 @@ ELSIF vPhase = 2600 THEN
               (* Option 2: extend active's previous stage *)
               IF NOT vCapConflict THEN
                 IF vCapAs >= 2 THEN
-                  vCapAProgStg := g_dep_wk_schedule[vCapAUnit].Stages[vCapAs - 1].ProgramStage;
+                  vCapAProgStg := gDepWkSchedule[vCapAUnit].Stages[vCapAs - 1].ProgramStage;
                   IF vCapAProgStg >= 1 AND vCapAProgStg <= 30 THEN
-                    vOldCal := g_dep_wk_program[vCapAUnit].Steps[vCapAProgStg].CalTime;
-                    vMaxCal := g_dep_wk_program[vCapAUnit].Steps[vCapAProgStg].MaxTime;
-                    vMinCal := g_dep_wk_program[vCapAUnit].Steps[vCapAProgStg].MinTime;
+                    vOldCal := gDepWkProgram[vCapAUnit].Steps[vCapAProgStg].CalTime;
+                    vMaxCal := gDepWkProgram[vCapAUnit].Steps[vCapAProgStg].MaxTime;
+                    vMinCal := gDepWkProgram[vCapAUnit].Steps[vCapAProgStg].MinTime;
                     vNewCal := vOldCal + LINT_TO_DINT(vCapNeed);
                     (* Flex cap: min + factor × (max - min) *)
                     vFlexCap := vMinCal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(vMaxCal - vMinCal));
                     IF vMaxCal > 0 AND vNewCal > vFlexCap THEN vNewCal := vFlexCap; END_IF;
                     IF vMaxCal <= 0 OR vNewCal <= vMaxCal THEN
-                      g_dep_wk_program[vCapAUnit].Steps[vCapAProgStg].CalTime := vNewCal;
+                      gDepWkProgram[vCapAUnit].Steps[vCapAProgStg].CalTime := vNewCal;
                       vCapConflict := TRUE;
                     ELSE
                       vNextPhase := 9000;  (* Neither option works — reject *)
@@ -686,8 +686,8 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
       iTaskStart := vWTasks[vSi].StartTime,
       iTaskEnd   := vWTasks[vSi].FinishTime,
       iMarginS   := SCH_CONFLICT_MARGIN_S,
-      ioTask      := g_dep_wk_task,
-      ioOverlap   := g_dep_overlap
+      ioTask      := gDepWkTask,
+      ioOverlap   := gDepOverlap
     );
 
     (* Idle-slot fit check *)
@@ -704,7 +704,7 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
       iFlexFactor  := SCH_DEP_FLEX_FACTOR,
       iMarginS     := SCH_MARGIN_S,
       iConflictMarginS := SCH_CONFLICT_MARGIN_S,
-      ioIdleSlot   := g_dep_idle_slot,
+      ioIdleSlot   := gDepIdleSlot,
       ioResult       := vFitResult
     );
 
@@ -713,22 +713,22 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
     IF vFitResult.Fits THEN
       (* Trim idle slot after successful fit *)
       IF vFitResult.SlotIdx >= 1 AND vFitResult.SlotIdx <= DEP_MAX_IDLE_SLOTS THEN
-        g_dep_idle_slot[vTi].Slots[vFitResult.SlotIdx].StartTime :=
+        gDepIdleSlot[vTi].Slots[vFitResult.SlotIdx].StartTime :=
           vFitResult.TaskEndTime;
-        g_dep_idle_slot[vTi].Slots[vFitResult.SlotIdx].LiftStationTarget :=
+        gDepIdleSlot[vTi].Slots[vFitResult.SlotIdx].LiftStationTarget :=
           vWTasks[vSi].SinkStationTarget;
       END_IF;
 
       IF vTotalDelayS > SCH_MARGIN_S THEN
         vProgIdx := vWTasks[vSi].SrcStage;
         IF vProgIdx >= 0 AND vProgIdx <= 30 THEN
-          vOldCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].CalTime;
-          vMaxCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].MaxTime;
-          vMinCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].MinTime;
+          vOldCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].CalTime;
+          vMaxCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].MaxTime;
+          vMinCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].MinTime;
           vNewCal := vOldCal + REAL_TO_DINT(vTotalDelayS);
           vFlexCap := vMinCal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(vMaxCal - vMinCal));
           IF vMaxCal > 0 AND vNewCal > vFlexCap THEN vNewCal := vFlexCap; END_IF;
-          g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].CalTime := vNewCal;
+          gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].CalTime := vNewCal;
           vFitRound := vFitRound + 1;
           oFitRound := vFitRound;
           IF vFitRound > SCH_MAX_FIT_ROUNDS THEN
@@ -785,15 +785,15 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
               ELSIF vChainDelays[vCi].Target = 1 THEN
                 vProgIdx := vChainDelays[vCi].Stage;
                 IF vProgIdx >= 1 AND vProgIdx <= 30 THEN
-                  vOldCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].CalTime;
-                  vMaxCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].MaxTime;
-                  vMinCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].MinTime;
+                  vOldCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].CalTime;
+                  vMaxCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].MaxTime;
+                  vMinCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].MinTime;
                   vNewCal := vOldCal + vChainDelays[vCi].DelayTime;
                   vFlexCap := vMinCal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(vMaxCal - vMinCal));
                   IF vMaxCal > 0 AND vNewCal > vFlexCap THEN
                     vNewCal := vFlexCap;
                   END_IF;
-                  g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].CalTime := vNewCal;
+                  gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].CalTime := vNewCal;
                 END_IF;
               END_IF;
             END_IF;
@@ -803,15 +803,15 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
           IF vTotalDelayS > SCH_MARGIN_S THEN
             vProgIdx := vWTasks[vSi].SrcStage;
             IF vProgIdx >= 1 AND vProgIdx <= 30 THEN
-              vOldCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].CalTime;
-              vMaxCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].MaxTime;
-              vMinCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].MinTime;
+              vOldCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].CalTime;
+              vMaxCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].MaxTime;
+              vMinCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].MinTime;
               vNewCal := vOldCal + REAL_TO_DINT(vTotalDelayS);
               vFlexCap := vMinCal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(vMaxCal - vMinCal));
               IF vMaxCal > 0 AND vNewCal > vFlexCap THEN
                 vNewCal := vFlexCap;
               END_IF;
-              g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].CalTime := vNewCal;
+              gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].CalTime := vNewCal;
             END_IF;
           END_IF;
 
@@ -829,13 +829,13 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
           vWidenNeed := vRemainingNeed;
           vOvSlotIdx := vFitResult.OverflowSlotIdx;
 
-          IF vOvSlotIdx >= 1 AND vOvSlotIdx <= g_dep_idle_slot[vTi].Count THEN
+          IF vOvSlotIdx >= 1 AND vOvSlotIdx <= gDepIdleSlot[vTi].Count THEN
             (* ── Stretch RIGHT border: find task whose StartTime = slot EndTime ── *)
             vBorderUnit := 0;
-            FOR vQi := 1 TO g_dep_wk_task[vTi].Count DO
-              IF g_dep_wk_task[vTi].Queue[vQi].StartTime = g_dep_idle_slot[vTi].Slots[vOvSlotIdx].EndTime THEN
-                vBorderUnit := g_dep_wk_task[vTi].Queue[vQi].Unit;
-                vBorderSrcStage := g_dep_wk_task[vTi].Queue[vQi].SrcStage;
+            FOR vQi := 1 TO gDepWkTask[vTi].Count DO
+              IF gDepWkTask[vTi].Queue[vQi].StartTime = gDepIdleSlot[vTi].Slots[vOvSlotIdx].EndTime THEN
+                vBorderUnit := gDepWkTask[vTi].Queue[vQi].Unit;
+                vBorderSrcStage := gDepWkTask[vTi].Queue[vQi].SrcStage;
                 EXIT;
               END_IF;
             END_FOR;
@@ -844,9 +844,9 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
                AND vBorderUnit <> vCurWaitUnit
                AND vBorderSrcStage >= 1 AND vBorderSrcStage <= 30 THEN
               (* Flex cap: min + factor × (max - min); available room = vFlexCap - CalTime *)
-              vMinCal := g_dep_wk_program[vBorderUnit].Steps[vBorderSrcStage].MinTime;
-              vMaxCal := g_dep_wk_program[vBorderUnit].Steps[vBorderSrcStage].MaxTime;
-              vOldCal := g_dep_wk_program[vBorderUnit].Steps[vBorderSrcStage].CalTime;
+              vMinCal := gDepWkProgram[vBorderUnit].Steps[vBorderSrcStage].MinTime;
+              vMaxCal := gDepWkProgram[vBorderUnit].Steps[vBorderSrcStage].MaxTime;
+              vOldCal := gDepWkProgram[vBorderUnit].Steps[vBorderSrcStage].CalTime;
               vFlexCap := vMinCal + REAL_TO_DINT(SCH_DEP_FLEX_FACTOR * DINT_TO_REAL(vMaxCal - vMinCal));
               vBorderFlex := DINT_TO_REAL(vFlexCap - vOldCal);
   IF vBorderFlex < 0.0 THEN vBorderFlex := 0.0; END_IF;
@@ -856,7 +856,7 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
               IF vBorderUse > SCH_MARGIN_S THEN
                 vNewCal := vOldCal + REAL_TO_DINT(vBorderUse);
   IF vMaxCal > 0 AND vNewCal > vFlexCap THEN vNewCal := vFlexCap; END_IF;
-                g_dep_wk_program[vBorderUnit].Steps[vBorderSrcStage].CalTime := vNewCal;
+                gDepWkProgram[vBorderUnit].Steps[vBorderSrcStage].CalTime := vNewCal;
                 vWidenNeed := vWidenNeed - vBorderUse;
               END_IF;
             END_IF;
@@ -864,10 +864,10 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
             (* ── Advance LEFT border: find task whose FinishTime = slot StartTime ── *)
             IF vWidenNeed > SCH_MARGIN_S THEN
               vBorderUnit := 0;
-              FOR vQi := 1 TO g_dep_wk_task[vTi].Count DO
-                IF g_dep_wk_task[vTi].Queue[vQi].FinishTime = g_dep_idle_slot[vTi].Slots[vOvSlotIdx].StartTime THEN
-                  vBorderUnit := g_dep_wk_task[vTi].Queue[vQi].Unit;
-                  vBorderSrcStage := g_dep_wk_task[vTi].Queue[vQi].SrcStage;
+              FOR vQi := 1 TO gDepWkTask[vTi].Count DO
+                IF gDepWkTask[vTi].Queue[vQi].FinishTime = gDepIdleSlot[vTi].Slots[vOvSlotIdx].StartTime THEN
+                  vBorderUnit := gDepWkTask[vTi].Queue[vQi].Unit;
+                  vBorderSrcStage := gDepWkTask[vTi].Queue[vQi].SrcStage;
                   EXIT;
                 END_IF;
               END_FOR;
@@ -876,19 +876,19 @@ ELSIF vPhase >= 3100 AND vPhase <= 3199 THEN
                  AND vBorderUnit <> vCurWaitUnit
                  AND vBorderSrcStage >= 1 AND vBorderSrcStage <= 30 THEN
                 vBorderFlex := DINT_TO_REAL(
-                  g_dep_wk_program[vBorderUnit].Steps[vBorderSrcStage].CalTime
-                - g_dep_wk_program[vBorderUnit].Steps[vBorderSrcStage].MinTime);
+                  gDepWkProgram[vBorderUnit].Steps[vBorderSrcStage].CalTime
+                - gDepWkProgram[vBorderUnit].Steps[vBorderSrcStage].MinTime);
   IF vBorderFlex < 0.0 THEN vBorderFlex := 0.0; END_IF;
                 vBorderCapped := vBorderFlex * SCH_DEP_FLEX_FACTOR;
                 vBorderUse := vBorderCapped;
   IF vBorderUse > vWidenNeed THEN vBorderUse := vWidenNeed; END_IF;
 
                 IF vBorderUse > SCH_MARGIN_S THEN
-                  vOldCal := g_dep_wk_program[vBorderUnit].Steps[vBorderSrcStage].CalTime;
-                  vMinCal := g_dep_wk_program[vBorderUnit].Steps[vBorderSrcStage].MinTime;
+                  vOldCal := gDepWkProgram[vBorderUnit].Steps[vBorderSrcStage].CalTime;
+                  vMinCal := gDepWkProgram[vBorderUnit].Steps[vBorderSrcStage].MinTime;
                   vNewCal := vOldCal - REAL_TO_DINT(vBorderUse);
   IF vNewCal < vMinCal THEN vNewCal := vMinCal; END_IF;
-                  g_dep_wk_program[vBorderUnit].Steps[vBorderSrcStage].CalTime := vNewCal;
+                  gDepWkProgram[vBorderUnit].Steps[vBorderSrcStage].CalTime := vNewCal;
                   vWidenNeed := vWidenNeed - vBorderUse;
                 END_IF;
               END_IF;
@@ -926,13 +926,13 @@ ELSIF vPhase = 4000 THEN
     IF vDelayTarget = 1 THEN
       vProgIdx := vDelayStage;
       IF vProgIdx >= 1 AND vProgIdx <= 30 THEN
-        vOldCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].CalTime;
-        vMaxCal := g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].MaxTime;
+        vOldCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].CalTime;
+        vMaxCal := gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].MaxTime;
         vNewCal := vOldCal + REAL_TO_DINT(vDelayAmount);
         IF vNewCal > vMaxCal AND vMaxCal > 0 THEN
           vNewCal := vMaxCal;
         END_IF;
-        g_dep_wk_program[vCurWaitUnit].Steps[vProgIdx].CalTime := vNewCal;
+        gDepWkProgram[vCurWaitUnit].Steps[vProgIdx].CalTime := vNewCal;
       END_IF;
     END_IF;
     vNextPhase := 1000;  (* RECALC *)
@@ -943,42 +943,42 @@ ELSIF vPhase = 4000 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 8000 THEN
   FOR vUi := 1 TO MAX_UNITS DO
-    g_dep_pending.Programs[vUi] := g_dep_wk_program[vUi];
+    gDepPending.Programs[vUi] := gDepWkProgram[vUi];
   END_FOR;
   (* Write active batch CalTimes from sandbox programs *)
   FOR vUi := 1 TO MAX_UNITS DO
-    IF g_dep_wk_batch[vUi].State = IN_PROCESS
-       AND g_dep_wk_batch[vUi].CurStage >= 1
-       AND g_dep_wk_batch[vUi].CurStage <= g_dep_wk_program[vUi].StepCount THEN
-      g_dep_pending.ActiveBatchCalTime[vUi] := g_dep_wk_program[vUi].Steps[g_dep_wk_batch[vUi].CurStage].CalTime;
+    IF gDepWkBatch[vUi].State = IN_PROCESS
+       AND gDepWkBatch[vUi].CurStage >= 1
+       AND gDepWkBatch[vUi].CurStage <= gDepWkProgram[vUi].StepCount THEN
+      gDepPending.ActiveBatchCalTime[vUi] := gDepWkProgram[vUi].Steps[gDepWkBatch[vUi].CurStage].CalTime;
     ELSE
-      g_dep_pending.ActiveBatchCalTime[vUi] := 0;
+      gDepPending.ActiveBatchCalTime[vUi] := 0;
     END_IF;
   END_FOR;
-  g_dep_pending.BatchUnit  := vCurWaitUnit;
-  g_dep_pending.BatchStage := 0;
-  g_dep_pending.BatchState := IN_PROCESS;
+  gDepPending.BatchUnit  := vCurWaitUnit;
+  gDepPending.BatchStage := 0;
+  gDepPending.BatchState := IN_PROCESS;
   (* Stage 0 = prepend, read CalcTime/Min/Max from calculated schedule *)
-  g_dep_pending.BatchCalTime := g_dep_wk_schedule[vCurWaitUnit].Stages[0].CalcTime;
-  g_dep_pending.BatchMinTime := g_dep_wk_schedule[vCurWaitUnit].Stages[0].MinTime;
-  g_dep_pending.BatchMaxTime := g_dep_wk_schedule[vCurWaitUnit].Stages[0].MaxTime;
-  g_dep_pending.TimeStamp := iTimeS;
-  g_dep_pending.Valid     := TRUE;
+  gDepPending.BatchCalTime := gDepWkSchedule[vCurWaitUnit].Stages[0].CalcTime;
+  gDepPending.BatchMinTime := gDepWkSchedule[vCurWaitUnit].Stages[0].MinTime;
+  gDepPending.BatchMaxTime := gDepWkSchedule[vCurWaitUnit].Stages[0].MaxTime;
+  gDepPending.TimeStamp := iTimeS;
+  gDepPending.Valid     := TRUE;
 
-  g_dep_activated := TRUE;
+  gDepActivated := TRUE;
   oActivated := TRUE;
 
   (* ── Emit BATCH_ACTIVATED event (msg_type=4) ── *)
-  IF NOT g_event_pending_valid THEN
-    g_event_pending.MsgType := 4;
-    g_event_pending.TsHi := LINT_TO_UINT(iTimeS / LINT#65536);
-    g_event_pending.TsLo := LINT_TO_UINT(iTimeS MOD LINT#65536);
-    g_event_pending.Payload[1]  := vCurWaitUnit;                        (* unit_id *)
-    g_event_pending.Payload[2]  := g_batch[vCurWaitUnit].BatchCode;     (* batch_code *)
-    g_event_pending.Payload[3]  := g_batch[vCurWaitUnit].ProgId;        (* program_id *)
-    g_event_pending.Payload[4]  := TreatmentPrograms[vCurWaitUnit].StepCount;   (* stages_count *)
-    g_event_pending.Payload[5]  := g_dep_wk_schedule[vCurWaitUnit].Stages[0].Station; (* start_station *)
-    g_event_pending_valid := TRUE;
+  IF NOT gEventPendingValid THEN
+    gEventPending.MsgType := 4;
+    gEventPending.TsHi := LINT_TO_UINT(iTimeS / LINT#65536);
+    gEventPending.TsLo := LINT_TO_UINT(iTimeS MOD LINT#65536);
+    gEventPending.Payload[1]  := vCurWaitUnit;                        (* unit_id *)
+    gEventPending.Payload[2]  := gBatch[vCurWaitUnit].BatchCode;     (* batch_code *)
+    gEventPending.Payload[3]  := gBatch[vCurWaitUnit].ProgId;        (* program_id *)
+    gEventPending.Payload[4]  := TreatmentPrograms[vCurWaitUnit].StepCount;   (* stages_count *)
+    gEventPending.Payload[5]  := gDepWkSchedule[vCurWaitUnit].Stages[0].Station; (* start_station *)
+    gEventPendingValid := TRUE;
   END_IF;
 
   vNextPhase := 8100;
@@ -987,7 +987,7 @@ ELSIF vPhase = 8000 THEN
 (* PHASE 8100: WAIT_SAVE — wait for TSK to process pending     *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 8100 THEN
-  IF NOT g_dep_pending.Valid THEN
+  IF NOT gDepPending.Valid THEN
     vNextPhase := 8500;
   ELSE
     vNextPhase := 8100;  (* stay *)
@@ -997,7 +997,7 @@ ELSIF vPhase = 8100 THEN
 (* PHASE 8500: RESTART — back to WAIT_STABLE                   *)
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 8500 THEN
-  g_dep_activated := FALSE;
+  gDepActivated := FALSE;
   oRoundTicks := vRoundTicks;
   vRoundTicks := 0;
   vNextPhase := 1;
@@ -1007,8 +1007,8 @@ ELSIF vPhase = 8500 THEN
 (* ════════════════════════════════════════════════════════════ *)
 ELSIF vPhase = 9000 THEN
   FC_DEP_Sandbox(iCmd := 1,
-    ioWkSchedule := g_dep_wk_schedule, ioWkBatch := g_dep_wk_batch,
-    ioWkProgram := g_dep_wk_program, ioWkTask := g_dep_wk_task);
+    ioWkSchedule := gDepWkSchedule, ioWkBatch := gDepWkBatch,
+    ioWkProgram := gDepWkProgram, ioWkTask := gDepWkTask);
   oRejectCnt := oRejectCnt + 1;
 
   vCurWaitIdx := vCurWaitIdx + 1;

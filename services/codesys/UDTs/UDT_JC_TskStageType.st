@@ -1,5 +1,5 @@
 (* TskStageType - Calculated batch schedule stage *)
-(* Times are absolute epoch-offset seconds (g_time_s reference frame) *)
+(* Times are absolute epoch-offset seconds (gTimeS reference frame) *)
 TYPE UDT_JC_TskStageType :
 STRUCT
     Station      : INT;  (* station number, 0 = unused stage *)

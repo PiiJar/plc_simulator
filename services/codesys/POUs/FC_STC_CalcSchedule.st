@@ -25,67 +25,67 @@ FUNCTION FC_STC_CalcSchedule : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iUnit                    : INT;
-  iTrans                   : INT;
-  iTimeS                  : LINT;
+  iUnit  : INT;
+  iTrans : INT;
+  iTimeS : LINT;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 10=MAX_UNITS *)
-  ioSchedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
-  ioBatch                  : ARRAY[1..10] OF UDT_BatchType;
-  ioProgram                : ARRAY[1..10] OF UDT_TreatmentProgramType;
+  ioSchedule : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  ioBatch    : ARRAY[1..10] OF UDT_BatchType;
+  ioProgram  : ARRAY[1..10] OF UDT_TreatmentProgramType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MIN_STATION_INDEX        : INT;
-    MAX_STATION_INDEX        : INT;
-    MAX_UNITS               : INT;
-    MAX_TRANSPORTERS        : INT;
-    MAX_STEPS_PER_PROGRAM   : INT;
-    NOT_PROCESSED           : INT;
-    USED                    : INT;
+    MIN_STATION_INDEX     : INT;
+    MAX_STATION_INDEX     : INT;
+    MAX_UNITS             : INT;
+    MAX_TRANSPORTERS      : INT;
+    MAX_STEPS_PER_PROGRAM : INT;
+    NOT_PROCESSED         : INT;
+    USED                  : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_unit                    : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
-  Stations                 : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
-  g_station_occupancy             : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
-  CountStations              : INT;
-  g_move                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
-  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
-  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  gUnit             : ARRAY[1..MAX_UNITS] OF UDT_JC_UnitType;
+  Stations          : ARRAY[MIN_STATION_INDEX..MAX_STATION_INDEX] OF UDT_StationType;
+  gStationOccupancy : ARRAY[1..MAX_STATION_INDEX] OF UDT_JC_UnitAtStationType;
+  CountStations     : INT;
+  gMove             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_MoveTimesType;
+  Transporters      : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  gTransporter      : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
 END_VAR
 
 VAR
-  vStg                       : INT;
-  vStnNum                   : INT;
-  vPrevStn                  : INT;
-  vCurStage                 : INT;
-  vLocation                  : INT;
-  vStartSt                  : INT;
-  vEntryT                   : LINT;
-  vExitT                    : LINT;
-  vXferT                    : REAL;
-  vCalcS                    : REAL;
-  vMinS                     : REAL;
-  vMaxS                     : REAL;
-  vIsOnStn                 : BOOL;
-  vIsFirst                  : BOOL;
-  vRemainS                  : REAL;
-  vElapsedS                 : REAL;
-  vP                         : INT;
-  vChosenStn                : INT;
-  vTmpMove                  : UDT_JC_MoveTimesType;
-  vCandArr                  : ARRAY[1..5] OF INT;
-  vCandCnt                  : INT;
-  vSchedOccupied            : ARRAY[1..5] OF BOOL;
-  vBestChangeTime          : LINT;
-  vMyEntry                  : LINT;
-  vMyExit                   : LINT;
-  vOvStart                  : LINT;
-  vOvEnd                    : LINT;
-  vUj                        : INT;
-  vSj                        : INT;
+  vStg            : INT;
+  vStnNum         : INT;
+  vPrevStn        : INT;
+  vCurStage       : INT;
+  vLocation       : INT;
+  vStartSt        : INT;
+  vEntryT         : LINT;
+  vExitT          : LINT;
+  vXferT          : REAL;
+  vCalcS          : REAL;
+  vMinS           : REAL;
+  vMaxS           : REAL;
+  vIsOnStn        : BOOL;
+  vIsFirst        : BOOL;
+  vRemainS        : REAL;
+  vElapsedS       : REAL;
+  vP              : INT;
+  vChosenStn      : INT;
+  vTmpMove        : UDT_JC_MoveTimesType;
+  vCandArr        : ARRAY[1..5] OF INT;
+  vCandCnt        : INT;
+  vSchedOccupied  : ARRAY[1..5] OF BOOL;
+  vBestChangeTime : LINT;
+  vMyEntry        : LINT;
+  vMyExit         : LINT;
+  vOvStart        : LINT;
+  vOvEnd          : LINT;
+  vUj             : INT;
+  vSj             : INT;
 END_VAR
 
 FC_STC_CalcSchedule := FALSE;
@@ -93,7 +93,7 @@ IF iUnit < 1 OR iUnit > MAX_UNITS THEN RETURN; END_IF;
 IF iTrans < 1 OR iTrans > MAX_TRANSPORTERS THEN RETURN; END_IF;
 
 vCurStage := ioBatch[iUnit].CurStage;
-vLocation  := g_unit[iUnit].Location;
+vLocation  := gUnit[iUnit].Location;
 vIsOnStn := vLocation >= MIN_STATION_INDEX;
 
 (* Clear old schedule *)
@@ -164,9 +164,9 @@ IF vIsOnStn AND vStartSt >= 1 THEN
     ELSE
       (* Pickup wait: transporter horizontal vTravel time to this station, min 5s *)
       vCalcS := FC_STC_CalcHorizontalTravel(
-        iFromStn := g_transporter[iTrans].CurrentStation,
+        iFromStn := gTransporter[iTrans].CurrentStation,
         iToStn   := vLocation,
-        iMove     := g_move[iTrans]);
+        iMove     := gMove[iTrans]);
       IF vCalcS < 5.0 THEN vCalcS := 5.0; END_IF;
       vExitT := iTimeS + REAL_TO_LINT(vCalcS);
       ioSchedule[iUnit].Stages[0].ExitTime  := vExitT;
@@ -212,7 +212,7 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
     ELSE
       (* Estimate this batch's time window per candidate for overlap check *)
       vCalcS := DINT_TO_REAL(ioProgram[iUnit].Steps[vStg].CalTime);
-      vTmpMove := g_move[iTrans];
+      vTmpMove := gMove[iTrans];
 
       FOR vP := 1 TO vCandCnt DO
         (* Calculate entry/exit per candidate station individually *)
@@ -254,8 +254,8 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
       FOR vP := 1 TO vCandCnt DO
         IF NOT vSchedOccupied[vP] THEN
           IF vCandArr[vP] >= MIN_STATION_INDEX AND vCandArr[vP] <= MAX_STATION_INDEX THEN
-            IF g_station_occupancy[vCandArr[vP]].ChangeTime < vBestChangeTime THEN
-              vBestChangeTime := g_station_occupancy[vCandArr[vP]].ChangeTime;
+            IF gStationOccupancy[vCandArr[vP]].ChangeTime < vBestChangeTime THEN
+              vBestChangeTime := gStationOccupancy[vCandArr[vP]].ChangeTime;
               vChosenStn := vCandArr[vP];
             END_IF;
           END_IF;
@@ -275,7 +275,7 @@ FOR vStg := vStartSt TO ioProgram[iUnit].StepCount DO
   vMinS  := DINT_TO_REAL(ioProgram[iUnit].Steps[vStg].MinTime);
   vMaxS  := DINT_TO_REAL(ioProgram[iUnit].Steps[vStg].MaxTime);
 
-  vTmpMove := g_move[iTrans];
+  vTmpMove := gMove[iTrans];
   IF vPrevStn >= MIN_STATION_INDEX AND vPrevStn <= MAX_STATION_INDEX
      AND vStnNum >= MIN_STATION_INDEX AND vStnNum <= MAX_STATION_INDEX THEN
     IF Stations[vPrevStn].Crosstransport > 0

@@ -32,17 +32,17 @@ FUNCTION FC_STC_CalcTransferTime : REAL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iFromStn                : INT;     (* source station, e.g. 105 *)
-  iToStn                  : INT;     (* destination station, e.g. 112 *)
-  iMove                    : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
-  iFromDroppingX10       : INT;     (* Stations[from].DrippingTime — tenths of second *)
-  iToDeviceDelayX10     : INT;     (* Stations[to].DeviceDelay   — tenths of second *)
-  iDripTrayDelayX10     : INT;     (* Transporters[trans].DripTrayDelay  — tenths of second *)
+  iFromStn          : INT;     (* source station, e.g. 105 *)
+  iToStn            : INT;     (* destination station, e.g. 112 *)
+  iMove             : UDT_JC_MoveTimesType;   (* transporter's precomputed move times *)
+  iFromDroppingX10  : INT;     (* Stations[from].DrippingTime — tenths of second *)
+  iToDeviceDelayX10 : INT;     (* Stations[to].DeviceDelay   — tenths of second *)
+  iDripTrayDelayX10 : INT;     (* Transporters[trans].DripTrayDelay  — tenths of second *)
 END_VAR
 
 VAR
-  vFromIdx                  : INT;
-  vToIdx                    : INT;
+  vFromIdx : INT;
+  vToIdx   : INT;
 END_VAR
 
 FC_STC_CalcTransferTime := 0.0;

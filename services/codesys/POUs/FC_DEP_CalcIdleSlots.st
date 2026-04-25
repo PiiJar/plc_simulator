@@ -24,34 +24,34 @@ FUNCTION FC_DEP_CalcIdleSlots : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iTrans                   : INT;
-  iTimeS                  : LINT;
+  iTrans : INT;
+  iTimeS : LINT;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 3=MAX_TRANSPORTERS *)
-  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
-  ioIdleSlot              : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
+  ioTask     : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioIdleSlot : ARRAY[1..3] OF UDT_JC_DepIdleSlotSetType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    MAX_UNITS               : INT;
-    DEP_MAX_IDLE_SLOTS      : INT;
+    MAX_TRANSPORTERS   : INT;
+    MAX_UNITS          : INT;
+    DEP_MAX_IDLE_SLOTS : INT;
 END_VAR
 
 VAR_EXTERNAL
-  g_transporter             : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
+  gTransporter : ARRAY[1..MAX_TRANSPORTERS] OF UDT_TransporterStatusType;
 END_VAR
 
 VAR
-  vQi                        : INT;
-  vSi                        : INT;
-  vCnt                       : INT;
-  vPrevEnd                  : LINT;
-  vPrevSink                 : INT;
-  vGapStart                 : LINT;
-  vGapEnd                   : LINT;
-  cHorizon                   : LINT := 9999999999;
+  vQi       : INT;
+  vSi       : INT;
+  vCnt      : INT;
+  vPrevEnd  : LINT;
+  vPrevSink : INT;
+  vGapStart : LINT;
+  vGapEnd   : LINT;
+  cHorizon  : LINT := 9999999999;
 END_VAR
 
 FC_DEP_CalcIdleSlots := FALSE;
@@ -62,7 +62,7 @@ vSi := 0;
 vCnt := ioTask[iTrans].Count;
 
 vPrevEnd  := iTimeS;
-vPrevSink := g_transporter[iTrans].CurrentStation;
+vPrevSink := gTransporter[iTrans].CurrentStation;
 
 FOR vQi := 1 TO MAX_UNITS DO
   IF vQi > vCnt THEN EXIT; END_IF;

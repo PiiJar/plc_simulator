@@ -33,39 +33,39 @@ FUNCTION_BLOCK FB_STC_FindTransporter
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iLiftStn                : INT;     (* lift station number *)
-  iSinkStn                : INT;     (* sink station number, 0 = lift-only search *)
+  iLiftStn : INT;     (* lift station number *)
+  iSinkStn : INT;     (* sink station number, 0 = lift-only search *)
 END_VAR
 
 VAR_OUTPUT
-  oTrans                   : INT;         (* transporter ID 1..3, 0 = not vFound *)
+  oTrans : INT;         (* transporter ID 1..3, 0 = not vFound *)
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
+    MAX_TRANSPORTERS : INT;
 END_VAR
 
 VAR_EXTERNAL
-  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
-  g_task                    : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
+  Transporters : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  gTask        : ARRAY[1..MAX_TRANSPORTERS] OF UDT_JC_TskQueueType;
 END_VAR
 
 VAR
-  vTi                        : INT;
-  vAi                        : INT;
-  vArea                      : UDT_TaskAreaType;
-  vCanLift                  : BOOL;
-  vCanSink                  : BOOL;
+  vTi        : INT;
+  vAi        : INT;
+  vArea      : UDT_TaskAreaType;
+  vCanLift   : BOOL;
+  vCanSink   : BOOL;
   (* Multi-transporter scoring *)
-  vCapable                   : ARRAY[1..3] OF INT;   (* vCapable transporter IDs *)
-  vCapCount                 : INT;
-  vBestIdx                  : INT;
-  vBestCount                : INT;
-  vBestDist                 : INT;
-  vCurCount                 : INT;
-  vCurDist                  : INT;
-  vLastSink                 : INT;
-  vCi                        : INT;
+  vCapable   : ARRAY[1..3] OF INT;   (* vCapable transporter IDs *)
+  vCapCount  : INT;
+  vBestIdx   : INT;
+  vBestCount : INT;
+  vBestDist  : INT;
+  vCurCount  : INT;
+  vCurDist   : INT;
+  vLastSink  : INT;
+  vCi        : INT;
 END_VAR
 
 oTrans := 0;
@@ -114,11 +114,11 @@ ELSIF vCapCount = 1 THEN
 ELSE
   (* JS: scored.sort((a,b) => a.count - b.count || a.distFromLastTask - b.distFromLastTask) *)
   vBestIdx := 1;
-  vBestCount := g_task[vCapable[1]].Count;
+  vBestCount := gTask[vCapable[1]].Count;
   (* Find last sink station for first candidate *)
   vLastSink := 0;
   IF vBestCount > 0 THEN
-    vLastSink := g_task[vCapable[1]].Queue[vBestCount].SinkStationTarget;
+    vLastSink := gTask[vCapable[1]].Queue[vBestCount].SinkStationTarget;
   END_IF;
   IF vLastSink > 0 THEN
     vBestDist := ABS(vLastSink - iLiftStn);
@@ -127,10 +127,10 @@ ELSE
   END_IF;
 
   FOR vCi := 2 TO vCapCount DO
-    vCurCount := g_task[vCapable[vCi]].Count;
+    vCurCount := gTask[vCapable[vCi]].Count;
     vLastSink := 0;
     IF vCurCount > 0 THEN
-      vLastSink := g_task[vCapable[vCi]].Queue[vCurCount].SinkStationTarget;
+      vLastSink := gTask[vCapable[vCi]].Queue[vCurCount].SinkStationTarget;
     END_IF;
     IF vLastSink > 0 THEN
       vCurDist := ABS(vLastSink - iLiftStn);

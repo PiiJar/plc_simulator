@@ -30,61 +30,61 @@ FUNCTION FC_TSK_Resolve : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_INPUT
-  iConfUnit               : INT;
-  iConfStage              : INT;
-  iConfTrans              : INT;
-  iBlockedUnit            : INT;
-  iBlockedStage           : INT;
-  iDeficit                 : REAL;
+  iConfUnit     : INT;
+  iConfStage    : INT;
+  iConfTrans    : INT;
+  iBlockedUnit  : INT;
+  iBlockedStage : INT;
+  iDeficit      : REAL;
 END_VAR
 
 VAR_IN_OUT  (* array sizes must match GVL_JC_Constants: 50=MAX_LOCKS, 10=MAX_UNITS, 3=MAX_TRANSPORTERS *)
-  ioLocks                  : ARRAY[1..50] OF UDT_JC_TskLockType;
-  ioLockCnt               : INT;
-  ioSchedule               : ARRAY[1..10] OF UDT_JC_TskScheduleType;
-  ioTask                   : ARRAY[1..3] OF UDT_JC_TskQueueType;
-  ioBatch                  : ARRAY[1..10] OF UDT_BatchType;
+  ioLocks    : ARRAY[1..50] OF UDT_JC_TskLockType;
+  ioLockCnt  : INT;
+  ioSchedule : ARRAY[1..10] OF UDT_JC_TskScheduleType;
+  ioTask     : ARRAY[1..3] OF UDT_JC_TskQueueType;
+  ioBatch    : ARRAY[1..10] OF UDT_BatchType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    MAX_UNITS               : INT;
-    SCH_TSK_FLEX_FACTOR     : REAL;
+    MAX_TRANSPORTERS    : INT;
+    MAX_UNITS           : INT;
+    SCH_TSK_FLEX_FACTOR : REAL;
 END_VAR
 
 VAR_OUTPUT
-  oSolved                  : BOOL;
-  oTotalDelay             : REAL;
-  oTotalAdv               : REAL;
+  oSolved     : BOOL;
+  oTotalDelay : REAL;
+  oTotalAdv   : REAL;
 END_VAR
 
 VAR
-  vRemain                    : REAL;
-  vCap                       : REAL;
-  vAmount                    : REAL;
-  vStageFlex                : REAL;
-  vIsLockedAdv             : BOOL;
-  vIsLockedDel             : BOOL;
-  vCanAdvance               : BOOL;
-  vCanDelay                 : BOOL;
-  vLockI                    : INT;
-  vPrevConfStage           : INT;
-  vIsPcsLocked             : BOOL;
-  vPrevSinkStn             : INT;
-  vNextLiftStn             : INT;
-  vIsBlkAdvLocked         : BOOL;
-  vQi                        : INT;
-  vChainFlex                : REAL;
-  vSuffixFlex               : REAL;
-  vEarlierStg               : INT;
-  vEarlierFlex              : REAL;
-  vChainAmount              : REAL;
-  vSuffixAmount             : REAL;
-  vSchedBlocked             : INT;
-  vSchedConf                : INT;
-  vSchedPrevConf           : INT;
-  vTmpSi                    : INT;
-  vCapRemain                : REAL;
+  vRemain         : REAL;
+  vCap            : REAL;
+  vAmount         : REAL;
+  vStageFlex      : REAL;
+  vIsLockedAdv    : BOOL;
+  vIsLockedDel    : BOOL;
+  vCanAdvance     : BOOL;
+  vCanDelay       : BOOL;
+  vLockI          : INT;
+  vPrevConfStage  : INT;
+  vIsPcsLocked    : BOOL;
+  vPrevSinkStn    : INT;
+  vNextLiftStn    : INT;
+  vIsBlkAdvLocked : BOOL;
+  vQi             : INT;
+  vChainFlex      : REAL;
+  vSuffixFlex     : REAL;
+  vEarlierStg     : INT;
+  vEarlierFlex    : REAL;
+  vChainAmount    : REAL;
+  vSuffixAmount   : REAL;
+  vSchedBlocked   : INT;
+  vSchedConf      : INT;
+  vSchedPrevConf  : INT;
+  vTmpSi          : INT;
+  vCapRemain      : REAL;
 END_VAR
 
 FC_TSK_Resolve := FALSE;

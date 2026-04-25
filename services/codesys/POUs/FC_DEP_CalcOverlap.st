@@ -24,26 +24,26 @@ FUNCTION FC_DEP_CalcOverlap : BOOL
 (* Introduction of Variables ----------------------------------------------------------------*)
 
 VAR_IN_OUT
-  ioOverlap                : UDT_JC_DepOverlapType;
+  ioOverlap : UDT_JC_DepOverlapType;
 END_VAR
 
 VAR_EXTERNAL CONSTANT
-    MAX_TRANSPORTERS        : INT;
-    MIN_STATION_INDEX        : INT;
-    MAX_STATION_INDEX        : INT;
+    MAX_TRANSPORTERS  : INT;
+    MIN_STATION_INDEX : INT;
+    MAX_STATION_INDEX : INT;
 END_VAR
 
 VAR_EXTERNAL
-  Transporters                     : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
+  Transporters : ARRAY[0..MAX_TRANSPORTERS] OF UDT_TransporterType;
 END_VAR
 
 VAR
-  vStationIdx               : INT;
-  vTi                        : INT;
-  vAi                        : INT;
-  vCoverCount               : INT;
-  vCovered                   : BOOL;
-  vArea                      : UDT_TaskAreaType;
+  vStationIdx : INT;
+  vTi         : INT;
+  vAi         : INT;
+  vCoverCount : INT;
+  vCovered    : BOOL;
+  vArea       : UDT_TaskAreaType;
 END_VAR
 
 ioOverlap.Count := 0;

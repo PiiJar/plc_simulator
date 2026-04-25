@@ -5,38 +5,38 @@
 FUNCTION FC_STC_TakeOut : BOOL
 
 VAR_INPUT
-  iTimeS                  : LINT;
+  iTimeS : LINT;
 END_VAR
 
 VAR
-  vTi                        : INT;
-  vCurrentStation           : INT;
-  vTakeOutDelay            : INT;
-  vTakeOutDist             : DINT;
-  vIdleTime                 : LINT;
-  vCurrentX                 : DINT;
-  vTargetX                  : DINT;
-  vNextLiftX               : DINT;
-  vAreaCenter               : DINT;
-  vDir                       : INT;
-  vQueuedLiftStation       : INT;
-  vTimeToStart             : LINT;
-  vSi                        : INT;
-  vStnX                     : DINT;
-  vBestStn                  : INT;
-  vBestDist                 : DINT;
-  vDx                        : DINT;
+  vTi                : INT;
+  vCurrentStation    : INT;
+  vTakeOutDelay      : INT;
+  vTakeOutDist       : DINT;
+  vIdleTime          : LINT;
+  vCurrentX          : DINT;
+  vTargetX           : DINT;
+  vNextLiftX         : DINT;
+  vAreaCenter        : DINT;
+  vDir               : INT;
+  vQueuedLiftStation : INT;
+  vTimeToStart       : LINT;
+  vSi                : INT;
+  vStnX              : DINT;
+  vBestStn           : INT;
+  vBestDist          : DINT;
+  vDx                : DINT;
 END_VAR
 
 FC_STC_TakeOut := TRUE;
 
 FOR vTi := 1 TO MAX_TRANSPORTERS DO
 
-  IF g_transporter[vTi].Phase <> 0 THEN CONTINUE; END_IF;
-  IF g_transporter[vTi].Status <> 3 THEN CONTINUE; END_IF;
-  IF NOT g_transporter[vTi].IsActive THEN CONTINUE; END_IF;
+  IF gTransporter[vTi].Phase <> 0 THEN CONTINUE; END_IF;
+  IF gTransporter[vTi].Status <> 3 THEN CONTINUE; END_IF;
+  IF NOT gTransporter[vTi].IsActive THEN CONTINUE; END_IF;
 
-  vCurrentStation := g_transporter[vTi].CurrentStation;
+  vCurrentStation := gTransporter[vTi].CurrentStation;
   IF vCurrentStation < MIN_STATION_INDEX OR vCurrentStation > MAX_STATION_INDEX THEN CONTINUE; END_IF;
 
   vTakeOutDelay := Stations[vCurrentStation].TakeOutDelay;
@@ -45,25 +45,25 @@ FOR vTi := 1 TO MAX_TRANSPORTERS DO
   vTakeOutDist := INT_TO_DINT(Stations[vCurrentStation].TakeOutDistance);
   IF vTakeOutDist <= 0 THEN CONTINUE; END_IF;
 
-  vIdleTime := iTimeS - g_transporter[vTi].IdleStartTime;
+  vIdleTime := iTimeS - gTransporter[vTi].IdleStartTime;
   IF vIdleTime < DINT_TO_LINT(INT_TO_DINT(vTakeOutDelay)) THEN CONTINUE; END_IF;
 
   (* Defer if next task on SAME station starts soon *)
-  IF g_task[vTi].Count > 0 THEN
-    vQueuedLiftStation := g_task[vTi].Queue[1].LiftStationTarget;
+  IF gTask[vTi].Count > 0 THEN
+    vQueuedLiftStation := gTask[vTi].Queue[1].LiftStationTarget;
     IF vQueuedLiftStation = vCurrentStation THEN
-      vTimeToStart := g_task[vTi].Queue[1].StartTime - iTimeS;
+      vTimeToStart := gTask[vTi].Queue[1].StartTime - iTimeS;
       IF vTimeToStart >= 0 AND vTimeToStart < DINT_TO_LINT(INT_TO_DINT(TAKE_OUT_MIN_WAIT_S)) THEN
         CONTINUE;
       END_IF;
     END_IF;
   END_IF;
 
-  vCurrentX := g_transporter[vTi].XPosition;
+  vCurrentX := gTransporter[vTi].XPosition;
 
   (* Determine direction: toward next task or toward vArea center *)
-  IF g_task[vTi].Count > 0 THEN
-    vNextLiftX := Stations[g_task[vTi].Queue[1].LiftStationTarget].XPosition;
+  IF gTask[vTi].Count > 0 THEN
+    vNextLiftX := Stations[gTask[vTi].Queue[1].LiftStationTarget].XPosition;
     IF vNextLiftX > vCurrentX THEN
       vDir := 1;
     ELSE
@@ -113,10 +113,10 @@ FOR vTi := 1 TO MAX_TRANSPORTERS DO
 
   (* If next task starts soon and take-out would pass over its lift station,
      stop at the lift station instead *)
-  IF g_task[vTi].Count > 0 THEN
-    vTimeToStart := g_task[vTi].Queue[1].StartTime - iTimeS;
+  IF gTask[vTi].Count > 0 THEN
+    vTimeToStart := gTask[vTi].Queue[1].StartTime - iTimeS;
     IF vTimeToStart >= 0 AND vTimeToStart < DINT_TO_LINT(INT_TO_DINT(TAKE_OUT_MIN_WAIT_S)) THEN
-      vQueuedLiftStation := g_task[vTi].Queue[1].LiftStationTarget;
+      vQueuedLiftStation := gTask[vTi].Queue[1].LiftStationTarget;
       IF vQueuedLiftStation >= MIN_STATION_INDEX AND vQueuedLiftStation <= MAX_STATION_INDEX THEN
         vNextLiftX := Stations[vQueuedLiftStation].XPosition;
         (* Check if take-out target is on the other side of lift station *)
@@ -132,11 +132,11 @@ FOR vTi := 1 TO MAX_TRANSPORTERS DO
   (* Re-check: still worth moving? *)
   IF ABS(vTargetX - vCurrentX) < 100 THEN CONTINUE; END_IF;
 
-  g_transporter[vTi].Phase := 1;
-  g_transporter[vTi].LiftStationTarget := 0;
-  g_transporter[vTi].SinkStationTarget := 0;
-  g_transporter[vTi].XDriveTarget := vTargetX;
-  g_transporter[vTi].XFinalTarget := vTargetX;
+  gTransporter[vTi].Phase := 1;
+  gTransporter[vTi].LiftStationTarget := 0;
+  gTransporter[vTi].SinkStationTarget := 0;
+  gTransporter[vTi].XDriveTarget := vTargetX;
+  gTransporter[vTi].XFinalTarget := vTargetX;
 
 END_FOR;
 
